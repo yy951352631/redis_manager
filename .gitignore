@@ -1,0 +1,52 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven build output
+target/
+**/target/
+
+# Local dev setup (Go SDK, Redis binaries, redis-shake, etc.)
+cachecloud-web/.local-setup/
+
+# Archives & binaries (should never be committed)
+*.war
+*.jar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# Installation media / deployment artifacts
+修改文件/
+
+# Logs & runtime files
+*.log
+*.pid
+*.tmp
+*.bak
+
+# Java
+*.class
+hs_err_pid*
+
+# Node / frontend
+node_modules/
+**/dist/
+**/.pnpm-store/
+cachecloud-ui/dist/
+
+# Repo maintenance tooling (downloaded locally)
+scripts/.pydeps/
+scripts/git-filter-repo
+
+# MySQL 备份产物（本地保留，不入库）
+deploy/mysql/backups/

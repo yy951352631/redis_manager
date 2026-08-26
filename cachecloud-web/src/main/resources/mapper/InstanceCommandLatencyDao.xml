@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.InstanceCommandLatencyDao">
+
+    <insert id="batchSaveMinute">
+        replace into instance_command_latency_minute(collect_time,app_id,instance_id,command,calls,usec)
+        values
+        <foreach collection="list" item="it" separator=",">
+            (#{it.collectTime},#{it.appId},#{it.instanceId},#{it.command},#{it.calls},#{it.usec})
+        </foreach>
+    </insert>
+
+    <select id="listMinuteByAppAndRange" resultType="InstanceCommandLatency">
+        select id,collect_time,app_id,instance_id,command,calls,usec
+        from instance_command_latency_minute
+        where app_id = #{appId} and collect_time between #{beginTime} and #{endTime}
+        order by instance_id, command, collect_time
+    </select>
+
+    <insert id="batchSaveHour">
+        replace into instance_command_latency_hour(collect_time,app_id,instance_id,command,calls,usec,max_avg_usec)
+        values
+        <foreach collection="list" item="it" separator=",">
+            (#{it.collectTime},#{it.appId},#{it.instanceId},#{it.command},#{it.calls},#{it.usec},#{it.maxAvgUsec})
+        </foreach>
+    </insert>
+
+    <select id="listHourByAppAndRange" resultType="InstanceCommandLatency">
+        select id,collect_time,app_id,instance_id,command,calls,usec,max_avg_usec
+        from instance_command_latency_hour
+        where app_id = #{appId} and collect_time between #{beginTime} and #{endTime}
+        order by instance_id, command, collect_time
+    </select>
+
+    <delete id="deleteMinuteBefore">
+        delete from instance_command_latency_minute where collect_time &lt; #{collectTime} limit 5000
+    </delete>
+
+    <delete id="deleteHourBefore">
+        delete from instance_command_latency_hour where collect_time &lt; #{collectTime} limit 5000
+    </delete>
+
+</mapper>

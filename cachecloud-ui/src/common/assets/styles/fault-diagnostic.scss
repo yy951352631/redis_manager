@@ -1,0 +1,1033 @@
+/**
+ * 故障诊断 Tab — 对齐 JSP fault-diagnostic.css，字号收紧，蓝色主色
+ */
+.app-fault-diagnostic-page {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.45;
+  scroll-behavior: smooth;
+  padding-bottom: 4px;
+  color: #334155;
+  --fd-primary: #4d8dff;
+  --fd-primary-dark: #2563eb;
+  --fd-primary-soft: #eff6ff;
+  --fd-primary-border: #bfdbfe;
+  --fd-ok: #059669;
+  --fd-warn: #d97706;
+  --fd-fail: #dc2626;
+  --fd-surface: #fff;
+  --fd-muted: #64748b;
+  --fd-border: #e2e8f0;
+  --fd-radius: 6px;
+}
+
+.app-fault-diagnostic-page h4,
+.app-fault-diagnostic-page h5,
+.app-fault-diagnostic-page h6 {
+  margin: 0;
+  padding: 0;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.app-fault-diagnostic-page .el-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -0.12em;
+  line-height: 1;
+}
+
+.app-fault-diagnostic-page .el-icon svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* 三层流程条 */
+.app-fault-diagnostic-pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--fd-radius);
+  background: linear-gradient(135deg, #f8fafc 0%, #fff 50%, var(--fd-primary-soft) 100%);
+  border: 1px solid var(--fd-border);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.app-fault-diagnostic-pipeline__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 72px;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.app-fault-diagnostic-pipeline__step.is-active {
+  opacity: 1;
+}
+
+.app-fault-diagnostic-pipeline__step.is-current .app-fault-diagnostic-pipeline__dot {
+  background: linear-gradient(135deg, #6ba0ff 0%, var(--fd-primary) 100%);
+  box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.18);
+}
+
+.app-fault-diagnostic-pipeline__dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #94a3b8;
+  transition: box-shadow 0.2s ease;
+}
+
+.app-fault-diagnostic-pipeline__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fd-muted);
+  white-space: nowrap;
+}
+
+.app-fault-diagnostic-pipeline__step.is-active .app-fault-diagnostic-pipeline__label {
+  color: #334155;
+}
+
+.app-fault-diagnostic-pipeline__line {
+  flex: 1;
+  max-width: 56px;
+  height: 2px;
+  margin: 0 6px 16px;
+  background: linear-gradient(90deg, #cbd5e1 0%, #e2e8f0 100%);
+  border-radius: 1px;
+}
+
+/* Hero */
+.app-fault-diagnostic-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--fd-radius);
+  border: 1px solid transparent;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.04);
+  background: linear-gradient(135deg, #f8fafc 0%, #fff 55%);
+  border-color: var(--fd-border);
+}
+
+.app-fault-diagnostic-hero--idle {
+  background: linear-gradient(135deg, var(--fd-primary-soft) 0%, #f8fafc 48%, #fff 100%);
+  border-color: var(--fd-primary-border);
+}
+
+.app-fault-diagnostic-hero--ok {
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 48%, #fff 100%);
+  border-color: #86efac;
+}
+
+.app-fault-diagnostic-hero--warn {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 32%, #fff 100%);
+  border-color: #fcd34d;
+}
+
+.app-fault-diagnostic-hero--fail {
+  background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 48%, #fff 100%);
+  border-color: #fca5a5;
+}
+
+.app-fault-diagnostic-hero--running {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 48%, #fff 100%);
+  border-color: #93c5fd;
+}
+
+.app-fault-diagnostic-hero__icon-wrap {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 18px;
+  color: var(--fd-primary-dark);
+  background: #dbeafe;
+  box-shadow: 0 0 0 2px rgba(77, 141, 255, 0.12);
+}
+
+.app-fault-diagnostic-hero__icon-wrap .el-icon {
+  font-size: 18px;
+}
+
+.app-fault-diagnostic-hero--ok .app-fault-diagnostic-hero__icon-wrap {
+  color: #059669;
+  background: #d1fae5;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.app-fault-diagnostic-hero--warn .app-fault-diagnostic-hero__icon-wrap {
+  color: #d97706;
+  background: #fef3c7;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+}
+
+.app-fault-diagnostic-hero--fail .app-fault-diagnostic-hero__icon-wrap {
+  color: #dc2626;
+  background: #fee2e2;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.app-fault-diagnostic-hero--running .app-fault-diagnostic-hero__icon-wrap {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.app-fault-diagnostic-hero__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-fault-diagnostic-hero__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.app-fault-diagnostic-hero__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--rp-text, #0f172a);
+}
+
+.app-fault-diagnostic-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.app-fault-diagnostic-hero__badge--ok {
+  color: #047857;
+  background: #a7f3d0;
+}
+
+.app-fault-diagnostic-hero__badge--warn {
+  color: #b45309;
+  background: #fde68a;
+}
+
+.app-fault-diagnostic-hero__badge--fail {
+  color: #b91c1c;
+  background: #fecaca;
+}
+
+.app-fault-diagnostic-hero__badge--running {
+  color: #1d4ed8;
+  background: #bfdbfe;
+}
+
+.app-fault-diagnostic-meta--hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 8px;
+}
+
+.app-fault-diagnostic-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.app-fault-diagnostic-meta__item i,
+.app-fault-diagnostic-meta__item .el-icon {
+  color: var(--fd-primary);
+  font-size: 11px;
+}
+
+.app-fault-diagnostic-meta__item em {
+  font-style: normal;
+  color: #94a3b8;
+  margin-right: 3px;
+}
+
+.app-fault-diagnostic-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.app-fault-diagnostic-stat {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.app-fault-diagnostic-stat__num {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.app-fault-diagnostic-stat__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.app-fault-diagnostic-stat--pass {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.app-fault-diagnostic-stat--warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.app-fault-diagnostic-stat--fail {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.app-fault-diagnostic-stat--skip {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.app-fault-diagnostic-stat--mini {
+  min-width: auto;
+  padding: 1px 6px;
+  flex-direction: row;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.app-fault-diagnostic-stat--mini .app-fault-diagnostic-stat__num {
+  font-size: 10px;
+}
+
+.app-fault-diagnostic-stat--mini .app-fault-diagnostic-stat__label {
+  display: none;
+}
+
+.app-fault-diagnostic-hero__hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fd-muted);
+}
+
+.app-fault-diagnostic-hero__hint a {
+  font-weight: 600;
+  color: var(--fd-primary);
+}
+
+.app-fault-diagnostic-hero__hint-note {
+  display: block;
+  margin-top: 4px;
+  color: #b45309;
+  font-size: 11px;
+}
+
+.app-fault-diagnostic-hero__actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Section 区块 */
+.app-fault-diagnostic-section {
+  margin-bottom: 12px;
+  border: 1px solid var(--fd-border);
+  border-radius: var(--fd-radius);
+  background: var(--fd-surface);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+}
+
+.app-fault-diagnostic-section--ai {
+  border-color: var(--fd-primary-border);
+  background: linear-gradient(180deg, var(--fd-primary-soft) 0%, #fff 80px);
+}
+
+.app-fault-diagnostic-section--chat {
+  border-color: #dbeafe;
+  background: linear-gradient(180deg, #f0f9ff 0%, #fff 72px);
+}
+
+.app-fault-diagnostic-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.app-fault-diagnostic-section--ai .app-fault-diagnostic-section__head {
+  background: rgba(239, 246, 255, 0.9);
+  border-bottom-color: #dbeafe;
+}
+
+.app-fault-diagnostic-section--chat .app-fault-diagnostic-section__head {
+  background: rgba(240, 249, 255, 0.9);
+  border-bottom-color: #e0f2fe;
+}
+
+.app-fault-diagnostic-section__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rp-text, #1e293b);
+}
+
+.app-fault-diagnostic-section__title i,
+.app-fault-diagnostic-section__title .el-icon {
+  color: var(--fd-primary);
+  font-size: 13px;
+}
+
+.app-fault-diagnostic-section__bar {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #6ba0ff 0%, var(--fd-primary) 100%);
+}
+
+.app-fault-diagnostic-section__bar--ai,
+.app-fault-diagnostic-section__bar--chat {
+  background: linear-gradient(180deg, #60a5fa 0%, var(--fd-primary-dark) 100%);
+}
+
+.app-fault-diagnostic-section__sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #f1f5f9;
+}
+
+.app-fault-diagnostic-section--ai .app-fault-diagnostic-section__sub,
+.app-fault-diagnostic-section--chat .app-fault-diagnostic-section__sub {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.app-fault-diagnostic-section__body {
+  padding: 12px 14px 14px;
+}
+
+/* 工具栏筛选 */
+.app-fault-diagnostic-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.app-fault-diagnostic-filter {
+  border: 1px solid var(--fd-border);
+  background: #fff;
+  color: var(--fd-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.app-fault-diagnostic-filter:hover {
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.app-fault-diagnostic-filter.is-active {
+  border-color: var(--fd-primary);
+  background: var(--fd-primary-soft);
+  color: var(--fd-primary-dark);
+}
+
+.app-fault-diagnostic-filter[data-filter="FAIL"].is-active {
+  border-color: #f87171;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.app-fault-diagnostic-filter[data-filter="WARN"].is-active {
+  border-color: #fbbf24;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.app-fault-diagnostic-filter[data-filter="PASS"].is-active {
+  border-color: #4ade80;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* 空状态 */
+.app-fault-diagnostic-empty {
+  text-align: center;
+  padding: 20px 12px;
+  color: var(--fd-muted);
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px dashed #e2e8f0;
+  background: #fafbfc;
+}
+
+.app-fault-diagnostic-empty--compact {
+  padding: 10px 12px;
+  text-align: left;
+  border-style: solid;
+  border-color: var(--fd-primary-border);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.app-fault-diagnostic-empty__icon {
+  font-size: 24px;
+  color: var(--fd-primary);
+  margin-bottom: 8px;
+}
+
+.app-fault-diagnostic-empty__icon .el-icon {
+  font-size: 24px;
+}
+
+.app-fault-diagnostic-empty p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.app-fault-diagnostic-empty .text-muted {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+/* 分组 */
+.app-fault-diagnostic-group {
+  margin-bottom: 12px;
+}
+
+.app-fault-diagnostic-group:last-child {
+  margin-bottom: 0;
+}
+
+.app-fault-diagnostic-group__title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  background: #f8fafc;
+}
+
+.app-fault-diagnostic-group__title i,
+.app-fault-diagnostic-group__title .el-icon {
+  color: var(--fd-primary);
+  font-size: 12px;
+}
+
+.app-fault-diagnostic-group__count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.app-fault-diagnostic-check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* 检查项卡片 */
+.app-fault-diagnostic-check {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  border: 1px solid #eef2f7;
+  background: #fff;
+  transition: box-shadow 0.15s ease;
+}
+
+.app-fault-diagnostic-check:hover {
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05);
+}
+
+.app-fault-diagnostic-check:last-child {
+  margin-bottom: 0;
+}
+
+.app-fault-check--pass {
+  border-left: 3px solid #22c55e;
+  background: linear-gradient(90deg, #f0fdf4 0%, #fff 20%);
+}
+
+.app-fault-check--warn {
+  border-left: 3px solid #f59e0b;
+  background: linear-gradient(90deg, #fffbeb 0%, #fff 20%);
+}
+
+.app-fault-check--fail {
+  border-left: 3px solid #ef4444;
+  background: linear-gradient(90deg, #fef2f2 0%, #fff 20%);
+}
+
+.app-fault-check--skip {
+  border-left: 3px solid #94a3b8;
+  opacity: 0.88;
+}
+
+.app-fault-diagnostic-check__icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.app-fault-check--pass .app-fault-diagnostic-check__icon { color: #16a34a; }
+.app-fault-check--warn .app-fault-diagnostic-check__icon { color: #d97706; }
+.app-fault-check--fail .app-fault-diagnostic-check__icon { color: #dc2626; }
+.app-fault-check--skip .app-fault-diagnostic-check__icon { color: #94a3b8; }
+
+.app-fault-diagnostic-check__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-fault-diagnostic-check__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.app-fault-diagnostic-check__level-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.app-fault-diagnostic-check__level-tag--pass {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.app-fault-diagnostic-check__level-tag--warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.app-fault-diagnostic-check__level-tag--fail {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.app-fault-diagnostic-check__level-tag--skip {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.app-fault-diagnostic-check__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.app-fault-diagnostic-check__code {
+  font-size: 10px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.app-fault-diagnostic-check__summary {
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.app-fault-diagnostic-check__detail {
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 4px;
+  border: 1px solid #eef2f7;
+}
+
+.app-fault-diagnostic-check__skip {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.app-fault-diagnostic-check__raw-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fd-primary);
+  cursor: pointer;
+}
+
+.app-fault-diagnostic-check__raw-toggle.is-open {
+  color: var(--fd-primary-dark);
+}
+
+.app-fault-diagnostic-check__raw {
+  margin-top: 6px;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 10px;
+  line-height: 1.4;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+/* AI 报告 */
+.app-fault-diagnostic-ai-report {
+  padding: 12px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid var(--fd-primary-border);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.app-fault-diagnostic-ai-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 11px;
+}
+
+/* Layer ③ */
+.app-fault-diagnostic-chat-hint {
+  font-size: 12px;
+  color: var(--fd-muted);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.app-fault-diagnostic-chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.app-fault-diagnostic-chip {
+  border: 1px solid var(--fd-primary-border);
+  background: var(--fd-primary-soft);
+  color: var(--fd-primary-dark);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.app-fault-diagnostic-chip:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+/* 历史 */
+.app-fault-diagnostic-history-backdrop {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.app-fault-diagnostic-history-panel {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--fd-border);
+  border-radius: var(--fd-radius);
+  background: #f8fafc;
+}
+
+.app-fault-diagnostic-history-panel--modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10090;
+  width: min(440px, 92vw);
+  max-height: min(480px, 72vh);
+  overflow: auto;
+  margin-top: 0;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+}
+
+.app-fault-diagnostic-history-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.app-fault-diagnostic-history-panel__head .close {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.app-fault-diagnostic-history-panel__head .close:hover {
+  color: #475569;
+}
+
+.app-fault-diagnostic-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-fault-diagnostic-history-item button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-fault-diagnostic-history-item button:hover {
+  background: var(--fd-primary-soft);
+  border-color: var(--fd-primary-border);
+}
+
+.app-fault-diagnostic-history-item__time {
+  flex: 1;
+  font-size: 12px;
+  color: #475569;
+  text-align: left;
+}
+
+.app-fault-diagnostic-history-item__badges {
+  display: flex;
+  gap: 4px;
+}
+
+.app-fault-diagnostic-history-empty {
+  padding: 6px 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* 按钮 — 蓝色主色 */
+.app-fault-diagnostic-page .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  background: #fff;
+  color: #334155;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.app-fault-diagnostic-page .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.app-fault-diagnostic-page .btn-sm {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.app-fault-diagnostic-page .btn-primary {
+  background: var(--fd-primary);
+  border-color: var(--fd-primary);
+  color: #fff;
+}
+
+.app-fault-diagnostic-page .btn-primary:hover:not(:disabled) {
+  background: var(--fd-primary-dark);
+  border-color: var(--fd-primary-dark);
+}
+
+.app-fault-diagnostic-page .btn-default {
+  border-color: var(--fd-border);
+  background: #fff;
+  color: #475569;
+}
+
+.app-fault-diagnostic-page .btn-default:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.app-fault-diagnostic-page .btn-info {
+  background: var(--fd-primary-dark);
+  border-color: var(--fd-primary-dark);
+  color: #fff;
+}
+
+.app-fault-diagnostic-page .btn-info:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.app-fault-diagnostic-page code {
+  font-size: 11px;
+}
+
+/* AI 报告 Markdown */
+.app-fault-diagnostic-ai-report .rp-ai-md h3,
+.app-fault-diagnostic-ai-report .rp-ai-md h4 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.app-fault-diagnostic-ai-report .rp-ai-md p {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.app-fault-diagnostic-ai-report .rp-ai-md ul {
+  margin: 0 0 8px 16px;
+  font-size: 12px;
+}
+
+.app-fault-diagnostic-ai-report .rp-ai-md li {
+  margin-bottom: 3px;
+}
+
+.app-fault-diagnostic-ai-report .rp-ai-md strong {
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.app-fault-diagnostic-ai-report .rp-ai-md code {
+  background: #f0f4f8;
+  border: 1px solid #e8edf3;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+  color: #0f172a;
+}
+
+.app-fault-diagnostic-ai-report .rp-ai-md pre.rp-ai-code,
+.app-fault-diagnostic-ai-report .rp-ai-code {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-radius: 4px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 6px 0 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  border: 1px solid #334155;
+}
+
+@media (max-width: 768px) {
+  .app-fault-diagnostic-hero {
+    flex-direction: column;
+  }
+
+  .app-fault-diagnostic-hero__actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .app-fault-diagnostic-pipeline__label {
+    font-size: 10px;
+  }
+
+  .app-fault-diagnostic-pipeline__line {
+    max-width: 28px;
+  }
+}

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-3.0.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd" default-autowire="byName">
+
+    <context:component-scan base-package="com.shcj.cache.web.controller"/>
+
+    <mvc:interceptors>
+        <!-- 变更操作审计：记录所有 POST/PUT/DELETE/PATCH -->
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="com.shcj.cache.interceptor.OperationAuditInterceptor"/>
+        </mvc:interceptor>
+        <!-- 应用维度接口验证（前后端分离后仅剩 SPA 仍在调用的遗留 ajax 接口） -->
+        <mvc:interceptor>
+            <mvc:mapping path="/admin/app/*"/>
+            <bean class="com.shcj.cache.interceptor.FrontUserLoginInterceptor"/>
+        </mvc:interceptor>
+        <!-- 后台管理员验证 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/manage/instance/*"/>
+            <mvc:mapping path="/manage/ai/*"/>
+            <mvc:mapping path="/manage/diagnostic/**"/>
+            <bean class="com.shcj.cache.interceptor.ManageUserLoginInterceptor"/>
+        </mvc:interceptor>
+        <!-- 应用权限验证 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/admin/app/*"/>
+            <bean class="com.shcj.cache.interceptor.AppAndInstanceAuthorityInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <bean id="freemarkerConfig" class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
+        <property name="templateLoaderPath" value="classpath:/templates/"/>
+        <property name="defaultEncoding" value="UTF-8"/>
+        <property name="freemarkerSettings">
+            <props>
+                <prop key="tag_syntax">auto_detect</prop>
+                <prop key="url_escaping_charset">UTF-8</prop>
+                <prop key="default_encoding">UTF-8</prop>
+                <prop key="output_encoding">UTF-8</prop>
+                <prop key="locale">zh_CN</prop>
+                <prop key="boolean_format">true,false</prop>
+                <prop key="datetime_format">yyyy-MM-dd HH:mm:ss</prop>
+                <prop key="date_format">yyyy-MM-dd</prop>
+                <prop key="time_format">HH:mm:ss</prop>
+                <prop key="number_format">0.##</prop>
+                <prop key="whitespace_stripping">true</prop>
+                <prop key="object_wrapper">freemarker.ext.beans.BeansWrapper</prop>
+            </props>
+        </property>
+    </bean>
+</beans>

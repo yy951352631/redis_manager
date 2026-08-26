@@ -1,0 +1,307 @@
+# 供 CacheCloud 平台纳管测试用的两套 Redis：
+#   - Redis Cluster 6.2.13：3 主 3 从
+#   - Redis Sentinel 5.0.14：1 主 2 从 + 3 哨兵
+#
+# 两套都挂在固定子网 172.30.0.0/16 上并分配静态 IP，纳管时填的节点串才不会因重启而变化。
+# 起完之后需要把 CacheCloud 后端容器接进本网络，否则平台连不上：
+#   docker network connect redis-test cachecloud-web
+#
+# 均未设置密码，纳管时「Redis 密码」「Sentinel 密码」留空即可。
+
+name: redis-test
+
+x-cluster-node: &cluster-node
+  image: redis:6.2.13-alpine
+  restart: unless-stopped
+  # 用配置文件启动，否则 CONFIG REWRITE 会报 "server is running without a config file"，
+  # 平台改完配置无法持久化。详见 redis-entrypoint.sh。
+  entrypoint: ["/usr/local/bin/redis-entrypoint.sh"]
+  environment:
+    TZ: Asia/Shanghai
+  healthcheck:
+    test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+
+x-sentinel-data-node: &sentinel-data-node
+  image: redis:5.0.14-alpine
+  restart: unless-stopped
+  # 用配置文件启动，否则 CONFIG REWRITE 会报 "server is running without a config file"，
+  # 平台改完配置无法持久化。详见 redis-entrypoint.sh。
+  entrypoint: ["/usr/local/bin/redis-entrypoint.sh"]
+  environment:
+    TZ: Asia/Shanghai
+  healthcheck:
+    test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+
+services:
+  # ---------------------------------------------------------------- Cluster 6.2.13
+  cluster-1:
+    <<: *cluster-node
+    container_name: redis-cluster-1
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_CLUSTER: "yes"
+      REDIS_ANNOUNCE_IP: 172.30.0.11
+    ports: ["7001:6379"]
+    volumes:
+      - cluster-1-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.11
+
+  cluster-2:
+    <<: *cluster-node
+    container_name: redis-cluster-2
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_CLUSTER: "yes"
+      REDIS_ANNOUNCE_IP: 172.30.0.12
+    ports: ["7002:6379"]
+    volumes:
+      - cluster-2-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.12
+
+  cluster-3:
+    <<: *cluster-node
+    container_name: redis-cluster-3
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_CLUSTER: "yes"
+      REDIS_ANNOUNCE_IP: 172.30.0.13
+    ports: ["7003:6379"]
+    volumes:
+      - cluster-3-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.13
+
+  cluster-4:
+    <<: *cluster-node
+    container_name: redis-cluster-4
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_CLUSTER: "yes"
+      REDIS_ANNOUNCE_IP: 172.30.0.14
+    ports: ["7004:6379"]
+    volumes:
+      - cluster-4-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.14
+
+  cluster-5:
+    <<: *cluster-node
+    container_name: redis-cluster-5
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_CLUSTER: "yes"
+      REDIS_ANNOUNCE_IP: 172.30.0.15
+    ports: ["7005:6379"]
+    volumes:
+      - cluster-5-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.15
+
+  cluster-6:
+    <<: *cluster-node
+    container_name: redis-cluster-6
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_CLUSTER: "yes"
+      REDIS_ANNOUNCE_IP: 172.30.0.16
+    ports: ["7006:6379"]
+    volumes:
+      - cluster-6-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.16
+
+  # 一次性任务：组建集群。已经组好则跳过，可重复执行。
+  cluster-init:
+    image: redis:6.2.13-alpine
+    container_name: redis-cluster-init
+    restart: "no"
+    depends_on:
+      cluster-1: {condition: service_healthy}
+      cluster-2: {condition: service_healthy}
+      cluster-3: {condition: service_healthy}
+      cluster-4: {condition: service_healthy}
+      cluster-5: {condition: service_healthy}
+      cluster-6: {condition: service_healthy}
+    networks: [redis-test]
+    command:
+      - sh
+      - -c
+      - |
+        state=$$(redis-cli -h 172.30.0.11 cluster info 2>/dev/null | grep -c 'cluster_state:ok' || true)
+        if [ "$$state" = "1" ]; then
+          echo "cluster already formed, skip"
+          exit 0
+        fi
+        redis-cli --cluster create \
+          172.30.0.11:6379 172.30.0.12:6379 172.30.0.13:6379 \
+          172.30.0.14:6379 172.30.0.15:6379 172.30.0.16:6379 \
+          --cluster-replicas 1 --cluster-yes
+
+  # ---------------------------------------------------------------- Sentinel 5.0.14
+  sentinel-master:
+    <<: *sentinel-data-node
+    container_name: redis-sentinel-master
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_ANNOUNCE_IP: 172.30.0.21
+    ports: ["7101:6379"]
+    volumes:
+      - sentinel-master-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.21
+
+  sentinel-replica-1:
+    <<: *sentinel-data-node
+    container_name: redis-sentinel-replica-1
+    depends_on:
+      sentinel-master: {condition: service_healthy}
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_ANNOUNCE_IP: 172.30.0.22
+      REDIS_REPLICAOF: "172.30.0.21 6379"
+    ports: ["7102:6379"]
+    volumes:
+      - sentinel-replica-1-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.22
+
+  sentinel-replica-2:
+    <<: *sentinel-data-node
+    container_name: redis-sentinel-replica-2
+    depends_on:
+      sentinel-master: {condition: service_healthy}
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_ANNOUNCE_IP: 172.30.0.23
+      REDIS_REPLICAOF: "172.30.0.21 6379"
+    ports: ["7103:6379"]
+    volumes:
+      - sentinel-replica-2-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.23
+
+  sentinel-1: &sentinel
+    image: redis:5.0.14-alpine
+    container_name: redis-sentinel-1
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      SENTINEL_ANNOUNCE_IP: 172.30.0.31
+    depends_on:
+      sentinel-master: {condition: service_healthy}
+    ports: ["27101:26379"]
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.31
+    # sentinel 运行期会重写配置文件，因此写到容器内可写路径而非只读挂载
+    command:
+      - sh
+      - -c
+      - |
+        cat > /tmp/sentinel.conf <<CONF
+        port 26379
+        sentinel announce-ip $${SENTINEL_ANNOUNCE_IP}
+        sentinel monitor mymaster 172.30.0.21 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        CONF
+        exec redis-sentinel /tmp/sentinel.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  sentinel-2:
+    <<: *sentinel
+    container_name: redis-sentinel-2
+    environment:
+      TZ: Asia/Shanghai
+      SENTINEL_ANNOUNCE_IP: 172.30.0.32
+    ports: ["27102:26379"]
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.32
+
+  sentinel-3:
+    <<: *sentinel
+    container_name: redis-sentinel-3
+    environment:
+      TZ: Asia/Shanghai
+      SENTINEL_ANNOUNCE_IP: 172.30.0.33
+    ports: ["27103:26379"]
+    networks:
+      redis-test:
+        ipv4_address: 172.30.0.33
+
+  # ---------------------------------------------------------------- 流量发生器
+  # 默认不启动（profile），需要时：
+  #   docker compose -f deploy/test-redis/compose.yaml --profile workload up -d
+  workload:
+    image: python:3.12-alpine
+    container_name: redis-workload
+    profiles: ["workload"]
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      WORKLOAD_QPS: "6"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      cluster-1: {condition: service_healthy}
+      sentinel-master: {condition: service_healthy}
+      sentinel-1: {condition: service_healthy}
+    volumes: ["./workload.py:/app/workload.py:ro"]
+    networks: [redis-test]
+    # 必须跑在本网络里：cluster 宣告的是 172.30.0.x，宿主机上 MOVED 会跳到不可达地址
+    command:
+      - sh
+      - -c
+      - |
+        pip install --quiet --root-user-action=ignore 'redis>=5,<6'
+        exec python -u /app/workload.py
+
+networks:
+  redis-test:
+    name: redis-test
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
+volumes:
+  cluster-1-data:
+  cluster-2-data:
+  cluster-3-data:
+  cluster-4-data:
+  cluster-5-data:
+  cluster-6-data:
+  sentinel-master-data:
+  sentinel-replica-1-data:
+  sentinel-replica-2-data:

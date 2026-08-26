@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.InstanceRuntimeProfileDao">
+
+    <insert id="upsert" parameterType="InstanceRuntimeProfile">
+        replace into instance_runtime_profile(instance_id,app_id,os_arch,redis_version,major_version,update_time)
+        values(#{instanceId},#{appId},#{osArch},#{redisVersion},#{majorVersion},#{updateTime})
+    </insert>
+
+    <select id="listAll" resultType="InstanceRuntimeProfile">
+        select instance_id,app_id,os_arch,redis_version,major_version,update_time
+        from instance_runtime_profile
+    </select>
+
+</mapper>

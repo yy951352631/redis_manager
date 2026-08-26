@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.OfflineAnalysisRecordDao">
+
+    <sql id="columns">
+        file_name,file_size,file_path,file_type,status,progress,key_count,error_msg,user_name,create_time,update_time
+    </sql>
+
+    <insert id="save" parameterType="OfflineAnalysisRecord" keyProperty="id" useGeneratedKeys="true">
+        insert into offline_analysis_record(<include refid="columns"/>)
+        values(#{fileName},#{fileSize},#{filePath},#{fileType},#{status},#{progress},#{keyCount},
+               #{errorMsg},#{userName},#{createTime},#{updateTime})
+    </insert>
+
+    <!-- 列表不查 result_json：单条可达数 MB，翻页时会把内存和带宽吃光 -->
+    <select id="list" resultType="OfflineAnalysisRecord">
+        select id,<include refid="columns"/>
+        from offline_analysis_record
+        order by id desc
+        limit #{offset}, #{limit}
+    </select>
+
+    <select id="count" resultType="int">
+        select count(1) from offline_analysis_record
+    </select>
+
+    <select id="getById" resultType="OfflineAnalysisRecord">
+        select id,<include refid="columns"/>,result_json
+        from offline_analysis_record where id = #{id}
+    </select>
+
+    <update id="updateProgress">
+        update offline_analysis_record
+        set status = #{status}, progress = #{progress}, key_count = #{keyCount}, update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="finish">
+        update offline_analysis_record
+        set status = 2, progress = 100, key_count = #{keyCount}, result_json = #{resultJson},
+            error_msg = null, file_path = '', update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="fail">
+        update offline_analysis_record
+        set status = 3, error_msg = #{errorMsg}, file_path = '', update_time = now()
+        where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from offline_analysis_record where id = #{id}
+    </delete>
+
+    <update id="markStaleAsFailed">
+        update offline_analysis_record
+        set status = 3, error_msg = #{errorMsg}, file_path = '', update_time = now()
+        where status in (0, 1)
+    </update>
+
+</mapper>

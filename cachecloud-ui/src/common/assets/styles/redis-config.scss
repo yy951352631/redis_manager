@@ -1,0 +1,204 @@
+/* 模板配置页 — 对齐 manage/redisConfig/initConfigDetail.jsp */
+
+.redis-config-page {
+  padding: 16px;
+}
+
+.redis-config-shell {
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: var(--rp-radius, 8px);
+  background: var(--rp-surface, #fff);
+  overflow: hidden;
+}
+
+.redis-config-shell__filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--rp-border, #e2e8f0);
+  background: var(--rp-surface-muted, #f8fafc);
+}
+
+.redis-config-shell__filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rp-text-muted, #64748b);
+  white-space: nowrap;
+}
+
+.redis-config-version-tabs-wrap {
+  padding: 0 20px;
+  background: var(--rp-surface, #fff);
+  border-bottom: 1px solid var(--rp-border, #e2e8f0);
+}
+
+.redis-config-version-tabs.el-tabs {
+  .el-tabs__header {
+    margin: 0 !important;
+    padding: 0;
+    background: transparent;
+    border-bottom: none;
+  }
+
+  .el-tabs__nav-wrap {
+    display: flex;
+    align-items: center;
+  }
+
+  .el-tabs__nav-wrap::after {
+    display: none;
+  }
+
+  .el-tabs__item {
+    height: 44px !important;
+    min-width: auto;
+    padding: 0 28px 0 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    line-height: 1 !important;
+    font-size: 13px;
+    color: var(--rp-text-muted, #64748b);
+  }
+
+  .el-tabs__item:first-child {
+    padding-left: 0 !important;
+  }
+
+  .el-tabs__item.is-active {
+    color: var(--rp-primary, #ea580c);
+    font-weight: 600;
+  }
+
+  .el-tabs__active-bar {
+    background-color: var(--rp-primary, #ea580c);
+  }
+}
+
+.redis-config-body {
+  padding: 20px;
+}
+
+.redis-config-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.redis-config-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--rp-text, #1e293b);
+}
+
+.redis-config-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.redis-config-alert {
+  margin-bottom: 16px;
+
+  :deep(.el-alert__title) {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.redis-config-list-card {
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.redis-config-list-head {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rp-text, #1e293b);
+  border-bottom: 1px solid var(--rp-border, #e2e8f0);
+  background: var(--rp-surface-muted, #f8fafc);
+}
+
+.redis-config-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) minmax(130px, 1fr) minmax(180px, 1.5fr) 108px 148px;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rp-border, #e2e8f0);
+  transition: background 0.15s ease;
+}
+
+.redis-config-row:hover {
+  background: #fafbfc;
+}
+
+.redis-config-row:last-child {
+  border-bottom: none;
+}
+
+.redis-config-row__key {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rp-text, #1e293b);
+  word-break: break-all;
+}
+
+.redis-config-row__invalid {
+  color: var(--el-color-danger);
+  font-weight: 400;
+}
+
+.redis-config-row__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1100px) {
+  .redis-config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .redis-config-row__actions {
+    justify-content: flex-start;
+  }
+}
+
+.redis-config-preview-dialog {
+  :deep(.el-dialog__body) {
+    padding-top: 8px;
+  }
+}
+
+.redis-config-preview-summary {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--rp-text-muted, #64748b);
+  line-height: 1.6;
+}
+
+.redis-config-preview-output {
+  margin: 0;
+  padding: 16px 18px;
+  min-height: 320px;
+  max-height: 60vh;
+  overflow: auto;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 8px;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

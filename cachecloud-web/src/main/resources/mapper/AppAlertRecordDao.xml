@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.shcj.cache.dao.AppAlertRecordDao">
+    <sql id="alert_record_fields">
+        create_time
+        , visible_type, important_level, app_id, instance_id, ip, port, title, content
+    </sql>
+
+    <sql id="alert_record_query_fields">
+        id
+        , create_time, visible_type, important_level, app_id, instance_id, ip, port, title, content
+    </sql>
+
+    <insert id="save" parameterType="com.shcj.cache.entity.AppAlertRecord" keyProperty="id" useGeneratedKeys="true">
+        insert into app_alert_record
+        (<include refid="alert_record_fields"/>)
+        values
+        (
+        #{createTime},#{visibleType},#{importantLevel},#{appId},#{instanceId},#{ip},#{port},#{title},#{content}
+        )
+    </insert>
+
+    <insert id="batchSave">
+        insert ignore into app_alert_record (<include refid="alert_record_fields"/>)
+        values
+        <foreach collection="list" item="appAlertRecord" separator=",">
+            (
+            #{appAlertRecord.createTime},#{appAlertRecord.visibleType},#{appAlertRecord.importantLevel},#{appAlertRecord.appId},
+            #{appAlertRecord.instanceId},#{appAlertRecord.ip},#{appAlertRecord.port},#{appAlertRecord.title},#{appAlertRecord.content}
+            )
+        </foreach>
+    </insert>
+
+    <sql id="search_where">
+        <where>
+            <if test="importantLevel != null">
+                and important_level = #{importantLevel}
+            </if>
+            <if test="appId != null">
+                and app_id = #{appId}
+            </if>
+            <if test="ip != null and ip != ''">
+                and ip = #{ip}
+            </if>
+            <if test="startTime != null">
+                and create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and create_time &lt;= #{endTime}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and (title like concat('%', #{keyword}, '%')
+                     or content like concat('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="search" resultType="com.shcj.cache.entity.AppAlertRecord">
+        select <include refid="alert_record_query_fields"/>
+        from app_alert_record
+        <include refid="search_where"/>
+        order by id desc
+        limit #{offset}, #{limit}
+    </select>
+
+    <select id="count" resultType="int">
+        select count(1) from app_alert_record
+        <include refid="search_where"/>
+    </select>
+
+    <select id="listAlertAppIds" resultType="long">
+        select distinct app_id from app_alert_record
+        where app_id is not null and app_id &gt; 0
+        order by app_id
+    </select>
+
+    <delete id="deleteBefore">
+        delete from app_alert_record where create_time &lt; #{before}
+    </delete>
+
+</mapper>
+
+

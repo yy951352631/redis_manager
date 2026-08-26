@@ -1,0 +1,343 @@
+/* 集群统计 Tab — 对齐 manage-app-tab.css / appStat.jsp */
+
+.app-stat-page {
+  padding: 0;
+}
+
+.app-stat-page .filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.app-stat-page .filter-bar__range {
+  width: 420px;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.app-stat-page .filter-bar__range.el-date-editor {
+  --el-date-editor-width: 420px;
+}
+
+.app-stat-page .filter-bar__range.el-date-editor.el-input__wrapper,
+.app-stat-page .filter-bar .el-date-editor--datetimerange {
+  width: 420px !important;
+  max-width: 100%;
+}
+
+.app-stat-page .range-hint {
+  margin: -8px 0 12px;
+  font-size: 12px;
+  color: var(--rp-text-muted);
+}
+
+.app-stat-page .panels-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.app-stat-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rp-text);
+}
+
+.app-stat-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 20px;
+
+  td {
+    padding: 10px 12px;
+    border: 1px solid var(--rp-border);
+    vertical-align: middle;
+  }
+
+  tr:nth-child(even) td {
+    background: #fafbfc;
+  }
+
+  td:first-child,
+  td:nth-child(3) {
+    width: 120px;
+    color: var(--rp-text-muted);
+    background: #f8fafc;
+    font-weight: 500;
+  }
+}
+
+.app-stat-mem-progress {
+  position: relative;
+  height: 22px;
+  border-radius: 4px;
+  background: #e8edf3;
+  overflow: hidden;
+
+  &__bar {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    font-size: 12px;
+    color: #1a2332;
+
+    &--success {
+      background: #86efac;
+    }
+
+    &--warning {
+      background: #fde68a;
+    }
+
+    &--danger {
+      background: #fca5a5;
+    }
+  }
+
+  &__label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    white-space: nowrap;
+    font-size: 12px;
+    color: #1a2332;
+    pointer-events: none;
+  }
+}
+
+.app-stat-pie-box {
+  position: relative;
+  z-index: 1;
+  height: 400px;
+}
+
+.app-stat-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.app-stat-chart-card {
+  border: 1px solid var(--rp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(26, 35, 50, 0.06);
+  position: relative;
+  min-width: 0;
+}
+
+.app-stat-chart-card.manage-chart-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(90deg, var(--rp-primary-soft, #eaf2ff) 0%, rgba(234, 242, 255, 0.25) 55%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-stat-chart-card__title {
+  margin: 0;
+  padding: 10px 14px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rp-text-muted);
+  border-bottom: 1px solid var(--rp-border);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(234, 242, 255, 0.35) 18%,
+    var(--rp-primary-soft) 50%,
+    rgba(234, 242, 255, 0.35) 82%,
+    transparent 100%
+  );
+}
+
+.app-stat-chart-box {
+  position: relative;
+  z-index: 1;
+  height: 380px;
+}
+
+/* 图表卡片：标题栏（同时是拖拽手柄）+ 画布 */
+.metric-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-card__head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--rp-border);
+  cursor: grab;
+  user-select: none;
+}
+
+.metric-card__head:active {
+  cursor: grabbing;
+}
+
+/* 饼图不参与拖拽，标题栏不给拖拽手型 */
+.metric-card__head--static {
+  cursor: default;
+}
+
+.metric-card__head--static:active {
+  cursor: default;
+}
+
+.metric-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2332;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.metric-card__action {
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.metric-card:hover .metric-card__action,
+.metric-card__action:focus-visible {
+  opacity: 1;
+}
+
+.metric-card--ghost {
+  opacity: 0.45;
+  outline: 2px dashed var(--rp-primary, #3274d9);
+  outline-offset: -2px;
+}
+
+/* 放大视图：右侧抽屉，纵向空间充裕，图表固定高度、明细表吃掉剩余高度 */
+.metric-expand-drawer .el-drawer__body {
+  padding: 12px 20px 20px;
+  overflow: auto;
+}
+
+.metric-expand-drawer .el-drawer__header {
+  margin-bottom: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rp-border);
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.metric-expand {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.metric-expand__chart {
+  height: 46vh;
+  min-height: 300px;
+}
+
+.metric-expand__table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.metric-expand__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.metric-summary-card {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--rp-border);
+  border-radius: 6px;
+  background: var(--rp-primary-soft, #f5f8ff);
+}
+
+.metric-summary-card__name {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rp-text-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.metric-summary-card__body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.metric-summary-card__body > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metric-summary-card__body span {
+  font-size: 11px;
+  color: var(--rp-text-muted);
+}
+
+.metric-summary-card__body b {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2332;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.metric-expand__table-title {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rp-text-muted);
+}
+
+@media (max-width: 768px) {
+  .metric-summary-card__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .app-stat-page .panels-row {
+    grid-template-columns: 1fr;
+  }
+
+  .app-stat-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}

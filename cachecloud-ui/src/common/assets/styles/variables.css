@@ -1,0 +1,106 @@
+/* 全局 CSS 变量，这种变量不仅可以在 CSS 和 SCSS 中使用，还可以导入到 JS 中使用 */
+
+:root {
+  /* CacheCloud Redis Pulse 主题（对齐 theme-redis-pulse.css） */
+  --rp-bg: #f0f4f8;
+  --rp-surface: #ffffff;
+  --rp-border: #e8edf3;
+  --rp-text: #1a2332;
+  --rp-text-muted: #6b7a90;
+  --rp-primary: #4d8dff;
+  --rp-primary-hover: #3a7cef;
+  --rp-primary-soft: #eaf2ff;
+  --rp-primary-dark: #2d6be8;
+  --rp-primary-gradient: linear-gradient(135deg, #6ba0ff 0%, #4d8dff 55%, #2d6be8 100%);
+  --rp-font-size-base: 14px;
+  --rp-font-size-sm: 12px;
+  --rp-font-size-md: 14px;
+  --rp-font-size-lg: 16px;
+  --rp-font-size-xl: 18px;
+
+  --el-font-size-base: var(--rp-font-size-base);
+  --el-font-size-small: var(--rp-font-size-sm);
+  --el-font-size-large: var(--rp-font-size-lg);
+
+  --el-color-primary: var(--rp-primary);
+  --el-color-primary-light-3: #82afff;
+  --el-color-primary-light-5: #a6c4ff;
+  --el-color-primary-light-7: #c9dcff;
+  --el-color-primary-light-8: #dbe8ff;
+  --el-color-primary-light-9: var(--rp-primary-soft);
+  --el-color-primary-dark-2: var(--rp-primary-hover);
+  --el-bg-color-page: var(--rp-bg);
+  --el-border-color-lighter: var(--rp-border);
+
+  /* Body */
+  --v3-body-text-color: var(--rp-text);
+  --v3-body-bg-color: var(--rp-bg);
+  /* Header 区域 = NavigationBar 组件 + TagsView 组件 */
+  --v3-header-height: calc(
+    var(--v3-navigationbar-height) + var(--v3-tagsview-height) + var(--v3-header-border-bottom-width)
+  );
+  --v3-header-bg-color: var(--rp-surface);
+  --v3-header-box-shadow: 0 2px 8px rgba(26, 35, 50, 0.06);
+  --v3-header-border-bottom-width: 1px;
+  --v3-header-border-bottom: var(--v3-header-border-bottom-width) solid var(--rp-border);
+  /* NavigationBar 组件 */
+  --v3-navigationbar-height: 54px;
+  --v3-navigationbar-text-color: var(--rp-text-muted);
+  /* Sidebar 组件（浅色侧栏 + 蓝主色，对齐旧版 Redis Pulse） */
+  /* 菜单项最宽为 4 个汉字：20 左内边距 + 14 图标 + 10 间距 + 56 文字 + 20 右内边距 = 120px；
+     Logo「Redis管理平台」约 110px。取 160px 留出约 40px 余量 */
+  --v3-sidebar-width: 160px;
+  --v3-sidebar-hide-width: 58px;
+  --v3-sidebar-border-right: 1px solid var(--rp-border);
+  --v3-sidebar-menu-item-height: 44px;
+  --v3-sidebar-menu-tip-line-bg-color: var(--rp-primary);
+  --v3-sidebar-menu-bg-color: var(--rp-surface);
+  --v3-sidebar-menu-hover-bg-color: #f4f7fb;
+  --v3-sidebar-menu-active-bg-color: var(--rp-primary-soft);
+  --v3-sidebar-menu-text-color: var(--rp-text-muted);
+  --v3-sidebar-menu-active-text-color: var(--rp-primary);
+  /* TagsView 组件 */
+  --v3-tagsview-height: 38px;
+  --v3-tagsview-text-color: var(--rp-text-muted);
+  --v3-tagsview-tag-active-text-color: var(--rp-primary);
+  --v3-tagsview-tag-bg-color: var(--rp-surface);
+  --v3-tagsview-tag-active-bg-color: var(--rp-primary-soft);
+  --v3-tagsview-tag-border-radius: 6px;
+  --v3-tagsview-tag-border-color: var(--rp-border);
+  --v3-tagsview-tag-active-border-color: var(--rp-primary);
+  --v3-tagsview-tag-icon-hover-bg-color: rgba(77, 141, 255, 0.12);
+  --v3-tagsview-tag-icon-hover-color: var(--rp-primary);
+  --v3-tagsview-contextmenu-text-color: var(--rp-text-muted);
+  --v3-tagsview-contextmenu-hover-text-color: var(--rp-text);
+  --v3-tagsview-contextmenu-bg-color: var(--rp-surface);
+  --v3-tagsview-contextmenu-hover-bg-color: var(--rp-primary-soft);
+  --v3-tagsview-contextmenu-box-shadow: 0 8px 24px rgba(26, 35, 50, 0.08);
+  /* Hamburger 组件 */
+  --v3-hamburger-text-color: var(--rp-text);
+  /* RightPanel 组件  */
+  --v3-rightpanel-button-bg-color: var(--rp-primary);
+}
+
+/* 内容区放大时，将不需要的组件隐藏 */
+body.content-large {
+  /* Header 区域 = TagsView 组件 */
+  --v3-header-height: var(--v3-tagsview-height);
+  /* NavigationBar 组件 */
+  --v3-navigationbar-height: 0px;
+  /* Sidebar 组件 */
+  --v3-sidebar-width: 0px;
+  --v3-sidebar-hide-width: 0px;
+}
+
+/* 内容区全屏时，将不需要的组件隐藏 */
+body.content-full {
+  /* Header 区域 */
+  --v3-header-height: 0px;
+  /* NavigationBar 组件 */
+  --v3-navigationbar-height: 0px;
+  /* Sidebar 组件 */
+  --v3-sidebar-width: 0px;
+  --v3-sidebar-hide-width: 0px;
+  /* TagsView 组件 */
+  --v3-tagsview-height: 0px;
+}

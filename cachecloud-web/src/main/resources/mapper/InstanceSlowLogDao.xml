@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.InstanceSlowLogDao">
+
+    <sql id="instance_slow_log_columns">
+        instance_id,app_id,ip,port,slow_log_id,cost_time,command,client_ip,execute_time,create_time
+    </sql>
+
+    <insert id="batchSave">
+        insert ignore into instance_slow_log(<include refid="instance_slow_log_columns"/>)
+        values
+        <foreach collection="list" item="instanceSlowLog" separator=",">
+            (#{instanceSlowLog.instanceId},#{instanceSlowLog.appId},#{instanceSlowLog.ip},#{instanceSlowLog.port},#{instanceSlowLog.slowLogId},#{instanceSlowLog.costTime},#{instanceSlowLog.command},#{instanceSlowLog.clientIp},#{instanceSlowLog.executeTime},#{instanceSlowLog.createTime})
+        </foreach>
+    </insert>
+
+    <select id="getMaxExecuteTimeByInstanceId" resultType="java.sql.Timestamp">
+        select max(execute_time) from instance_slow_log where instance_id = #{instanceId}
+    </select>
+
+    <select id="getByAppId" resultType="InstanceSlowLog">
+        select id,
+        <include refid="instance_slow_log_columns"/>
+        from instance_slow_log where app_id = #{appId}
+    </select>
+
+    <select id="getByInstanceExecuteTime" resultType="InstanceSlowLog">
+        select id,
+        <include refid="instance_slow_log_columns"/>
+        from instance_slow_log
+        where instance_id = #{instanceId} and execute_time=#{executeDate}
+        limit 10
+    </select>
+
+
+    <select id="search" resultType="InstanceSlowLog">
+        select id,
+        <include refid="instance_slow_log_columns"/>
+        from instance_slow_log
+        where app_id = #{appId}
+          and execute_time &gt;= #{startDate}
+          and execute_time &lt;= #{endDate}
+        order by execute_time desc
+    </select>
+
+    <select id="getInstanceSlowLogCountMapByAppId" resultType="hashmap">
+        select concat(ip,":",port) as hostPort,count(*) as count
+        from instance_slow_log
+        where app_id = #{appId}
+          and execute_time &gt;= #{startDate}
+          and execute_time &lt;= #{endDate}
+        group by hostPort order by count desc
+    </select>
+
+    <select id="getAppSlowLogCount" resultType="int">
+        select count(*) as count
+        from instance_slow_log where app_id = #{appId} and execute_time between DATE_FORMAT(#{startDate}, '%Y-%m-%d') and DATE_FORMAT(#{endDate}, '%Y-%m-%d')
+    </select>
+
+    <select id="getAppSlowLogCountStat" resultType="AppClientStatisticGather">
+        select app_id, count(*) as slowLogCount, DATE_FORMAT(execute_time,'%Y-%m-%d') gather_time
+        from instance_slow_log
+        where execute_time between #{startTime} and #{endTime}
+        group by app_id, DATE_FORMAT(execute_time,'%Y-%m-%d')
+    </select>
+
+
+
+    <!-- 主面板慢命令榜：command 形如 "HGETALL key ..."，取首个 token 作为命令名 -->
+    <select id="topCommandsSince" resultType="java.util.Map">
+        select
+            upper(substring_index(command, ' ', 1)) as cmd,
+            count(*) as calls,
+            round(avg(cost_time) / 1000, 2) as avgCostMs,
+            sum(cost_time) as totalCost
+        from instance_slow_log
+        where execute_time >= #{since}
+        group by cmd
+        order by calls desc
+        limit #{limit}
+    </select>
+
+    <!-- 主面板慢查询榜：按节点聚合窗口内条数 -->
+    <select id="countByInstanceSince" resultType="java.util.Map">
+        select app_id as appId, instance_id as instanceId, ip, port, count(*) as cnt
+        from instance_slow_log
+        where execute_time >= #{since}
+        group by app_id, instance_id, ip, port
+        order by cnt desc
+        limit #{limit}
+    </select>
+
+    <!-- 按保留天数清理平台侧慢查询记录；Redis 自身的 SLOWLOG 缓冲区不受影响。
+         表内自带 app_id，无需回连 instance_info：既省一次 join，
+         也能清掉实例已被删除、仅剩历史记录的那部分数据。 -->
+    <delete id="deleteByAppIdBefore">
+        delete from instance_slow_log
+        where app_id = #{appId} and execute_time &lt; #{before}
+    </delete>
+
+    <select id="countByAppIdBefore" resultType="int">
+        select count(*) from instance_slow_log
+        where app_id = #{appId} and execute_time &lt; #{before}
+    </select>
+
+</mapper>

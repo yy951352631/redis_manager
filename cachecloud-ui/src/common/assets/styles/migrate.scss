@@ -1,0 +1,270 @@
+.migrate-form-page,
+.migrate-list-page {
+  padding: 16px;
+}
+
+.migrate-form-page .page-header,
+.migrate-list-page .page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.migrate-form-page .page-title,
+.migrate-list-page .page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.migrate-list-page .page-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.migrate-list-page .search-form {
+  margin-bottom: 16px;
+}
+
+.migrate-list-page .content-card {
+  .el-card__body {
+    padding: 16px;
+  }
+}
+
+.migrate-list-page .pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.migrate-list-page .migrate-cell-block {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.migrate-list-page .migrate-cell-muted {
+  color: var(--el-text-color-secondary);
+}
+
+.migrate-form-card {
+  .el-card__body {
+    padding: 20px 24px;
+  }
+}
+
+.migrate-form-section {
+  margin-bottom: 24px;
+}
+
+.migrate-form-section__title {
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rp-border, #e2e8f0);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--rp-text, #1e293b);
+}
+
+.migrate-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+
+.migrate-form-help {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border: 1px dashed #348f27;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--rp-text-muted, #64748b);
+  background: #f8fffb;
+}
+
+.migrate-form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.migrate-text-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.topology-migrate-page {
+  padding: 16px;
+}
+
+.topology-migrate-page .page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.topology-migrate-page .page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.topology-migrate-card .el-card__body {
+  padding: 20px 24px;
+}
+
+.topology-steps-wrap {
+  margin-bottom: 20px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+  overflow-x: auto;
+}
+
+.topology-steps {
+  min-width: 720px;
+
+  :deep(.el-step__title) {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+.topology-step-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--el-color-primary-light-7);
+  background: var(--el-color-primary-light-9);
+}
+
+.topology-step-banner__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.topology-step-banner__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.topology-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.topology-summary-item {
+  padding: 12px 14px;
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.topology-summary-item__label {
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.topology-summary-item__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rp-text, #1e293b);
+  word-break: break-all;
+}
+
+.topology-machine-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.topology-machine-row .el-select {
+  flex: 1;
+}
+
+.topology-machine-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.topology-readonly-panel {
+  padding: 12px 14px;
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+  max-height: 220px;
+  overflow: auto;
+}
+
+.topology-readonly-panel--highlight :deep(textarea) {
+  background: #fff8f8;
+}
+
+.topology-readonly-panel .migrate-text-pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.topology-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rp-border, #e2e8f0);
+}
+
+.topology-footer__hint {
+  flex: 1;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.topology-footer__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 992px) {
+  .migrate-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topology-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .topology-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topology-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topology-footer__actions {
+    justify-content: flex-end;
+  }
+}

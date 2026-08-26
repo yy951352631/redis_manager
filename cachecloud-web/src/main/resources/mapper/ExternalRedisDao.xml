@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.shcj.cache.dao.ExternalRedisDao">
+
+    <sql id="columns">
+        id, app_id, name, intro, type, password, sentinel_password, instance_info, user_id, status, create_time, update_time
+    </sql>
+
+    <select id="listAll" resultType="ExternalRedis">
+        SELECT
+        <include refid="columns"/>
+        FROM external_redis
+        ORDER BY id DESC
+    </select>
+
+    <select id="getById" resultType="ExternalRedis">
+        SELECT
+        <include refid="columns"/>
+        FROM external_redis
+        WHERE id = #{id}
+    </select>
+
+    <select id="getByAppId" resultType="ExternalRedis">
+        SELECT
+        <include refid="columns"/>
+        FROM external_redis
+        WHERE app_id = #{appId}
+    </select>
+
+    <insert id="save" parameterType="ExternalRedis" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO external_redis (app_id, name, intro, type, password, sentinel_password, instance_info, user_id, status, create_time,
+                                  update_time)
+        VALUES (#{appId}, #{name}, #{intro}, #{type}, #{password}, #{sentinelPassword}, #{instanceInfo}, #{userId}, #{status}, #{createTime},
+                #{updateTime})
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE external_redis
+        SET status = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateInstanceInfo">
+        UPDATE external_redis
+        SET instance_info = #{instanceInfo},
+            update_time   = NOW()
+        WHERE app_id = #{appId}
+    </update>
+
+    <update id="updateNameAndIntro">
+        UPDATE external_redis
+        SET name        = #{name},
+            intro       = #{intro},
+            update_time = NOW()
+        WHERE app_id = #{appId}
+    </update>
+
+    <delete id="deleteByAppId">
+        DELETE FROM external_redis WHERE app_id = #{appId}
+    </delete>
+
+</mapper>

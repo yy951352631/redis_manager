@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.AppKeyAnalysisStatsDao">
+
+    <select id="getStatsJson" resultType="java.lang.String">
+        select stats_json
+        from app_key_analysis_stats
+        where audit_id = #{auditId}
+        limit 1
+    </select>
+
+    <insert id="upsertStats">
+        insert into app_key_analysis_stats (audit_id, app_id, stats_json)
+        values (#{auditId}, #{appId}, #{statsJson})
+        on duplicate key update
+            stats_json  = values(stats_json),
+            update_time = current_timestamp()
+    </insert>
+
+    <delete id="deleteByAuditId">
+        delete from app_key_analysis_stats where audit_id = #{auditId}
+    </delete>
+
+</mapper>

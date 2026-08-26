@@ -1,0 +1,15 @@
+# CacheCloud MySQL 附加配置（被 /etc/my.cnf 的 !includedir /etc/mysql/conf.d/ 加载）
+#
+# 开启 binlog，用于「恢复到故障发生前任意时刻」（PITR）。
+# 单靠 mysqldump 只能回到最近一次快照；binlog 补上快照之后那段增量。
+# deploy/mysql/backup.sh 的 --master-data=2 会把快照对应的 binlog 位点写进 dump 头部，
+# 恢复时先导入 dump，再用 mysqlbinlog 从该位点重放到目标时刻。
+#
+# log-bin 是只读变量，改动需重启 MySQL 才生效。
+[mysqld]
+server-id        = 1
+log-bin          = /var/lib/mysql/mysql-bin
+binlog-format    = ROW
+binlog-row-image = FULL
+expire-logs-days = 7
+max-binlog-size  = 256M

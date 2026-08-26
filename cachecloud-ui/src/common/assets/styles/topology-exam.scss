@@ -1,0 +1,618 @@
+/* 拓扑诊断 — 对齐 manage-app-tab.css / appKeysDealTool.jsp，字号与间距按 JSP 视觉收紧 */
+.app-topology-exam-page {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--rp-text, #334155);
+  scroll-behavior: smooth;
+}
+
+.app-topology-exam-page h4,
+.app-topology-exam-page h5,
+.app-topology-exam-page h6 {
+  margin: 0;
+  padding: 0;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.app-topology-exam-page .el-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -0.12em;
+  line-height: 1;
+}
+
+.app-topology-exam-page .el-icon svg {
+  width: 1em;
+  height: 1em;
+}
+
+/* 顶部总览 Hero */
+.app-topology-exam-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.04);
+}
+
+.app-topology-exam-hero--ok {
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 48%, #fff 100%);
+  border-color: #86efac;
+}
+
+.app-topology-exam-hero--fail {
+  background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 48%, #fff 100%);
+  border-color: #fca5a5;
+}
+
+.app-topology-exam-hero__icon-wrap {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.app-topology-exam-hero__icon-wrap .el-icon {
+  font-size: 18px;
+}
+
+.app-topology-exam-hero--ok .app-topology-exam-hero__icon-wrap {
+  color: #059669;
+  background: #d1fae5;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.app-topology-exam-hero--fail .app-topology-exam-hero__icon-wrap {
+  color: #dc2626;
+  background: #fee2e2;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.app-topology-exam-hero__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-topology-exam-hero__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.app-topology-exam-hero__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--rp-text, #0f172a);
+}
+
+.app-topology-exam-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.app-topology-exam-hero__badge .el-icon {
+  font-size: 11px;
+}
+
+.app-topology-exam-hero__badge--ok {
+  color: #047857;
+  background: #a7f3d0;
+}
+
+.app-topology-exam-hero__badge--fail {
+  color: #b91c1c;
+  background: #fecaca;
+}
+
+.app-topology-exam-meta--hero .app-topology-exam-meta__item i,
+.app-topology-exam-meta--hero .app-topology-exam-meta__item .el-icon {
+  color: #64748b;
+  margin-right: 3px;
+  font-size: 11px;
+}
+
+.app-topology-exam-section__title--bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px !important;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rp-text, #1e293b);
+}
+
+.app-topology-exam-section__title--bar .el-icon {
+  font-size: 13px;
+  color: var(--rp-primary, #4d8dff);
+}
+
+/* 诊断结果 */
+.app-topology-exam-section--results {
+  padding: 12px 14px;
+  background: var(--rp-surface, #fff);
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+.app-topology-exam-results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.app-topology-exam-result {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 180px;
+  min-width: 180px;
+  padding: 10px 12px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  border-top-width: 3px;
+}
+
+.app-topology-exam-result--ok {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  border-top-color: #22c55e;
+}
+
+.app-topology-exam-result--fail {
+  background: #fff5f5;
+  border-color: #fecaca;
+  border-top-color: #ef4444;
+}
+
+.app-topology-exam-result__head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+
+.app-topology-exam-result__no {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.app-topology-exam-result--ok .app-topology-exam-result__no {
+  background: #22c55e;
+}
+
+.app-topology-exam-result--fail .app-topology-exam-result__no {
+  background: #ef4444;
+}
+
+.app-topology-exam-result__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.app-topology-exam-result__icon .el-icon {
+  font-size: 14px;
+}
+
+.app-topology-exam-result--ok .app-topology-exam-result__icon {
+  color: #059669;
+}
+
+.app-topology-exam-result--fail .app-topology-exam-result__icon {
+  color: #f59e0b;
+}
+
+.app-topology-exam-result__title {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.app-topology-exam-result--ok .app-topology-exam-result__title {
+  color: #047857;
+}
+
+.app-topology-exam-result--fail .app-topology-exam-result__title {
+  color: #991b1b;
+}
+
+.app-topology-exam-result__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-topology-exam-result__status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.app-topology-exam-result__status .el-icon {
+  font-size: 12px;
+}
+
+.app-topology-exam-result--ok .app-topology-exam-result__status {
+  color: #059669;
+}
+
+.app-topology-exam-result--fail .app-topology-exam-result__status {
+  color: #dc2626;
+}
+
+.app-topology-exam-result__conclusion {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.app-topology-exam-section--diag[id] {
+  scroll-margin-top: 12px;
+}
+
+.app-topology-exam-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.app-topology-exam-detail-heading .el-icon {
+  font-size: 13px;
+  color: var(--rp-primary, #4d8dff);
+}
+
+.app-topology-exam-section--diag-ok {
+  border-left: 3px solid #22c55e;
+}
+
+.app-topology-exam-section--diag-fail {
+  border-left: 3px solid #ef4444;
+}
+
+.app-topology-exam-inline-ok,
+.app-topology-exam-inline-fail {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-topology-exam-inline-ok .el-icon,
+.app-topology-exam-inline-fail .el-icon {
+  font-size: 13px;
+}
+
+.app-topology-exam-inline-ok {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.app-topology-exam-inline-fail {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.app-topology-exam-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.app-topology-exam-meta__item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--rp-text-muted, #64748b);
+}
+
+.app-topology-exam-meta__item em {
+  font-style: normal;
+  color: #94a3b8;
+  margin-right: 3px;
+}
+
+.app-topology-exam-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.app-topology-exam-pill--sm {
+  min-width: 0;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.app-topology-exam-pill--ok {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.app-topology-exam-pill--fail {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.app-topology-exam-pill--warn {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.app-topology-exam-section {
+  margin-bottom: 14px;
+}
+
+.app-topology-exam-section--diag {
+  padding: 12px 14px;
+  background: var(--rp-surface, #fff);
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: 6px;
+}
+
+.app-topology-exam-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rp-border, #e2e8f0);
+}
+
+.app-topology-exam-section__title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rp-text, #1e293b);
+}
+
+.app-topology-exam-section__title .el-icon {
+  font-size: 13px;
+  color: var(--rp-primary, #4d8dff);
+}
+
+.app-topology-exam-section > .app-topology-exam-section__title {
+  margin-bottom: 10px;
+}
+
+.app-topology-exam-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--rp-text-muted, #64748b);
+}
+
+.app-topology-exam-stat strong {
+  color: var(--rp-text, #1e293b);
+  font-weight: 600;
+}
+
+.app-topology-exam-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.app-topology-exam-alert__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.app-topology-exam-alert__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-topology-exam-alert--fail {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-left: 3px solid #ef4444;
+  font-weight: 600;
+}
+
+.app-topology-exam-alert--fail .app-topology-exam-alert__icon {
+  color: #ef4444;
+}
+
+.app-topology-exam-alert--ok {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-left: 3px solid #22c55e;
+}
+
+.app-topology-exam-alert--ok .app-topology-exam-alert__icon {
+  color: #22c55e;
+}
+
+.app-topology-exam-alert--warn {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-left: 3px solid #f59e0b;
+}
+
+.app-topology-exam-alert--warn .app-topology-exam-alert__icon {
+  color: #f59e0b;
+}
+
+.app-topology-exam-subtitle {
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rp-text, #1e293b);
+}
+
+.app-topology-exam-slot-ranges {
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.app-topology-exam-slot-bar {
+  min-width: 64px;
+  height: 5px;
+  background: var(--rp-border, #e2e8f0);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.app-topology-exam-slot-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4d8dff, #6366f1);
+  border-radius: 2px;
+  min-width: 2px;
+}
+
+.app-topology-exam-table--slots td {
+  vertical-align: middle;
+}
+
+.app-topology-exam-table-wrap {
+  border: 1px solid var(--rp-border, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.app-topology-exam-table-wrap--sub {
+  margin-bottom: 10px;
+}
+
+.app-topology-exam-table {
+  margin-bottom: 0 !important;
+  background: var(--rp-surface, #fff);
+}
+
+.app-topology-exam-table > thead > tr > th {
+  padding: 6px 10px !important;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rp-text-muted, #64748b);
+  background: var(--rp-surface-muted, #fafafa) !important;
+  border-bottom: 1px solid var(--rp-border, #ebeef5) !important;
+  white-space: nowrap;
+}
+
+.app-topology-exam-table > tbody > tr > td {
+  padding: 6px 10px !important;
+  font-size: 12px;
+  color: var(--rp-text, #334155);
+  vertical-align: middle;
+  border-top: 1px solid #f1f5f9 !important;
+}
+
+.app-topology-exam-table > tbody > tr:hover > td {
+  background: #f8fafc;
+}
+
+.app-topology-exam-table__index {
+  width: 40px;
+  text-align: center;
+  color: var(--rp-text-muted, #64748b) !important;
+}
+
+.app-topology-exam-table__narrow {
+  width: 88px;
+  white-space: nowrap;
+}
+
+.app-topology-exam-table__empty {
+  text-align: center;
+  color: var(--rp-text-muted, #94a3b8) !important;
+  font-size: 12px;
+  padding: 14px 10px !important;
+}
+
+.app-topology-exam-table__instances {
+  line-height: 1.5;
+}
+
+.app-topology-exam-code {
+  padding: 1px 5px;
+  font-size: 11px;
+  color: #334155;
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.app-topology-exam-instance {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 8px;
+  margin-bottom: 2px;
+}
+
+.app-topology-exam-role {
+  font-size: 11px;
+  color: var(--rp-text-muted, #64748b);
+}
+
+.app-tab-pane-body .app-topology-exam-page > br {
+  display: none;
+}

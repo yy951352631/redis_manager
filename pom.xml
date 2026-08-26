@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.shcj.mw</groupId>
+    <artifactId>cachecloud-parent</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <modules>
+        <module>cachecloud-web</module>
+        <module>cachecloud-custom</module>
+    </modules>
+
+    <properties>
+        <spring.boot.version>2.7.18</spring.boot.version>
+        <logback.version>1.2.12</logback.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <quartz.version>2.3.2</quartz.version>
+        <mysql.java.version>8.0.29</mysql.java.version>
+        <druid-version>1.2.20</druid-version>
+        <mybatis-spring-boot.version>2.2.2</mybatis-spring-boot.version>
+        <junit.version>4.13.1</junit.version>
+        <skipTests>true</skipTests>
+        <jedis.version>3.7.0</jedis.version>
+        <redis.replicator.version>3.8.1</redis.replicator.version>
+        <protostuff.version>1.0.8</protostuff.version>
+        <httpcomponents.version>4.5.13</httpcomponents.version>
+        <apache.commons.collections>4.4</apache.commons.collections>
+        <maven.compiler.plugin>3.11.0</maven.compiler.plugin>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- 2.22+ 才带 JUnit Platform provider，低版本下 JUnit 5 用例会静默 0 执行 -->
+        <maven.surefire.plugin>2.22.2</maven.surefire.plugin>
+        <maven.clean.plugin>2.5</maven.clean.plugin>
+        <ganymed.ssh.version>build210</ganymed.ssh.version>
+        <sshj.version>0.26.0</sshj.version>
+        <commons.collections.version>3.2.1</commons.collections.version>
+        <guava.version>30.1.1-jre</guava.version>
+        <janino.version>3.1.10</janino.version>
+        <commons-lang.version>3.8.1</commons-lang.version>
+        <json-lib.version>2.4</json-lib.version>
+        <commons.configuration.version>1.6</commons.configuration.version>
+        <flexmark.version>0.42.12</flexmark.version>
+        <fastjson.version>1.2.83</fastjson.version>
+        <maven.deloy.plugin>2.8.1</maven.deloy.plugin>
+        <maven-source-plugin>2.2.1</maven-source-plugin>
+        <maven-resources-plugin>2.6</maven-resources-plugin>
+        <logstash-logback-encoder.version>6.6</logstash-logback-encoder.version>
+        <!-- open -->
+        <cachecloud-cloud.version>1.0-SNAPSHOT</cachecloud-cloud.version>
+        <apache.ant.version>1.10.11</apache.ant.version>
+        <lombok.version>1.18.46</lombok.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+                <scope>compile</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.java.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>${jedis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.moilioncircle</groupId>
+                <artifactId>redis-replicator</artifactId>
+                <version>${redis.replicator.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.dyuproject.protostuff</groupId>
+                <artifactId>protostuff-runtime</artifactId>
+                <version>${protostuff.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.dyuproject.protostuff</groupId>
+                <artifactId>protostuff-core</artifactId>
+                <version>${protostuff.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpcomponents.version}</version>
+            </dependency>
+
+            <!-- SSH远程 -->
+            <dependency>
+                <groupId>ch.ethz.ganymed</groupId>
+                <artifactId>ganymed-ssh2</artifactId>
+                <version>${ganymed.ssh.version}</version>
+            </dependency>
+
+            <!-- ssh -->
+            <dependency>
+                <groupId>com.hierynomus</groupId>
+                <artifactId>sshj</artifactId>
+                <version>${sshj.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${apache.commons.collections}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.sf.json-lib</groupId>
+                <artifactId>json-lib</artifactId>
+                <version>${json-lib.version}</version>
+                <classifier>jdk15</classifier>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-configuration</groupId>
+                <artifactId>commons-configuration</artifactId>
+                <version>${commons.configuration.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>org.codehaus.janino</groupId>
+                <artifactId>janino</artifactId>
+                <version>${janino.version}</version>
+            </dependency>
+
+            <!--markdown to html-->
+            <dependency>
+                <groupId>com.vladsch.flexmark</groupId>
+                <artifactId>flexmark</artifactId>
+                <version>${flexmark.version}</version>
+            </dependency>
+            <!--表格渲染插件-->
+            <dependency>
+                <groupId>com.vladsch.flexmark</groupId>
+                <artifactId>flexmark-ext-tables</artifactId>
+                <version>${flexmark.version}</version>
+            </dependency>
+            <!--markdown to html end-->
+
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid</artifactId>
+                <version>${druid-version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mybatis.spring.boot</groupId>
+                <artifactId>mybatis-spring-boot-starter</artifactId>
+                <version>${mybatis-spring-boot.version}</version>
+            </dependency>
+
+            <!-- njcb dependency -->
+            <dependency>
+                <groupId>com.shcj.mw.custom</groupId>
+                <artifactId>cachecloud-custom</artifactId>
+                <version>${cachecloud-cloud.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>org.apache.ant</groupId>
+                <artifactId>ant</artifactId>
+                <version>${apache.ant.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin}</version>
+                    <configuration>
+                        <source>${maven.compiler.source}</source>
+                        <target>${maven.compiler.target}</target>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.plugin}</version>
+                    <configuration>
+                        <!-- 默认仍然跳过（打包流程依赖这一点），但改成属性驱动，
+                             这样 mvn test -DskipTests=false 能真正把测试跑起来；
+                             写死成 true 时 -D 覆盖不了，等于测试永远无法执行。 -->
+                        <skipTests>${skipTests}</skipTests>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>${maven.clean.plugin}</version>
+                </plugin>
+
+                <plugin>
+	            	<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-deploy-plugin</artifactId>
+					<version>${maven.deloy.plugin}</version>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-source-plugin</artifactId>
+					<version>${maven-source-plugin}</version>
+					<configuration>
+						<attach>true</attach>
+					</configuration>
+					<executions>
+						<execution>
+							<phase>compile</phase>
+							<goals>
+								<goal>jar</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+	                <groupId>org.apache.maven.plugins</groupId>
+	                <artifactId>maven-resources-plugin</artifactId>
+	                <version>${maven-resources-plugin}</version>
+	                <configuration>
+	                    <encoding>UTF-8</encoding>
+	                </configuration>
+	            </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>aliyunmaven</id>
+            <url>https://maven.aliyun.com/repository/public/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+</project>

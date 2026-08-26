@@ -1,0 +1,45 @@
+package com.shcj.cache.server.data;
+
+import org.apache.commons.lang.math.NumberUtils;
+
+/**
+ * tcp连接
+ */
+public class Connection implements LineParser{
+	public static final String FLAG = "TCP";
+	
+	private int established;
+	private int timeWait;
+	private int orphan;
+	
+	/**
+	 * line format:
+	 * TCP: inuse 454 orphan 0 tw 159620 alloc 454 mem 79
+	 */
+	@Override
+    public void parse(String line, String timeKey) throws Exception{
+		if(line.startsWith(FLAG)) {
+			String[] items = line.split("\\s+");
+			for(int i = 0; i < items.length; ++i) {
+				if("inuse".equals(items[i])) {
+					established = NumberUtils.toInt(items[i+1]);
+				} else if("orphan".equals(items[i])) {
+					orphan = NumberUtils.toInt(items[i+1]);
+				} else if("tw".equals(items[i])) {
+					timeWait = NumberUtils.toInt(items[i+1]);
+				}
+			}
+		}
+	}
+	public int getEstablished() {
+		return established;
+	}
+
+	public int getTimeWait() {
+		return timeWait;
+	}
+
+	public int getOrphan() {
+		return orphan;
+	}
+}

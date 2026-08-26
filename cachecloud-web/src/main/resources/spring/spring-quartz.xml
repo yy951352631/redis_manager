@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                     http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
+       default-autowire="byName">
+
+    <!-- quartz线程池 -->
+    <bean id="quartzThreadPool" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+        <!-- 核心线程数  -->
+        <property name="corePoolSize" value="200"/>
+        <!-- 最大线程数 -->
+        <property name="maxPoolSize" value="200"/>
+        <!-- 队列最大长度 >=mainExecutor.maxSize -->
+        <property name="queueCapacity" value="1024"/>
+        <!-- 线程池维护线程所允许的空闲时间 -->
+        <property name="keepAliveSeconds" value="300"/>
+        <!-- 拒绝任务策略:被拒绝后直接在调用者线程中运行当前被放弃任务 -->
+        <property name="rejectedExecutionHandler">
+            <bean class="java.util.concurrent.ThreadPoolExecutor$DiscardPolicy"/>
+        </property>
+    </bean>
+
+    <!-- 分布式QuartzScheduler（停机顺序：先停 Scheduler，再关数据源） -->
+    <bean id="clusterScheduler" name="clusterScheduler" lazy-init="false"
+          class="org.springframework.scheduling.quartz.SchedulerFactoryBean" destroy-method="destroy">
+        <property name="dataSource" ref="cacheCloudDB"></property>
+        <property name="taskExecutor" ref="quartzThreadPool"/>
+        <property name="quartzProperties">
+            <props>
+                <prop key="org.quartz.scheduler.instanceName">CacheCloudScheduler</prop>
+                <prop key="org.quartz.scheduler.instanceId">AUTO</prop>
+                <!-- 不显式指定 jobStore.class：Spring 5.1+ 起会尊重此处的配置，
+                     而 JobStoreTX 需要额外的 org.quartz.jobStore.dataSource；
+                     留空则由 SchedulerFactoryBean 注入 LocalDataSourceJobStore，直接复用上面的 dataSource。 -->
+                <prop key="org.quartz.scheduler.batchTriggerAcquisitionMaxCount">200</prop>
+                <prop key="org.quartz.jobStore.driverDelegateClass">org.quartz.impl.jdbcjobstore.StdJDBCDelegate</prop>
+                <!-- 表名前缀 -->
+                <prop key="org.quartz.jobStore.tablePrefix">qrtz_</prop>
+                <prop key="org.quartz.jobStore.isClustered">true</prop>
+                <prop key="org.quartz.jobStore.clusterCheckinInterval">15000</prop>
+                <prop key="org.quartz.jobStore.maxMisfiresToHandleAtATime">20</prop>
+                <prop key="org.quartz.jobStore.misfireThreshold">60000</prop>
+                <!-- 打开JMX 配置 -->
+                <prop key="org.quartz.scheduler.jmx.export">true</prop>
+                <prop key="org.quartz.scheduler.interruptJobsOnShutdown">true</prop>
+                <prop key="org.quartz.plugin.triggHistory.class">org.quartz.plugins.history.LoggingJobHistoryPlugin</prop>
+            </props>
+        </property>
+        <property name="schedulerName" value="CacheCloudScheduler"/>
+        <property name="applicationContextSchedulerContextKey" value="applicationContext"/>
+        <property name="overwriteExistingJobs" value="true"/>
+        <property name="waitForJobsToCompleteOnShutdown" value="true"/>
+        <property name="startupDelay" value="10"/>
+        <property name="autoStartup" value="true"/>
+        <property name="triggers">
+            <array>
+                <ref bean="appDailyTrigger"/>
+                <ref bean="expAppsDailyTrigger"/>
+                <ref bean="instanceAlertValueTrigger"/>
+
+                <ref bean="taskExecuteJobTrigger"/>
+                <ref bean="riskCommandLatencyArchiveTrigger"/>
+                <ref bean="riskCommandLatencyCleanupTrigger"/>
+                <ref bean="riskMetricCleanupTrigger"/>
+                <ref bean="appStatGatherTrigger"/>
+
+                <ref bean="cleanupDayDimensionalityTrigger"/>
+                <ref bean="cleanupMinuteDimensionalityTrigger"/>
+                <ref bean="instanceStateTrigger"/>
+                <ref bean="instanceTopologySyncTrigger"/>
+                <ref bean="externalRedisStatsCollectTrigger"/>
+            </array>
+        </property>
+        <property name="jobDetails">
+            <array>
+                <ref bean="appDailyJobDetail"/>
+                <ref bean="expAppsDailyJobDetail"/>
+                <ref bean="instanceAlertValueJobDetail"/>
+
+                <ref bean="taskExecuteJobDetail"/>
+                <ref bean="riskCommandLatencyArchiveJobDetail"/>
+                <ref bean="riskCommandLatencyCleanupJobDetail"/>
+                <ref bean="riskMetricCleanupJobDetail"/>
+                <ref bean="appStatGatherJobDetail"/>
+
+                <ref bean="cleanupDayDimensionalityJobDetail"/>
+                <ref bean="cleanupMinuteDimensionalityJobDetail"/>
+                <ref bean="instanceStateJobDetail"/>
+                <ref bean="instanceTopologySyncJobDetail"/>
+                <ref bean="externalRedisStatsCollectJobDetail"/>
+            </array>
+        </property>
+
+    </bean>
+
+    <!-- 风险评估：命令耗时分钟样本归档为小时行，每小时第 3 分钟执行 -->
+    <!-- 服务端统计聚合：慢日志数/延迟数/应用统计/连接数 -->
+    <bean id="appStatGatherJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="appStatGatherJob"/>
+        <property name="group" value="appStatGather"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.AppStatGatherJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="appStatGatherTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="服务端统计聚合"/>
+        <property name="group" value="appStatGather"/>
+        <property name="jobDetail" ref="appStatGatherJobDetail"/>
+        <property name="cronExpression" value="0 0/5 * ? * *"/>
+    </bean>
+
+    <bean id="riskCommandLatencyArchiveJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="riskCommandLatencyArchiveJob"/>
+        <property name="group" value="riskAssess"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.RiskCommandLatencyArchiveJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="riskCommandLatencyArchiveTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="命令耗时小时归档"/>
+        <property name="group" value="riskAssess"/>
+        <property name="jobDetail" ref="riskCommandLatencyArchiveJobDetail"/>
+        <property name="cronExpression" value="0 3 * * * ?"/>
+    </bean>
+
+    <bean id="riskCommandLatencyCleanupJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="riskCommandLatencyCleanupJob"/>
+        <property name="group" value="riskAssess"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.RiskCommandLatencyCleanupJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <!-- 每天 03:20 清理，避开整点归档与业务高峰 -->
+    <bean id="riskCommandLatencyCleanupTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="命令耗时记录清理"/>
+        <property name="group" value="riskAssess"/>
+        <property name="jobDetail" ref="riskCommandLatencyCleanupJobDetail"/>
+        <property name="cronExpression" value="0 20 3 * * ?"/>
+    </bean>
+
+    <bean id="riskMetricCleanupJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="riskMetricCleanupJob"/>
+        <property name="group" value="riskAssess"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.RiskMetricCleanupJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <!-- 每天 03:40 清理，与命令耗时清理错开，避免两个批量删除同时压库 -->
+    <bean id="riskMetricCleanupTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="风险指标记录清理"/>
+        <property name="group" value="riskAssess"/>
+        <property name="jobDetail" ref="riskMetricCleanupJobDetail"/>
+        <property name="cronExpression" value="0 40 3 * * ?"/>
+    </bean>
+
+    <bean id="cleanupMinuteDimensionalityJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="cleanUpMinuteStatisticsJobDetail"></property>
+        <property name="group" value="cleanUpMinuteStatisticsGroup"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.CleanupMinuteDimensionalityJob"></property>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="cleanupMinuteDimensionalityTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="分钟级数据清理"/>
+        <property name="group" value="cleanUpMinuteStatisticsGroup"/>
+        <property name="jobDetail" ref="cleanupMinuteDimensionalityJobDetail"/>
+        <!-- 每10分钟执行一次 -->
+        <property name="cronExpression" value="0 0/10 * ? * *"/>
+    </bean>
+
+    <bean id="cleanupDayDimensionalityJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="cleanUpDayStatisticsJobDetail"></property>
+        <property name="group" value="cleanUpDayStatisticsGroup"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.CleanupDayDimensionalityJob"></property>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="cleanupDayDimensionalityTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="天级数据清理"/>
+        <property name="group" value="cleanUpDayStatisticsGroup"/>
+        <property name="jobDetail" ref="cleanupDayDimensionalityJobDetail"/>
+        <!-- 每小时执行一次 -->
+        <property name="cronExpression" value="0 0 0/1 ? * *"/>
+    </bean>
+
+    <bean id="taskExecuteJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="taskExecuteJob"></property>
+        <property name="group" value="taskExecuteGroup"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.TaskExecuteJob"/>
+        <property name="requestsRecovery" value="true"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="taskExecuteJobTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="工单任务执行"/>
+        <property name="group" value="taskExecuteGroup"/>
+        <property name="jobDetail" ref="taskExecuteJobDetail"/>
+        <property name="cronExpression" value="0/10 * * ? * *"/>
+    </bean>
+
+    <bean id="appDailyJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="appDailyJob"></property>
+        <property name="group" value="appDaily"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.AppDailyJob"></property>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="appDailyTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="应用日报"/>
+        <property name="group" value="appDaily"/>
+        <property name="jobDetail" ref="appDailyJobDetail"/>
+        <property name="cronExpression" value="0 0 10 * * ?"/>
+    </bean>
+
+    <bean id="expAppsDailyJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="expAppsDailyJob"></property>
+        <property name="group" value="expAppsDaily"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.ExpAppsDailyJob"></property>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="expAppsDailyTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="过期应用日报"/>
+        <property name="group" value="expAppsDaily"/>
+        <property name="jobDetail" ref="expAppsDailyJobDetail"/>
+        <property name="cronExpression" value="0 0 9 * * ?"/>
+    </bean>
+
+    <bean id="instanceAlertValueJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="instanceAlertValueJob"></property>
+        <property name="group" value="instanceAlertValue"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.InstanceAlertValueJob"></property>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="instanceAlertValueTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="实例告警判定"/>
+        <property name="group" value="instanceAlertValue"/>
+        <property name="jobDetail" ref="instanceAlertValueJobDetail"/>
+        <property name="cronExpression" value="0 0/1 * ? * *"/>
+        <property name="misfireInstruction" value="2"/>
+    </bean>
+
+    <bean id="instanceStateJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="instanceStateJob"></property>
+        <property name="group" value="instanceState"></property>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.InstanceStatJob"></property>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="instanceStateTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="实例异常状态告警"/>
+        <property name="group" value="instanceState"/>
+        <property name="jobDetail" ref="instanceStateJobDetail"/>
+        <property name="cronExpression" value="0 0/10 * ? * *"/>
+    </bean>
+
+    <bean id="instanceTopologySyncJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="instanceTopologySyncJob"/>
+        <property name="group" value="instanceTopologySync"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.InstanceTopologySyncJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="instanceTopologySyncTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="集群拓扑同步"/>
+        <property name="group" value="instanceTopologySync"/>
+        <property name="jobDetail" ref="instanceTopologySyncJobDetail"/>
+        <!-- 每 30 分钟同步一次 parent_id -->
+        <property name="cronExpression" value="0 0/30 * ? * *"/>
+    </bean>
+
+    <bean id="externalRedisStatsCollectJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="externalRedisStatsCollectJob"/>
+        <property name="group" value="externalRedisStatsCollect"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.ExternalRedisStatsCollectJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <bean id="externalRedisStatsCollectTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="纳管实例指标采集"/>
+        <property name="group" value="externalRedisStatsCollect"/>
+        <property name="jobDetail" ref="externalRedisStatsCollectJobDetail"/>
+        <property name="cronExpression" value="15 0/1 * ? * *"/>
+        <property name="misfireInstruction" value="2"/>
+    </bean>
+</beans>

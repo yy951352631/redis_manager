@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.RiskAssessReportDao">
+
+    <sql id="report_cols">
+        app_id,app_name,window_hours,window_start,window_end,level,score,
+        evaluated_dimensions,total_dimensions,instance_count,collected_instance_count,
+        operator,cost_ms,create_time
+    </sql>
+
+    <insert id="saveReport" parameterType="RiskAssessReport" useGeneratedKeys="true" keyProperty="id">
+        insert into risk_assess_report(<include refid="report_cols"/>)
+        values(#{appId},#{appName},#{windowHours},#{windowStart},#{windowEnd},#{level},#{score},
+               #{evaluatedDimensions},#{totalDimensions},#{instanceCount},#{collectedInstanceCount},
+               #{operator},#{costMs},#{createTime})
+    </insert>
+
+    <insert id="batchSaveDimensions">
+        insert into risk_assess_dimension(report_id,app_id,dimension,dimension_name,level,
+            actual_value,threshold,instance_id,instance_host_port,sample_count,sample_window,
+            summary,suggestion,evidence)
+        values
+        <foreach collection="list" item="it" separator=",">
+            (#{it.reportId},#{it.appId},#{it.dimension},#{it.dimensionName},#{it.level},
+             #{it.actualValue},#{it.threshold},#{it.instanceId},#{it.instanceHostPort},
+             #{it.sampleCount},#{it.sampleWindow},#{it.summary},#{it.suggestion},#{it.evidence})
+        </foreach>
+    </insert>
+
+    <select id="getReport" resultType="RiskAssessReport">
+        select id,<include refid="report_cols"/> from risk_assess_report where id = #{id}
+    </select>
+
+    <!-- 每个集群取最新一份，供总览清单展示 -->
+    <select id="listLatestByApps" resultType="RiskAssessReport">
+        select r.id,r.app_id,r.app_name,r.window_hours,r.window_start,r.window_end,r.level,r.score,
+               r.evaluated_dimensions,r.total_dimensions,r.instance_count,r.collected_instance_count,
+               r.operator,r.cost_ms,r.create_time
+        from risk_assess_report r
+        inner join (
+            select app_id, max(id) as max_id from risk_assess_report
+            <where>
+                <if test="appIds != null and appIds.size() > 0">
+                    app_id in
+                    <foreach collection="appIds" item="aid" open="(" separator="," close=")">#{aid}</foreach>
+                </if>
+            </where>
+            group by app_id
+        ) t on r.id = t.max_id
+    </select>
+
+    <select id="listHistory" resultType="RiskAssessReport">
+        select id,<include refid="report_cols"/> from risk_assess_report
+        where app_id = #{appId} order by id desc limit #{limit}
+    </select>
+
+    <select id="listDimensions" resultType="RiskAssessDimension">
+        select id,report_id,app_id,dimension,dimension_name,level,actual_value,threshold,
+               instance_id,instance_host_port,sample_count,sample_window,summary,suggestion,evidence
+        from risk_assess_dimension where report_id = #{reportId} order by id
+    </select>
+
+    <select id="getRecentReport" resultType="RiskAssessReport">
+        select id,<include refid="report_cols"/> from risk_assess_report
+        where app_id = #{appId} and window_hours = #{windowHours} and create_time &gt;= #{after}
+        order by id desc limit 1
+    </select>
+
+</mapper>

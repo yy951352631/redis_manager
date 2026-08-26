@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.RiskAssessRuleDao">
+
+    <sql id="cols">
+        dimension,sub_item,level,operator,threshold,threshold_text,min_absolute,
+        enabled,description,suggestion,customized,update_time
+    </sql>
+
+    <select id="listAll" resultType="RiskAssessRule">
+        select id,<include refid="cols"/> from risk_assess_rule where enabled = 1
+    </select>
+
+    <select id="listByDimension" resultType="RiskAssessRule">
+        select id,<include refid="cols"/> from risk_assess_rule
+        where dimension = #{dimension} and enabled = 1
+    </select>
+
+    <!-- 初始化用：已存在则不覆盖，避免每次启动把人工调过的阈值刷回默认值 -->
+    <insert id="insertIfAbsent" parameterType="RiskAssessRule">
+        insert into risk_assess_rule(<include refid="cols"/>)
+        select #{dimension},#{subItem},#{level},#{operator},#{threshold},#{thresholdText},#{minAbsolute},
+               #{enabled},#{description},#{suggestion},0,now()
+        from dual
+        where not exists (
+            select 1 from (select * from risk_assess_rule) t
+            where t.dimension = #{dimension}
+              and t.sub_item &lt;=&gt; #{subItem}
+              and t.level = #{level}
+        )
+    </insert>
+
+    <update id="update" parameterType="RiskAssessRule">
+        update risk_assess_rule
+        set operator = #{operator}, threshold = #{threshold}, threshold_text = #{thresholdText},
+            min_absolute = #{minAbsolute}, enabled = #{enabled}, suggestion = #{suggestion},
+            customized = 1, update_time = now()
+        where id = #{id}
+    </update>
+
+    <select id="count" resultType="int">
+        select count(1) from risk_assess_rule
+    </select>
+
+</mapper>

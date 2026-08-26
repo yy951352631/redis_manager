@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: cloud.cachecloud-web.open.test
+    import: classpath:spring/spring.xml
+
+server:
+  port: 8080
+  domain: 127.0.0.1:8080
+
+cachecloud:
+  primary:
+    url: ${CACHECLOUD_PRIMARY_URL:jdbc:mysql://127.0.0.1:3306/redis_manager?useUnicode=true&characterEncoding=UTF8&autoReconnect=true&connectTimeout=3000&socketTimeout=10000&serverTimezone=Asia/Shanghai}
+    user: ${CACHECLOUD_PRIMARY_USER:root}
+    password: ${CACHECLOUD_PRIMARY_PASSWORD:}
+    initialPoolSize: 3
+    maxPoolSize: 20
+  redis:
+    main:
+      # 本地辅助 Redis：先执行 scripts/start-local-assist-redis.sh
+      host: ${CACHECLOUD_REDIS_MAIN_HOST:127.0.0.1}
+      port: ${CACHECLOUD_REDIS_MAIN_PORT:6379}
+      password: ${CACHECLOUD_REDIS_MAIN_PASSWORD:}
+  kafka:
+    enabled: false
+    bootstrap-servers: 127.0.0.1:9092
+    topicName: test
+  weixin:
+    url: http://127.0.0.1:13082
+    corpId: local-dev
+    agentId: 1000001
+    corpSecret: ${WEIXIN_CORP_SECRET:}
+    adminIds: admin
+  web:
+    clients: 127.0.0.1
+  ai:
+    enabled: true
+    provider: deepseek
+    base-url: https://api.deepseek.com
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: deepseek-chat
+    max-tokens: 2048
+aof:
+  rewrite:
+    ignore-appIds:

@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: cloud.cachecloud-web.open.online
+    import: classpath:spring/spring.xml
+
+server:
+  port: 80
+  domain: ${SERVER_DOMAIN:http://127.0.0.1:80}
+
+cachecloud:
+  primary:
+    url: ${CACHECLOUD_PRIMARY_URL:jdbc:mysql://127.0.0.1:3306/redis_manager?useUnicode=true&characterEncoding=UTF8&autoReconnect=true&connectTimeout=3000&socketTimeout=10000&serverTimezone=Asia/Shanghai}
+    user: ${CACHECLOUD_PRIMARY_USER:root}
+    password: ${CACHECLOUD_PRIMARY_PASSWORD:}
+    initialPoolSize: 10
+    maxPoolSize: 50
+  redis:
+    main:
+      host: ${CACHECLOUD_REDIS_MAIN_HOST:127.0.0.1}
+      port: ${CACHECLOUD_REDIS_MAIN_PORT:6379}
+      password: ${CACHECLOUD_REDIS_MAIN_PASSWORD:}
+    cli:
+      # 本机 redis-cli 绝对路径，例如 /usr/local/bin/redis-cli；留空则自动探测
+      path: /usr/local/bin/redis-cli
+      remote-bin: /usr/local/bin/redis-cli
+  web:
+    clients: 127.0.0.1
+  kafka:
+    enabled: false
+    bootstrap-servers: 192.168.222.101:9092
+    topicName: test
+  weixin:
+    url: http://132.1.67.166:13082
+    corpId: wl948b79ab99
+    agentId: 1000084
+    corpSecret: ${WEIXIN_CORP_SECRET:}
+    adminIds: 1013098,1013099
+  ai:
+    enabled: true
+    provider: deepseek
+    base-url: https://api.deepseek.com
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: deepseek-chat
+    max-tokens: 2048
+
+aof:
+  rewrite:
+    ignore-appIds:

@@ -1,0 +1,565 @@
+/* 全局统计页 — 对齐 theme-redis-pulse.css rp-* 样式 */
+
+.rp-total-stat-page {
+  --rp-danger: #ef4444;
+  --rp-success: #22c55e;
+  --rp-radius: 10px;
+  --rp-radius-sm: 8px;
+  --rp-shadow: 0 2px 8px rgba(26, 35, 50, 0.06);
+
+  padding-bottom: 24px;
+}
+
+.rp-total-stat-page__title {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  font-size: var(--rp-font-size-xl, 18px);
+  font-weight: 600;
+  color: var(--rp-text);
+}
+
+.rp-panel-caption__bar {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 4px;
+  height: 18px;
+  margin-right: 10px;
+  border-radius: 2px;
+  background: var(--rp-primary-gradient);
+}
+
+/* ---------- 资源总览布局 ---------- */
+.rp-overview-layout {
+  margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.rp-overview-layout__col {
+  display: flex;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.rp-overview-layout__counts {
+  width: 100%;
+  height: 100%;
+}
+
+.rp-overview-layout__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  min-height: 184px;
+}
+
+.rp-mini-card {
+  display: flex;
+  align-items: stretch;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 0;
+  height: 100%;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(26, 35, 50, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.rp-mini-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(26, 35, 50, 0.16);
+}
+
+.rp-mini-card--g1 {
+  background: linear-gradient(135deg, #4d8dff 0%, #6ba8ff 100%);
+}
+
+.rp-mini-card--g2 {
+  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+}
+
+.rp-mini-card--g3 {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.rp-mini-card--g4 {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+}
+
+.rp-mini-card__icon {
+  width: 50px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 20px;
+  color: #fff;
+}
+
+.rp-mini-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.rp-mini-card__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rp-mini-card__value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.rp-mini-card__value a,
+.rp-mini-card__value .rp-link {
+  color: #fff !important;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+.rp-mini-card__value a:hover,
+.rp-mini-card__value .rp-link:hover {
+  opacity: 0.9;
+}
+
+/* 内存进度大卡片 */
+.rp-mem-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  width: 100%;
+  height: 100%;
+  min-height: 184px;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(45, 107, 232, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.rp-resource-drawer__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.rp-mem-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(45, 107, 232, 0.24);
+}
+
+.rp-mem-card--machine {
+  background: linear-gradient(135deg, #3a7cef 0%, #5b93ff 45%, #7eb8ff 100%);
+}
+
+.rp-mem-card--instance {
+  background: linear-gradient(135deg, #2d7be8 0%, #4d8dff 50%, #5ecfff 100%);
+}
+
+.rp-mem-card__glow {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  top: -30px;
+  right: -18px;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.rp-mem-card__watermark {
+  position: absolute;
+  right: 12px;
+  bottom: 6px;
+  font-size: 56px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.09);
+  pointer-events: none;
+}
+
+.rp-mem-card__body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 18px 20px;
+}
+
+.rp-mem-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rp-mem-card__head-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #fff;
+}
+
+.rp-mem-card__title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rp-mem-card__nums {
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.rp-mem-card__used {
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rp-mem-card__total {
+  font-size: 26px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.rp-mem-card__unit {
+  font-size: 18px;
+  font-weight: 600;
+  margin-right: 2px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.rp-mem-card__sep {
+  font-size: 22px;
+  font-weight: 400;
+  margin: 0 5px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.rp-mem-card__pct {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  vertical-align: middle;
+}
+
+.rp-mem-card__progress {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.rp-mem-card__progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+  transition: width 0.4s ease;
+}
+
+.rp-mem-card__footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ---------- 面板 ---------- */
+.rp-panel-section {
+  margin-bottom: 16px;
+}
+
+.rp-panel {
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--rp-shadow);
+}
+
+.rp-panel-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rp-border);
+  background: #fff;
+}
+
+.rp-panel-caption {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.rp-panel-caption__text {
+  flex-shrink: 0;
+  font-size: var(--rp-font-size-lg, 16px);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--rp-text);
+}
+
+.rp-panel-body {
+  padding: 24px;
+  background: #fff;
+}
+
+/* 异常总览 */
+.rp-topology-alert__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: var(--rp-danger);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rp-topology-alert__toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.rp-topology-alert__date {
+  color: var(--rp-text-muted);
+  font-size: var(--rp-font-size-sm, 12px);
+  white-space: nowrap;
+}
+
+.rp-topology-alert__hint {
+  margin: 0 0 16px;
+  color: var(--rp-text-muted);
+  font-size: var(--rp-font-size-sm, 12px);
+  line-height: 1.5;
+}
+
+.rp-abnormal-empty {
+  margin: 0;
+  color: var(--rp-text-muted);
+  font-size: var(--rp-font-size-sm, 12px);
+}
+
+.rp-text-danger {
+  color: var(--rp-danger);
+}
+
+.rp-text-muted {
+  color: var(--rp-text-muted);
+  font-size: var(--rp-font-size-sm, 12px);
+}
+
+.rp-op-links {
+  white-space: nowrap;
+
+  a,
+  .rp-op-link {
+    color: var(--rp-primary);
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--rp-primary-hover);
+      text-decoration: underline;
+    }
+  }
+}
+
+/* 表格 */
+.rp-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--rp-font-size-base, 14px);
+
+  th,
+  td {
+    padding: 10px 12px;
+    border: 1px solid var(--rp-border);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: var(--rp-text);
+  }
+
+  tbody tr:nth-child(even) {
+    background: #fafbfc;
+  }
+
+  tbody tr:hover {
+    background: #f4f7fb;
+  }
+
+  a,
+  .rp-table-link {
+    color: var(--rp-primary);
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--rp-primary-hover);
+      text-decoration: underline;
+    }
+  }
+}
+
+.rp-stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--rp-font-size-base, 14px);
+
+  td {
+    padding: 10px 14px;
+    border: 1px solid var(--rp-border);
+    vertical-align: middle;
+  }
+
+  tr:nth-child(even) {
+    background: #fafbfc;
+  }
+
+  a,
+  .rp-stat-link {
+    color: var(--rp-primary);
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.rp-mem-progress {
+  height: 22px;
+  border-radius: 4px;
+  background: #e8edf3;
+  overflow: hidden;
+
+  &__bar {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1a2332;
+    transition: width 0.3s ease;
+
+    &--success {
+      background: #86efac;
+    }
+
+    &--warning {
+      background: #fde68a;
+    }
+
+    &--danger {
+      background: #fca5a5;
+    }
+  }
+}
+
+/* 图表 */
+.rp-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.rp-chart-card {
+  border: 1px solid var(--rp-border);
+  border-radius: var(--rp-radius-sm);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--rp-shadow);
+}
+
+.rp-chart-card__title {
+  margin: 0;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rp-text-muted);
+  line-height: 1.4;
+  border-bottom: 1px solid var(--rp-border);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(234, 242, 255, 0.35) 18%,
+    var(--rp-primary-soft) 50%,
+    rgba(234, 242, 255, 0.35) 82%,
+    transparent 100%
+  );
+}
+
+.rp-chart-box {
+  min-width: 0;
+  height: 320px;
+  margin: 0 auto;
+  background: #fff;
+}
+
+@media (max-width: 992px) {
+  .rp-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rp-overview-layout__col {
+    flex: 1 1 100%;
+  }
+}

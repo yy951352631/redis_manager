@@ -1,0 +1,8 @@
+.git
+.gitlab-ci.yml
+**/target
+*.log
+*.tar.gz
+*.zip
+deploy/.env
+

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.OperationAuditDao">
+
+    <sql id="operation_audit_columns">
+        user_name,module,http_method,request_uri,handler,app_id,instance_id,params,client_ip,
+        status_code,success,error_msg,cost_ms,create_time
+    </sql>
+
+    <sql id="search_where">
+        <where>
+            <if test="userName != null and userName != ''">
+                and user_name = #{userName}
+            </if>
+            <if test="module != null and module != ''">
+                and module = #{module}
+            </if>
+            <if test="success != null">
+                and success = #{success}
+            </if>
+            <if test="startTime != null">
+                and create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and create_time &lt;= #{endTime}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and (request_uri like concat('%', #{keyword}, '%')
+                     or handler like concat('%', #{keyword}, '%')
+                     or params like concat('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <insert id="save" parameterType="com.shcj.cache.entity.OperationAudit">
+        insert into operation_audit(<include refid="operation_audit_columns"/>)
+        values(#{userName},#{module},#{httpMethod},#{requestUri},#{handler},#{appId},#{instanceId},
+               #{params},#{clientIp},#{statusCode},#{success},#{errorMsg},#{costMs},#{createTime})
+    </insert>
+
+    <select id="search" resultType="com.shcj.cache.entity.OperationAudit">
+        select id,<include refid="operation_audit_columns"/>
+        from operation_audit
+        <include refid="search_where"/>
+        order by id desc
+        limit #{offset}, #{limit}
+    </select>
+
+    <select id="count" resultType="int">
+        select count(1) from operation_audit
+        <include refid="search_where"/>
+    </select>
+
+    <select id="listModules" resultType="string">
+        select distinct module from operation_audit where module is not null and module != '' order by module
+    </select>
+
+    <delete id="deleteBefore">
+        delete from operation_audit where create_time &lt; #{before}
+    </delete>
+
+</mapper>

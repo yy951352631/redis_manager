@@ -1,0 +1,84 @@
+// 自定义 Element Plus 样式
+
+.el-button,
+.el-input__inner,
+.el-form-item__label,
+.el-table,
+.el-menu-item,
+.el-sub-menu__title,
+.el-breadcrumb,
+.el-dropdown,
+.el-tabs__item {
+  font-size: var(--rp-font-size-base, 14px);
+}
+
+.el-table .el-table__cell {
+  padding: 8px 0;
+}
+
+.el-table .el-table__header .el-table__cell {
+  font-size: var(--rp-font-size-sm, 12px);
+}
+
+// 统一页面内 Tab 样式（对齐节点运维：左对齐 + 底部灰线 + 蓝色激活下划线）
+.el-tabs {
+  --el-tabs-header-height: 40px;
+
+  .el-tabs__header {
+    margin: 0 0 16px;
+  }
+
+  .el-tabs__nav-wrap::after {
+    height: 1px;
+    background-color: var(--rp-border, #e8edf3);
+  }
+
+  .el-tabs__nav-scroll {
+    padding: 0;
+  }
+
+  .el-tabs__item {
+    height: 40px;
+    line-height: 40px;
+    padding: 0 16px;
+    color: var(--rp-text-muted, #6b7a90);
+    font-weight: 500;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--rp-primary, #4d8dff);
+    }
+
+    &.is-active {
+      color: var(--rp-primary, #4d8dff);
+      font-weight: 600;
+    }
+  }
+
+  .el-tabs__active-bar {
+    height: 2px;
+    background-color: var(--rp-primary, #4d8dff);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .el-tabs__content {
+    padding-top: 0;
+  }
+}
+
+.el-card > .el-card__body > .el-tabs:first-child {
+  margin-top: -4px;
+}
+
+.el-pagination {
+  // 参考 Bootstrap 的响应式设计 WIDTH = 768
+  @media screen and (max-width: 768px) {
+    .el-pagination__total,
+    .el-pagination__sizes,
+    .el-pagination__jump,
+    .btn-prev,
+    .btn-next {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,731 @@
+package com.shcj.cache.redis.impl;
+
+import com.shcj.cache.redis.AssistRedisService;
+import com.shcj.cache.redis.util.ProtostuffSerializer;
+import com.shcj.cache.util.ConstUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import redis.clients.jedis.*;
+import redis.clients.jedis.exceptions.JedisConnectionException;
+import redis.clients.jedis.exceptions.JedisDataException;
+import redis.clients.jedis.params.SetParams;
+
+import javax.annotation.PostConstruct;
+import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+@Component
+public class AssistRedisServiceImpl implements AssistRedisService {
+    private Logger logger = LoggerFactory.getLogger(AssistRedisServiceImpl.class);
+
+    @Value("${cachecloud.redis.main.host:127.0.0.1}")
+    private String mainHost;
+
+    @Value("${cachecloud.redis.main.port:6379}")
+    private int mainPort;
+
+    @Value("${cachecloud.redis.main.password:}")
+    private String mainPassword;
+
+    private JedisPool jedisPoolMain;
+
+    private ProtostuffSerializer protostuffSerializer = new ProtostuffSerializer();
+
+    @PostConstruct
+    public void init() {
+        JedisPoolConfig config = new JedisPoolConfig();
+        config.setMaxTotal(100);
+        config.setMaxIdle(50);
+        config.setMinIdle(20);
+        jedisPoolMain = new JedisPool(config, mainHost, mainPort, Protocol.DEFAULT_TIMEOUT, mainPassword);
+        logger.info("assist redis initialized: {}:{}", mainHost, mainPort);
+    }
+
+    @Override
+    public String getAssistRedisEndpoint() {
+        return mainHost + ":" + mainPort;
+    }
+
+    /**
+     * low版本，应该用vip或者hystrix，这里是以防万一
+     *
+     * @return
+     */
+    private Jedis getFromJedisPool() throws Exception {
+        try {
+            return jedisPoolMain.getResource();
+        } catch (JedisConnectionException ce) {
+            logger.warn("Please Make sure the file:application-${profile}.yml connection pool is configured correctly !  cachecloud.redis.main.host:{} cachecloud.redis.main.port:{} cachecloud.redis.main.password:{}", mainHost, mainPort, mainPassword);
+            throw ce;
+        } catch (Exception e) {
+            logger.warn(e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean rpush(String key, String item) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.rpush(key, item);
+            return true;
+        } catch (Exception e) {
+            logger.warn("rpush {} {} error " + e.getMessage(), key, item, e);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public List<String> lrange(String key, int start, int end) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.lrange(key, start, end);
+        } catch (Exception e) {
+            logger.warn("lrange {} {} {} error " + e.getMessage(), key, start, end);
+            return Collections.emptyList();
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean rpushList(String key, List<String> items) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.rpush(key, items.toArray(new String[items.size()]));
+            return true;
+        } catch (Exception e) {
+            logger.warn("rpushList {} {} error " + e.getMessage(), key, items);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public Long llen(final String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            Long llen = jedis.llen(key);
+            return llen;
+        } catch (Exception e) {
+            logger.warn("llen {} {} error " + e.getMessage(), key);
+            return 0L;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public String lpop(final String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            String lpop = jedis.lpop(key);
+            return lpop;
+        } catch (Exception e) {
+            logger.warn("rpushList {} {} error " + e.getMessage(), key);
+            return null;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean saddSet(String key, Set<String> items) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.sadd(key, items.toArray(new String[items.size()]));
+            return true;
+        } catch (Exception e) {
+            logger.warn("saddList {} {} error " + e.getMessage(), key, items);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean sadd(String key, String item) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.sadd(key, item);
+            return true;
+        } catch (Exception e) {
+            logger.warn("sadd {} {} error " + e.getMessage(), key, item);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public Set<String> smembers(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.smembers(key);
+        } catch (Exception e) {
+            logger.warn("smembers {} error " + e.getMessage(), key);
+            return Collections.emptySet();
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean srem(String key, String item) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.srem(key, item);
+            return true;
+        } catch (Exception e) {
+            logger.warn("srem {} {} error " + e.getMessage(), key, item);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean reloadSentinel() {
+        return false;
+    }
+
+    @Override
+    public <T> boolean set(String key, T value) {
+        if (value == null) {
+            return false;
+        }
+        byte[] bytes = protostuffSerializer.serialize(value);
+
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.set(key.getBytes(Charset.forName("UTF-8")), bytes);
+            return true;
+        } catch (Exception e) {
+            logger.warn("set {} error " + e.getMessage(), key, e);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public <T> boolean set(String key, T value, int seconds) {
+        if (value == null) {
+            return false;
+        }
+        byte[] bytes = protostuffSerializer.serialize(value);
+
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.set(key.getBytes(Charset.forName("UTF-8")), bytes, SetParams.setParams().ex((long) seconds));
+            return true;
+        } catch (Exception e) {
+            logger.warn("set {} {} error " + e.getMessage(), key, seconds);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean setNx(String key, String value) {
+        Jedis jedis = null;
+        Long result = 0L;
+        try {
+            jedis = getFromJedisPool();
+            result = jedis.setnx(key, value);
+        } catch (Exception e) {
+            logger.warn("setnx {} {} error:{} ", key, value, e.getMessage());
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+        return result == 1 ? true : false;
+    }
+
+    @Override
+    public String set(String key, String value, SetParams params) {
+
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.set(key, value, params);
+        } catch (Exception e) {
+            logger.warn("set {} {} {} error " + e.getMessage(), key, value, params);
+            return null;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public <T> boolean setWithNoSerialize(String key, T value) {
+        if (value == null) {
+            return false;
+        }
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.set(key, value.toString());
+            return true;
+        } catch (Exception e) {
+            logger.warn("setWithNoSerialize {} error " + e.getMessage(), key);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public <T> boolean setWithNoSerialize(String key, T value, int seconds) {
+        if (value == null) {
+            return false;
+        }
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.set(key, value.toString(), SetParams.setParams().ex((long) seconds));
+            return true;
+        } catch (Exception e) {
+            logger.warn("setWithNoSerialize {} error " + e.getMessage(), key);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public String getWithNoSerialize(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.get(key);
+        } catch (Exception e) {
+            logger.warn("getWithNoSerialize {} error " + e.getMessage(), key);
+            return null;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean remove(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.del(key);
+            return true;
+        } catch (Exception e) {
+            logger.warn("remove {} error " + e.getMessage(), key);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean zadd(String key, long score, String member) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            zaddWithWrongTypeRetry(jedis, key, score, member);
+            return true;
+        } catch (Exception e) {
+            logger.warn("zadd {} {} {} error " + e.getMessage(), key, score, member);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean hset(String key, String field, String value) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.hset(key, field, value);
+            return true;
+        } catch (Exception e) {
+            logger.warn("hset {} {} {} error " + e.getMessage(), key, field, value);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+
+    @Override
+    public boolean hmset(String key, Map<String, String> map) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.hmset(key, map);
+            return true;
+        } catch (Exception e) {
+            logger.warn("hset {} {} error " + e.getMessage(), key, map);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public Map<String, String> hgetAll(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.hgetAll(key);
+        } catch (Exception e) {
+            logger.warn("hgetAll {} error " + e.getMessage(), key);
+            return Collections.emptyMap();
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public <T> T get(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            byte[] bytes = jedis.get(key.getBytes(Charset.forName("UTF-8")));
+            if (bytes == null) {
+                return null;
+            }
+            T t = protostuffSerializer.deserialize(bytes);
+            return t;
+        } catch (Exception e) {
+            logger.warn("get {} error " + e.getMessage(), key);
+            return null;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean del(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            jedis.del(key);
+            return true;
+        } catch (Exception e) {
+            logger.warn("del {} error " + e.getMessage(), key);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public void zincrby(String key, double score, String member) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            zincrbyWithWrongTypeRetry(jedis, key, score, member);
+        } catch (Exception e) {
+            logger.warn("zincrby {} {} {} error " + e.getMessage(), key, score, member);
+            throw new RuntimeException("zincrby failed on assist redis key=" + key, e);
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    private boolean isKeyAnalysisRedisKey(String key) {
+        return key != null && key.startsWith("cc:key:");
+    }
+
+    private boolean isWrongTypeError(Exception e) {
+        return e instanceof JedisDataException
+                && e.getMessage() != null
+                && e.getMessage().contains("WRONGTYPE");
+    }
+
+    private void zaddWithWrongTypeRetry(Jedis jedis, String key, long score, String member) {
+        try {
+            jedis.zadd(key, score, member);
+        } catch (JedisDataException e) {
+            if (isKeyAnalysisRedisKey(key) && isWrongTypeError(e)) {
+                logger.warn("zadd WRONGTYPE on {}, delete and retry", key);
+                jedis.del(key);
+                jedis.zadd(key, score, member);
+                return;
+            }
+            throw e;
+        }
+    }
+
+    private void zincrbyWithWrongTypeRetry(Jedis jedis, String key, double score, String member) {
+        try {
+            jedis.zincrby(key, score, member);
+        } catch (JedisDataException e) {
+            if (isKeyAnalysisRedisKey(key) && isWrongTypeError(e)) {
+                logger.warn("zincrby WRONGTYPE on {}, delete and retry", key);
+                jedis.del(key);
+                jedis.zincrby(key, score, member);
+                return;
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean pingAssistRedis() {
+        Jedis jedis = null;
+        String testKey = "cc:assist:ping";
+        try {
+            jedis = getFromJedisPool();
+            if (!"PONG".equalsIgnoreCase(jedis.ping())) {
+                return false;
+            }
+            jedis.zadd(testKey, 1, "ok");
+            Set<Tuple> tuples = jedis.zrangeWithScores(testKey, 0, 0);
+            jedis.del(testKey);
+            return tuples != null && !tuples.isEmpty();
+        } catch (Exception e) {
+            logger.error("assist redis ping failed {}:{} - {}", mainHost, mainPort, e.getMessage());
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public void repairKeyAnalysisStatKeys(long appId, long auditId) {
+        String[] keys = new String[]{
+                ConstUtils.getRedisServerTypeKey(appId, auditId),
+                ConstUtils.getRedisServerTtlKey(appId, auditId),
+                ConstUtils.getRedisServerIdleKey(appId, auditId),
+                ConstUtils.getRedisServerValueSizeKey(appId, auditId),
+                ConstUtils.getRedisServerTypeMemoryKey(appId, auditId),
+                ConstUtils.getRedisServerTopKeyKey(appId, auditId),
+        };
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            for (String key : keys) {
+                String type = jedis.type(key);
+                if (type == null || "none".equals(type)) {
+                    continue;
+                }
+                if (!"zset".equals(type)) {
+                    jedis.del(key);
+                    logger.warn("repairKeyAnalysisStatKeys deleted wrong-type key {} type={}", key, type);
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("repairKeyAnalysisStatKeys appId={} auditId={} error {}", appId, auditId, e.getMessage());
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean hasZsetData(String key) {
+        Set<Tuple> tuples = zrangeWithScores(key, 0, 0);
+        return tuples != null && !tuples.isEmpty();
+    }
+
+    @Override
+    public void clearKeyAnalysisRisks(long appId, long auditId) {
+        del(ConstUtils.getKeyAnalysisRiskKey(appId, auditId));
+    }
+
+    @Override
+    public int clearKeyAnalysisStats(long appId, long auditId) {
+        String[] keys = new String[]{
+                ConstUtils.getRedisServerTypeKey(appId, auditId),
+                ConstUtils.getRedisServerTtlKey(appId, auditId),
+                ConstUtils.getRedisServerIdleKey(appId, auditId),
+                ConstUtils.getRedisServerValueSizeKey(appId, auditId),
+                ConstUtils.getRedisServerTypeMemoryKey(appId, auditId),
+                ConstUtils.getRedisServerTopKeyKey(appId, auditId),
+                ConstUtils.getKeyAnalysisRiskKey(appId, auditId),
+        };
+        int deleted = 0;
+        for (String key : keys) {
+            if (forceDel(key)) {
+                deleted++;
+            }
+        }
+        logger.info("clearKeyAnalysisStats appId={} auditId={} deleted={}", appId, auditId, deleted);
+        return deleted;
+    }
+
+    @Override
+    public int clearKeyAnalysisStatsForApp(long appId) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            Set<String> keys = jedis.keys(String.format("cc:key:*:%s:*", appId));
+            if (keys == null || keys.isEmpty()) {
+                return 0;
+            }
+            long removed = jedis.del(keys.toArray(new String[keys.size()]));
+            logger.info("clearKeyAnalysisStatsForApp appId={} removed={}", appId, removed);
+            return (int) removed;
+        } catch (Exception e) {
+            logger.warn("clearKeyAnalysisStatsForApp appId={} error {}", appId, e.getMessage());
+            return 0;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    private boolean forceDel(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            if (!jedis.exists(key)) {
+                return false;
+            }
+            jedis.del(key);
+            return true;
+        } catch (Exception e) {
+            logger.warn("forceDel {} error {}", key, e.getMessage());
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public void appendKeyAnalysisRisk(long appId, long auditId, String message) {
+        if (org.apache.commons.lang.StringUtils.isBlank(message)) {
+            return;
+        }
+        rpush(ConstUtils.getKeyAnalysisRiskKey(appId, auditId), message.trim());
+    }
+
+    @Override
+    public List<String> getKeyAnalysisRisks(long appId, long auditId) {
+        List<String> risks = lrange(ConstUtils.getKeyAnalysisRiskKey(appId, auditId), 0, -1);
+        return risks != null ? risks : Collections.emptyList();
+    }
+
+    @Override
+    public Set<Tuple> zrangeWithScores(String key, long start, long end) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.zrangeWithScores(key, start, end);
+        } catch (Exception e) {
+            logger.warn("zrangeWithScores {} {} {} error {}", key, start, end, e.getMessage());
+            return Collections.emptySet();
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeWithScores(String key, long start, long end) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.zrevrangeWithScores(key, start, end);
+        } catch (Exception e) {
+            logger.warn("zrevrangeWithScores {} {} {} error {}", key, start, end, e.getMessage());
+            return Collections.emptySet();
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    @Override
+    public boolean exists(String key) {
+        Jedis jedis = null;
+        try {
+            jedis = getFromJedisPool();
+            return jedis.exists(key);
+        } catch (Exception e) {
+            logger.warn("del {} error " + e.getMessage(), key);
+            return false;
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+    }
+
+    public void setProtostuffSerializer(ProtostuffSerializer protostuffSerializer) {
+        this.protostuffSerializer = protostuffSerializer;
+    }
+}

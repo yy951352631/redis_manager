@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.shcj.cache.dao.AppDao">
+    <sql id="app_desc_add_fields">
+        app_id,cluster_no
+        ,name,user_id,status,intro,create_time,passed_time,type,officer,
+        ver_id,is_test,has_back_store,need_persistence,need_hot_back_up,forecase_qps,
+        forecast_obj_num,client_machine_room,app_key,is_access_monitor,important_level,password,version_id,redis_version,custom_password
+    </sql>
+    <sql id="app_desc_fields">
+        app_id,cluster_no
+        ,name,user_id,status,intro,create_time,passed_time,type,officer,
+        ver_id,is_test,has_back_store,need_persistence,need_hot_back_up,forecase_qps,
+        forecast_obj_num,client_machine_room,app_key,is_access_monitor,important_level,password "pkey",version_id,redis_version versionName,custom_password,master_name,has_sentinel_pwd
+    </sql>
+    <sql id="app_desc_select_column">
+        app_desc.app_id,app_desc.cluster_no
+        ,name,app_desc.user_id,status,intro,create_time,passed_time,type,officer,ver_id,app_key,password "pkey",version_id,redis_version versionName,is_test,custom_password,master_name,has_sentinel_pwd
+    </sql>
+    <!--通过appId查询app的信息-->
+    <select id="getAppDescById" resultType="AppDesc" parameterType="long">
+        SELECT
+        <include refid="app_desc_fields"/>
+        FROM app_desc
+        WHERE app_id = #{appId};
+    </select>
+
+    <delete id="delete" parameterType="long">
+        DELETE FROM app_desc WHERE app_id = #{id}
+    </delete>
+
+    <select id="getByClusterNo" resultType="AppDesc" parameterType="int">
+        SELECT
+        <include refid="app_desc_fields"/>
+        FROM app_desc
+        WHERE cluster_no = #{clusterNo};
+    </select>
+
+
+    <select id="getOnlineAppDescById" resultType="AppDesc" parameterType="long">
+        SELECT
+        <include refid="app_desc_fields"/>
+        FROM app_desc
+        WHERE app_id = #{appId}
+        AND status = 2
+    </select>
+
+    <!-- 根据应用名查询app信息 -->
+    <select id="getByAppName" resultType="AppDesc" parameterType="string">
+        SELECT
+        <include refid="app_desc_fields"/>
+        FROM app_desc
+        WHERE name = #{appName}
+        AND status != 3
+        AND status != 4;
+    </select>
+
+
+    <insert id="save" parameterType="AppDesc" keyProperty="appId" useGeneratedKeys="true">
+        insert into app_desc
+        (<include refid="app_desc_add_fields"/>)
+        values
+        (
+        #{appId},#{clusterNo},#{name},#{userId},#{status},#{intro},#{createTime},#{passedTime},
+        #{type},#{officer},#{verId},#{isTest},#{hasBackStore},#{needPersistence},
+        #{needHotBackUp},#{forecaseQps},#{forecastObjNum},#{clientMachineRoom},
+        #{appKey},#{isAccessMonitor},#{importantLevel},#{pkey},#{versionId},#{versionName},#{customPassword}
+        )
+    </insert>
+
+    <update id="update" parameterType="AppDesc">
+        update app_desc
+        set name=#{name},
+            user_id=#{userId},
+            status=#{status},
+            intro=#{intro},
+            create_time=#{createTime},
+            passed_time=#{passedTime},
+            type=#{type},
+            officer=#{officer},
+            ver_id=#{verId},
+            is_access_monitor=#{isAccessMonitor},
+            important_level=#{importantLevel},
+            password=#{pkey},
+            version_id=#{versionId},
+            redis_version=#{versionName},
+            has_sentinel_pwd=#{hasSentinelPwd}
+        where app_id = #{appId}
+    </update>
+
+    <update id="updateWithCustomPwd" parameterType="AppDesc">
+        update app_desc
+        set name=#{name},
+            user_id=#{userId},
+            status=#{status},
+            intro=#{intro},
+            create_time=#{createTime},
+            passed_time=#{passedTime},
+            type=#{type},
+            officer=#{officer},
+            ver_id=#{verId},
+            is_access_monitor=#{isAccessMonitor},
+            important_level=#{importantLevel},
+            password=#{pkey},
+            version_id=#{versionId},
+            redis_version=#{versionName},
+            custom_password=#{customPassword},
+            has_sentinel_pwd=#{hasSentinelPwd}
+        where app_id = #{appId}
+    </update>
+
+    <update id="updateMasterName" parameterType="AppDesc">
+        update app_desc
+        set master_name=#{masterName}
+        where app_id = #{appId}
+    </update>
+
+    <update id="updateVersionId">
+        update app_desc
+        set version_id=#{versionId}
+        where app_id=#{appId}
+    </update>
+
+    <update id="updateVersionName">
+        update app_desc
+        set redis_version=#{versionName}
+        where app_id=#{appId}
+    </update>
+
+    <select id="getAppDescList" resultType="AppDesc" parameterType="long">
+        select
+        <include refid="app_desc_select_column"/>
+        from app_desc,app_to_user where app_to_user.user_id=#{userId} and app_to_user.app_id=app_desc.app_id and
+        app_desc.status &lt; 3
+    </select>
+
+    <select id="listPublishedApps" resultType="AppDesc">
+        SELECT
+        <include refid="app_desc_fields"/>
+        FROM app_desc
+        WHERE status = 2
+    </select>
+
+    <select id="getOnlineApps" resultType="AppDesc">
+        select
+        <include refid="app_desc_select_column"/>
+        from app_desc
+        where status = 2
+    </select>
+
+
+    <select id="getOnlineAppsNonTest" resultType="AppDesc">
+        select
+        <include refid="app_desc_select_column"/>
+        from app_desc
+        where status = 2 AND is_test = 0
+    </select>
+
+    <select id="getAllApps" resultType="AppDesc">
+        select
+        <include refid="app_desc_select_column"/>
+        from app_desc
+        order by app_id
+    </select>
+
+    <select id="getUserAppCount" resultType="int" parameterType="long">
+        select count(app_desc.app_id)
+        from app_desc,
+             app_to_user
+        where app_to_user.user_id = #{userId}
+          and app_to_user.app_id = app_desc.app_id
+          and app_desc.status &lt; 3
+    </select>
+
+    <select id="getAllAppCount" resultType="int" parameterType="AppSearch">
+        select count(app_id) from app_desc where 1=1 and status &lt;= 3
+        <choose>
+            <when test="appName != null and appName != ''">
+                and instr(name, #{appName}) > 0
+            </when>
+        </choose>
+        <choose>
+            <when test="appType != null and appType > 0">
+                and type = #{appType}
+            </when>
+        </choose>
+        <choose>
+            <when test="appStatus != null and appStatus >= 0">
+                and status = #{appStatus}
+            </when>
+        </choose>
+        <choose>
+            <when test="clusterNo != null and clusterNo > 0">
+                and cluster_no = #{clusterNo}
+            </when>
+        </choose>
+        <choose>
+            <when test="appId != null and appId >= 0">
+                and app_id = #{appId}
+            </when>
+        </choose>
+        <choose>
+            <when test="importantLevel != null and importantLevel > 0">
+                and important_level = #{importantLevel}
+            </when>
+        </choose>
+        <choose>
+            <when test="versionId != null and versionId > 0">
+                and version_id = #{versionId}
+            </when>
+        </choose>
+        <choose>
+            <when test="userId != null and userId > 0">
+                and app_id in (select app_id from app_to_user where user_id = #{userId})
+            </when>
+        </choose>
+    </select>
+
+    <select id="getAllAppDescList" resultType="AppDesc" parameterType="AppSearch">
+        select
+        <include refid="app_desc_fields"/>
+        from app_desc where 1=1 and status &lt;= 3
+        <choose>
+            <when test="appName != null and appName != ''">
+                and instr(name, #{appName}) > 0
+            </when>
+        </choose>
+        <choose>
+            <when test="appType != null and appType > 0">
+                and type = #{appType}
+            </when>
+        </choose>
+        <choose>
+            <when test="appStatus != null and appStatus >= 0">
+                and status = #{appStatus}
+            </when>
+        </choose>
+        <choose>
+            <when test="clusterNo != null and clusterNo > 0">
+                and cluster_no = #{clusterNo}
+            </when>
+        </choose>
+        <choose>
+            <when test="appId != null and appId >= 0">
+                and app_id = #{appId}
+            </when>
+        </choose>
+        <choose>
+            <when test="importantLevel != null and importantLevel > 0">
+                and important_level = #{importantLevel}
+            </when>
+        </choose>
+        <choose>
+            <when test="versionId != null and versionId > 0">
+                and version_id = #{versionId}
+            </when>
+        </choose>
+        <choose>
+            <when test="userId != null and userId > 0">
+                and app_id in (select app_id from app_to_user where user_id = #{userId})
+            </when>
+        </choose>
+        <choose>
+            <when test="isTest != null and isTest > 0">
+                and is_test = #{isTest}
+            </when>
+        </choose>
+        ORDER BY app_id desc
+        <choose>
+            <when test="page != null">
+                <choose>
+                    <when test="page.totalCount > page.pageSize">
+                        limit #{page.start},#{page.pageSize}
+                    </when>
+                    <otherwise>
+                        limit #{page.totalCount}
+                    </otherwise>
+                </choose>
+            </when>
+        </choose>
+    </select>
+
+    <select id="getTotalAppCount" resultType="int" parameterType="AppSearch">
+        select count(app_id)
+        from app_desc
+    </select>
+
+    <update id="updateAppKey">
+        update app_desc
+        set app_key=#{appKey}
+        where app_id = #{appId}
+    </update>
+
+    <select id="getAppDescByIds" resultType="AppDesc" parameterType="java.util.List">
+        select * from app_desc where app_id in
+        <foreach collection="appIds" index="index" item="appId" open="(" separator="," close=")">
+            #{appId}
+        </foreach>
+    </select>
+
+</mapper>
+
+

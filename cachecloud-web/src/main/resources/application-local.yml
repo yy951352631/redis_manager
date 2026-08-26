@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: cloud.cachecloud-web.local
+    import: classpath:spring/spring.xml
+
+server:
+  port: 8080
+  #ip/域名地址
+  domain: ${SERVER_DOMAIN:http://127.0.0.1:80}
+
+cachecloud:
+  # 本地环境默认打开报警判定，便于验证报警链路（通知组件仍是空实现，只落库）
+  alert:
+    enabled: ${CACHECLOUD_ALERT_ENABLED:true}
+  primary:
+    url: ${CACHECLOUD_PRIMARY_URL:jdbc:mysql://127.0.0.1:3306/redis_manager?useUnicode=true&characterEncoding=UTF8&autoReconnect=true&connectTimeout=3000&socketTimeout=10000&serverTimezone=Asia/Shanghai}
+    user: ${CACHECLOUD_PRIMARY_USER:root}
+    password: ${CACHECLOUD_PRIMARY_PASSWORD:}
+    initialPoolSize: 1
+    maxPoolSize: 3
+  redis:
+    main:
+      host: ${CACHECLOUD_REDIS_MAIN_HOST:127.0.0.1}
+      port: ${CACHECLOUD_REDIS_MAIN_PORT:6379}
+      password: ${CACHECLOUD_REDIS_MAIN_PASSWORD:}
+  kafka:
+    enabled: false
+    bootstrap-servers: 127.0.0.1:9092
+    topicName: test
+  #区分资源
+  web:
+    clients: 127.0.0.1
+  weixin:
+    url: ${WEIXIN_URL:http://127.0.0.1}
+    corpId: ${WEIXIN_CORP_ID:disabled}
+    agentId: ${WEIXIN_AGENT_ID:disabled}
+    corpSecret: ${WEIXIN_CORP_SECRET:disabled}
+    adminIds: ${WEIXIN_ADMIN_IDS:admin}
+  ai:
+    enabled: ${CACHECLOUD_AI_ENABLED:false}
+    provider: deepseek
+    base-url: https://api.deepseek.com
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: deepseek-chat
+    max-tokens: 2048
+aof:
+  rewrite:
+    ignore-appIds:

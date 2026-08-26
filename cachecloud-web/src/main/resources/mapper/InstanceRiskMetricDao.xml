@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.InstanceRiskMetricDao">
+
+    <sql id="cols">
+        collect_time,app_id,instance_id,ip,port,role,
+        used_memory,max_memory,total_system_memory,mem_frag_ratio,
+        keys_count,expires_count,avg_ttl,
+        connected_clients,rejected_connections,
+        keyspace_hits,keyspace_misses,expired_keys,evicted_keys,
+        latest_fork_usec,rdb_last_bgsave_time_sec,aof_delayed_fsync,
+        instantaneous_ops,net_input_bytes,net_output_bytes,
+        used_cpu_sys,used_cpu_user,cluster_my_epoch
+    </sql>
+
+    <insert id="save" parameterType="InstanceRiskMetric">
+        replace into instance_risk_metric_minute(<include refid="cols"/>)
+        values(#{collectTime},#{appId},#{instanceId},#{ip},#{port},#{role},
+               #{usedMemory},#{maxMemory},#{totalSystemMemory},#{memFragRatio},
+               #{keysCount},#{expiresCount},#{avgTtl},
+               #{connectedClients},#{rejectedConnections},
+               #{keyspaceHits},#{keyspaceMisses},#{expiredKeys},#{evictedKeys},
+               #{latestForkUsec},#{rdbLastBgsaveTimeSec},#{aofDelayedFsync},
+               #{instantaneousOps},#{netInputBytes},#{netOutputBytes},
+               #{usedCpuSys},#{usedCpuUser},#{clusterMyEpoch})
+    </insert>
+
+    <select id="listByAppAndRange" resultType="InstanceRiskMetric">
+        select id,<include refid="cols"/>
+        from instance_risk_metric_minute
+        where app_id = #{appId} and collect_time between #{beginTime} and #{endTime}
+        order by instance_id, collect_time
+    </select>
+
+    <!-- 倾斜必须用同一个 collect_time 上的全部实例，避免把采集时间差混进离散度 -->
+    <select id="listLatestSnapshot" resultType="InstanceRiskMetric">
+        select id,<include refid="cols"/>
+        from instance_risk_metric_minute
+        where app_id = #{appId}
+          and collect_time = (
+              select max(collect_time) from instance_risk_metric_minute
+              where app_id = #{appId} and collect_time between #{beginTime} and #{endTime}
+          )
+    </select>
+
+    <!-- 每个实例在窗口内的最新一条采样：面板的「当前值」口径 -->
+    <select id="listLatestInWindow" resultType="InstanceRiskMetric">
+        select id,<include refid="cols"/>
+        from instance_risk_metric_minute m
+        where m.collect_time >= #{sinceCollectTime}
+          and m.collect_time = (
+              select max(x.collect_time) from instance_risk_metric_minute x
+              where x.instance_id = m.instance_id and x.collect_time >= #{sinceCollectTime}
+          )
+    </select>
+
+    <!-- 窗口内各实例的峰值：Top-N 排行用，避免取瞬时值被毛刺带偏 -->
+    <select id="listWindowPeak" resultType="InstanceRiskMetric">
+        select
+            min(id) as id, min(collect_time) as collectTime,
+            app_id as appId, instance_id as instanceId, ip, port, max(role) as role,
+            max(used_memory) as usedMemory, max(max_memory) as maxMemory,
+            max(total_system_memory) as totalSystemMemory, max(mem_frag_ratio) as memFragRatio,
+            max(keys_count) as keysCount, max(expires_count) as expiresCount, max(avg_ttl) as avgTtl,
+            max(connected_clients) as connectedClients, max(rejected_connections) as rejectedConnections,
+            max(keyspace_hits) as keyspaceHits, max(keyspace_misses) as keyspaceMisses,
+            max(expired_keys) as expiredKeys, max(evicted_keys) as evictedKeys,
+            max(latest_fork_usec) as latestForkUsec,
+            max(rdb_last_bgsave_time_sec) as rdbLastBgsaveTimeSec,
+            max(aof_delayed_fsync) as aofDelayedFsync,
+            max(instantaneous_ops) as instantaneousOps,
+            max(net_input_bytes) as netInputBytes, max(net_output_bytes) as netOutputBytes,
+            max(used_cpu_sys) as usedCpuSys, max(used_cpu_user) as usedCpuUser,
+            max(cluster_my_epoch) as clusterMyEpoch
+        from instance_risk_metric_minute
+        where collect_time >= #{sinceCollectTime}
+        group by app_id, instance_id, ip, port
+    </select>
+
+    <!-- 趋势图：只取画线需要的列，避免把 20+ 列的全量行拉进内存。
+         内存使用率需要 used / max(或 total_system)，因此三列都要。 -->
+    <select id="listWindowSeries" resultType="InstanceRiskMetric">
+        select collect_time as collectTime, app_id as appId, instance_id as instanceId,
+               ip, port, role, used_memory as usedMemory, max_memory as maxMemory,
+               total_system_memory as totalSystemMemory
+        from instance_risk_metric_minute
+        where collect_time >= #{sinceCollectTime}
+          and role = 1
+        order by collect_time
+    </select>
+
+    <!-- CPU 使用率：累计秒数的增量 / 首末采样的真实跨度。
+         跨度用 collect_time 首末换算，而不是「采样点数×60」——中间有漏采时
+         后者会低估跨度，把使用率算高。 -->
+    <select id="cpuUsageSince" resultType="java.util.Map">
+        select
+            app_id as appId, instance_id as instanceId, ip, port,
+            max(used_cpu_sys + used_cpu_user) - min(used_cpu_sys + used_cpu_user) as cpuDelta,
+            timestampdiff(second,
+                str_to_date(min(collect_time), '%Y%m%d%H%i'),
+                str_to_date(max(collect_time), '%Y%m%d%H%i')) as spanSeconds
+        from instance_risk_metric_minute
+        where collect_time >= #{sinceCollectTime}
+        group by app_id, instance_id, ip, port
+        having spanSeconds > 0
+    </select>
+
+    <select id="getEarliestCollectTime" resultType="java.lang.Long">
+        select min(collect_time) from instance_risk_metric_minute where app_id = #{appId}
+    </select>
+
+    <delete id="deleteBefore">
+        delete from instance_risk_metric_minute where collect_time &lt; #{collectTime} limit 5000
+    </delete>
+
+</mapper>

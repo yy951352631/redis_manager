@@ -1,0 +1,120 @@
+name: cachecloud
+
+services:
+  mysql:
+    image: mysql:5.7.44
+    container_name: cachecloud-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_bin
+      - --lower-case-table-names=1
+      - --sql-mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+      - --max-allowed-packet=256M
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./deploy/mysql/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+      # binlog 等附加配置（时间点恢复）
+      - ./deploy/mysql/conf.d:/etc/mysql/conf.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - backend
+
+  mysql-backup:
+    image: mysql:5.7.44
+    container_name: cachecloud-mysql-backup
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      BACKUP_DB: ${CACHECLOUD_DB_NAME:-redis_manager}
+      BACKUP_INTERVAL_SECONDS: ${MYSQL_BACKUP_INTERVAL_SECONDS:-21600}
+      BACKUP_KEEP_DAYS: ${MYSQL_BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./deploy/mysql/backup.sh:/usr/local/bin/backup.sh:ro
+      # 落在宿主机目录，不随 docker volume 一起被清掉
+      - ./deploy/mysql/backups:/backup
+    entrypoint: ["bash", "/usr/local/bin/backup.sh"]
+    networks:
+      - backend
+
+  redis:
+    image: redis:6.2.13-alpine
+    container_name: cachecloud-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - backend
+
+  web:
+    image: ${CACHECLOUD_IMAGE:?CACHECLOUD_IMAGE is required}
+    container_name: cachecloud-web
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_DOMAIN: ${SERVER_DOMAIN:-https://redis-portal.shcj-s.com}
+      CACHECLOUD_PRIMARY_URL: jdbc:mysql://mysql:3306/redis_manager?useUnicode=true&characterEncoding=UTF8&autoReconnect=true&connectTimeout=3000&socketTimeout=10000&serverTimezone=Asia/Shanghai
+      CACHECLOUD_PRIMARY_USER: root
+      CACHECLOUD_PRIMARY_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      CACHECLOUD_REDIS_MAIN_HOST: redis
+      CACHECLOUD_REDIS_MAIN_PORT: 6379
+      CACHECLOUD_REDIS_MAIN_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      CACHECLOUD_AI_ENABLED: "false"
+      JAVA_OPTS: -Djava.security.egd=file:/dev/./urandom -Duser.timezone=Asia/Shanghai -Xms512m -Xmx1536m
+    ports:
+      - "${CACHECLOUD_BACKEND_PORT:-28083}:8080"
+    networks:
+      - backend
+
+  frontend:
+    image: ${CACHECLOUD_FRONTEND_IMAGE:?CACHECLOUD_FRONTEND_IMAGE is required}
+    container_name: cachecloud-frontend
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "${CACHECLOUD_FRONTEND_PORT:-28082}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - backend
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  backend:
+    name: cachecloud-backend

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shcj.cache.dao.InstanceLatencyHistoryDao">
+
+    <sql id="instance_latency_history_columns">
+        instance_id,app_id,ip,port,event,execute_date,execution_cost
+    </sql>
+
+    <insert id="batchSave">
+        insert ignore into instance_latency_history(<include refid="instance_latency_history_columns"/>)
+        values
+        <foreach collection="list" item="instanceLatencyHistory" separator=",">
+            (#{instanceLatencyHistory.instanceId},
+            #{instanceLatencyHistory.appId},
+            #{instanceLatencyHistory.ip},
+            #{instanceLatencyHistory.port},
+            #{instanceLatencyHistory.event},
+            #{instanceLatencyHistory.executeDate},
+            #{instanceLatencyHistory.executionCost})
+        </foreach>
+    </insert>
+
+    <select id="getAppLatencyStats" resultType="hashmap">
+        select max(app_id) app_id, count(1) count,
+        FROM_UNIXTIME(UNIX_TIMESTAMP(execute_date), '%Y%m%d%H%i') execute_date_min,
+        max(UNIX_TIMESTAMP(FROM_UNIXTIME(UNIX_TIMESTAMP(execute_date), '%Y-%m-%d %H:%i'))) timestamp,
+        event
+        from instance_latency_history
+        where app_id=#{appId} and execute_date between #{startTime} and #{endTime}
+        group by event, FROM_UNIXTIME(UNIX_TIMESTAMP(execute_date), '%Y%m%d%H%i')
+        order by execute_date_min asc
+    </select>
+
+    <select id="getAppLatencyStatsGroupByInstance" resultType="hashmap">
+        select concat(ip,":",port) as host_port, min(instance_id) instance_id, count(*) as count
+        from instance_latency_history
+        where app_id=#{appId}
+        and execute_date between #{startTime} and #{endTime}
+        group by ip, port
+    </select>
+
+    <select id="getAppLatencyStatsCount" resultType="int">
+        select count(0) as count
+        from instance_latency_history
+        where app_id=#{appId}
+        and execute_date between #{startTime} and #{endTime}
+    </select>
+
+    <select id="getAppLatencyInfo" resultType="hashmap">
+        select concat(ip,":",port) as host_port,UNIX_TIMESTAMP(execute_date) timestamp,
+        <include refid="instance_latency_history_columns"/>
+        from instance_latency_history
+        where app_id=#{appId}
+        <choose>
+            <when test="event != null and event != ''">
+                and event=#{event}
+            </when>
+        </choose>
+        and execute_date between #{startTime} and #{endTime}
+    </select>
+
+    <select id="getAppLatencyHistoryByRange" resultType="InstanceLatencyHistory">
+        select id, <include refid="instance_latency_history_columns"/>
+        from instance_latency_history
+        where app_id = #{appId}
+          and execute_date &gt;= #{startDate}
+          and execute_date &lt;= #{endDate}
+        order by execute_date asc, id asc
+    </select>
+
+
+    <select id="getAppLatencyCountStat" resultType="AppClientStatisticGather">
+        select app_id, count(1) as latency_count, DATE_FORMAT(execute_date,'%Y-%m-%d') gather_time
+        from instance_latency_history
+        where execute_date between #{startTime} and #{endTime}
+        group by app_id, DATE_FORMAT(execute_date,'%Y-%m-%d')
+    </select>
+</mapper>

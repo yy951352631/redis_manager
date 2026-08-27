@@ -40,6 +40,7 @@ public class RiskRuleInitializer {
             Map<String, Double> alertThresholds = loadAlertThresholds();
             seedAll(alertThresholds);
             downgradeKeyExpireRules();
+            realignRuleDefaults();
             LOGGER.info("risk assess rules initialized, total={}", riskAssessRuleDao.count());
         } catch (Exception e) {
             LOGGER.error("init risk assess rules failed: {}", e.getMessage(), e);
@@ -63,6 +64,53 @@ public class RiskRuleInitializer {
             }
         } catch (Exception e) {
             LOGGER.warn("downgrade KEY_EXPIRE rules failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 把命中率与 key 过期的阈值对齐到新默认值。
+     *
+     * <p>同 downgradeKeyExpireRules：seed 是 insert-if-absent，改默认值动不了已存在的行。
+     * 只改未被人工调过的（customized=0）。</p>
+     */
+    private void realignRuleDefaults() {
+        // 命中率原为 90/80/60 三档。定级是按 严重→风险→关注 取第一个命中的规则，
+        // 阶梯必须单调递减，否则轻的那一档会被重的挡住永远不触发。
+        realignThreshold(RiskDimension.HIT_RATE, RiskLevel.ATTENTION, 60D, "命中率低于 60%");
+        realignThreshold(RiskDimension.HIT_RATE, RiskLevel.RISK, 30D,
+                "命中率低于 30%");
+        removeLevel(RiskDimension.HIT_RATE, RiskLevel.SEVERE);
+
+        realignThreshold(RiskDimension.KEY_EXPIRE, RiskLevel.ATTENTION, 30D,
+                "超过 30% 的 key 未设置过期时间");
+    }
+
+    private void realignThreshold(RiskDimension dimension, RiskLevel level, double threshold, String description) {
+        try {
+            int updated = jdbcTemplate.update(
+                    "update risk_assess_rule set threshold = ?, description = ? "
+                            + "where dimension = ? and sub_item is null and level = ? "
+                            + "and customized = 0 and threshold <> ?",
+                    threshold, description, dimension.name(), level.name(), threshold);
+            if (updated > 0) {
+                LOGGER.info("realigned {} {} threshold to {}", dimension.name(), level.name(), threshold);
+            }
+        } catch (Exception e) {
+            LOGGER.warn("realign {} {} threshold failed: {}", dimension.name(), level.name(), e.getMessage());
+        }
+    }
+
+    private void removeLevel(RiskDimension dimension, RiskLevel level) {
+        try {
+            int removed = jdbcTemplate.update(
+                    "delete from risk_assess_rule where dimension = ? and sub_item is null "
+                            + "and level = ? and customized = 0",
+                    dimension.name(), level.name());
+            if (removed > 0) {
+                LOGGER.info("removed {} {} rule", dimension.name(), level.name());
+            }
+        } catch (Exception e) {
+            LOGGER.warn("remove {} {} rule failed: {}", dimension.name(), level.name(), e.getMessage());
         }
     }
 
@@ -102,12 +150,11 @@ public class RiskRuleInitializer {
                 "超过 2 个实例未设置 maxmemory", "集群多数节点无内存上限，需尽快统一补齐 maxmemory 配置");
 
         // 命中率（%），越低越差
-        seed(RiskDimension.HIT_RATE, null, RiskLevel.ATTENTION, "LT", 90D, null,
-                "命中率低于 90%", "检查缓存 key 设计与预热策略");
-        seed(RiskDimension.HIT_RATE, null, RiskLevel.RISK, "LT", 80D, null,
-                "命中率低于 80%", "大量请求穿透到后端，检查缓存策略与 TTL 设置");
-        seed(RiskDimension.HIT_RATE, null, RiskLevel.SEVERE, "LT", 60D, null,
-                "命中率低于 60%", "缓存基本未生效，需重新审视缓存设计");
+        // 只保留关注/风险两档：定级取第一个命中的规则，三档挤在 60% 以下会互相遮蔽
+        seed(RiskDimension.HIT_RATE, null, RiskLevel.ATTENTION, "LT", 60D, null,
+                "命中率低于 60%", "检查缓存 key 设计与预热策略");
+        seed(RiskDimension.HIT_RATE, null, RiskLevel.RISK, "LT", 30D, null,
+                "命中率低于 30%", "缓存基本未生效，大量请求穿透到后端，需重新审视缓存设计与 TTL 策略");
 
         // 慢日志 P99（ms）
         seed(RiskDimension.SLOW_LOG, null, RiskLevel.ATTENTION, "GT", 100D, null,
@@ -171,8 +218,8 @@ public class RiskRuleInitializer {
         // 未设置过期时间的 key 占比（%）——只到「关注」为止。
         // 不设 TTL 未必是问题：把 Redis 当持久存储、或用 maxmemory + LRU 兜底都是正当用法，
         // 真正的风险由内存使用率与内存增长率两个维度承担，这里只做提示，不参与定级恶化。
-        seed(RiskDimension.KEY_EXPIRE, null, RiskLevel.ATTENTION, "GT", 50D, null,
-                "超过 50% 的 key 未设置过期时间",
+        seed(RiskDimension.KEY_EXPIRE, null, RiskLevel.ATTENTION, "GT", 30D, null,
+                "超过 30% 的 key 未设置过期时间",
                 "确认这些 key 是否应长期驻留；若非有意为之，补充 TTL 或确认已配置 maxmemory 淘汰策略");
 
         // 内存日均增长率（%，以窗口内均值为基准）。

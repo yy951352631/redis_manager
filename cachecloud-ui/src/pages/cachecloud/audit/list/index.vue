@@ -3,6 +3,7 @@ import type { OperationAuditItem } from "@/api/cachecloud"
 import { Refresh, Search } from "@element-plus/icons-vue"
 import { getOperationAuditsApi } from "@/api/cachecloud"
 import { useAutoQuery } from "@@/composables/useAutoQuery"
+import { formatAuditHandler, hasAuditHandlerText } from "@/common/utils/audit-handler-meta"
 
 const loading = ref(false)
 const items = ref<OperationAuditItem[]>([])
@@ -10,6 +11,17 @@ const total = ref(0)
 const modules = ref<string[]>([])
 const detail = ref<OperationAuditItem | null>(null)
 const detailVisible = ref(false)
+
+function shiftRange(ms: number): [Date, Date] {
+  const end = new Date()
+  return [new Date(end.getTime() - ms), end]
+}
+const DAY_MS = 24 * 60 * 60 * 1000
+const rangeShortcuts = [
+  { text: "最近 1 天", value: () => shiftRange(DAY_MS) },
+  { text: "最近 3 天", value: () => shiftRange(3 * DAY_MS) },
+  { text: "最近 7 天", value: () => shiftRange(7 * DAY_MS) }
+]
 
 /** 查询条件；时间区间由 el-date-picker 直接给出 yyyy-MM-dd HH:mm:ss */
 const query = reactive({
@@ -110,6 +122,8 @@ onMounted(fetchList)
           v-model="timeRange"
           type="datetimerange"
           value-format="YYYY-MM-DD HH:mm:ss"
+          :shortcuts="rangeShortcuts"
+          range-separator="至"
           start-placeholder="开始时间"
           end-placeholder="结束时间"
           style="width: 360px"
@@ -135,7 +149,14 @@ onMounted(fetchList)
           </template>
         </el-table-column>
         <el-table-column prop="requestUri" label="请求路径" min-width="240" show-overflow-tooltip />
-        <el-table-column prop="handler" label="处理方法" min-width="200" show-overflow-tooltip />
+        <el-table-column label="处理方法" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <!-- 映射不到的原样显示并弱化，提醒新接口还没登记中文简述 -->
+            <span :class="{ 'audit-page__handler-raw': !hasAuditHandlerText(row.handler) }">
+              {{ formatAuditHandler(row.handler) }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column label="对象" min-width="170" show-overflow-tooltip>
           <template #default="{ row }">
             <router-link v-if="row.appId" :to="`/app/detail/${row.appId}`">
@@ -176,7 +197,10 @@ onMounted(fetchList)
         <el-descriptions-item label="操作人">{{ detail.userName || "-" }}</el-descriptions-item>
         <el-descriptions-item label="业务域">{{ detail.module }}</el-descriptions-item>
         <el-descriptions-item label="请求">{{ detail.httpMethod }} {{ detail.requestUri }}</el-descriptions-item>
-        <el-descriptions-item label="处理方法">{{ detail.handler || "-" }}</el-descriptions-item>
+        <el-descriptions-item label="处理方法">
+          {{ formatAuditHandler(detail.handler) }}
+          <span v-if="hasAuditHandlerText(detail.handler)" class="audit-page__handler-raw">（{{ detail.handler }}）</span>
+        </el-descriptions-item>
         <el-descriptions-item label="来源IP">{{ detail.clientIp || "-" }}</el-descriptions-item>
         <el-descriptions-item label="响应码">{{ detail.statusCode }}</el-descriptions-item>
         <el-descriptions-item label="耗时">{{ detail.costMs }} ms</el-descriptions-item>
@@ -203,6 +227,11 @@ onMounted(fetchList)
 .audit-page__pager {
   margin-top: 12px;
   justify-content: flex-end;
+}
+
+.audit-page__handler-raw {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 
 .audit-page__detail-title {

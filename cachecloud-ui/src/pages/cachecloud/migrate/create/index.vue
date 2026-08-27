@@ -165,15 +165,15 @@ onMounted(fetchInit)
         <h3 class="migrate-form-section__title">源和目标配置</h3>
         <div class="migrate-form-grid">
           <el-form label-width="120px">
-            <el-form-item label="源类型">
-              <el-select v-model="form.sourceRedisMigrateIndex" :disabled="form.sourceDataType === 1" style="width: 100%" @change="resetCheckState">
-                <el-option v-for="item in MIGRATE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
-              </el-select>
-            </el-form-item>
             <el-form-item label="数据源">
               <el-select v-model="form.sourceDataType" style="width: 100%">
                 <el-option label="Redis 管理平台纳管" :value="1" />
                 <el-option label="手工配置" :value="0" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="源类型">
+              <el-select v-model="form.sourceRedisMigrateIndex" :disabled="form.sourceDataType === 1" style="width: 100%" @change="resetCheckState">
+                <el-option v-for="item in MIGRATE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </el-form-item>
             <el-form-item v-if="form.sourceDataType === 1" label="选择集群">
@@ -192,15 +192,15 @@ onMounted(fetchInit)
           </el-form>
 
           <el-form label-width="120px">
-            <el-form-item label="目标类型">
-              <el-select v-model="form.targetRedisMigrateIndex" :disabled="form.targetDataType === 1" style="width: 100%" @change="resetCheckState">
-                <el-option v-for="item in MIGRATE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
-              </el-select>
-            </el-form-item>
             <el-form-item label="数据源">
               <el-select v-model="form.targetDataType" style="width: 100%">
                 <el-option label="Redis 管理平台纳管" :value="1" />
                 <el-option label="手工配置" :value="0" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="目标类型">
+              <el-select v-model="form.targetRedisMigrateIndex" :disabled="form.targetDataType === 1" style="width: 100%" @change="resetCheckState">
+                <el-option v-for="item in MIGRATE_TYPES" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </el-form-item>
             <el-form-item v-if="form.targetDataType === 1" label="选择集群">

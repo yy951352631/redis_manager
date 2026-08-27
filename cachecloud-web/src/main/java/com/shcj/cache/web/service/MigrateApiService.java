@@ -95,6 +95,9 @@ public class MigrateApiService {
             return result;
         }
         for (AppDataMigrateStatus s : list) {
+            // 状态只在打开进度视图时才推进，列表不回读的话正在迁移的任务会一直显示「准备阶段」；
+            // 非内嵌任务与终态任务由 refreshStatus 内部自行跳过
+            embeddedRedisShakeService.refreshStatus(s);
             fillStoredVersions(s);
             result.getItems().add(toItem(s));
         }

@@ -77,6 +77,17 @@ function handleSearch() {
   fetchList()
 }
 
+/**
+ * 重新拉取当前页。
+ *
+ * 与「查询」的区别是不重置页码：迁移状态由后端在列表接口里回读，
+ * 盯着某一页看进度时不该被弹回第一页。
+ */
+async function handleRefresh() {
+  await fetchList()
+  ElMessage.success("已刷新")
+}
+
 function openCreate() {
   router.push("/migrate/create")
 }
@@ -164,7 +175,11 @@ function canShowProcess(row: MigrateListItem) {
 }
 
 function canResync(row: MigrateListItem) {
-  return row.status === 1 && row.migrateTool === 0 && row.migrateMachineIp?.startsWith("embedded@")
+  // 1=同步结束、2=同步异常都允许重来：应用重启会把跑着的 RedisShake 子进程带走，
+  // 这类任务落到异常态，只认「同步结束」的话就只能删掉重建
+  return (row.status === 1 || row.status === 2)
+    && row.migrateTool === 0
+    && row.migrateMachineIp?.startsWith("embedded@")
 }
 
 function canDelete(row: MigrateListItem) {
@@ -238,6 +253,7 @@ onMounted(() => {
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+          <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">刷新</el-button>
         </el-form-item>
       </el-form>
 

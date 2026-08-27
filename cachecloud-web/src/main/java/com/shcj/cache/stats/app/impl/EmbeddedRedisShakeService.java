@@ -41,6 +41,17 @@ public class EmbeddedRedisShakeService {
 
     public static final int TOOL_ID = -461;
     public static final String TOOL_NAME = "redis-shake-4.6.1 (embedded)";
+
+    /**
+     * 内嵌任务的标识。
+     *
+     * <p>migrate_tool 认不出来：内嵌与远程 redis-shake 写的都是 0，
+     * 真正区分二者的是 migrate_machine_ip 上的这个前缀。</p>
+     */
+    private static final String EMBEDDED_MACHINE_PREFIX = "embedded@";
+
+    /** 启动宽限期：这段时间内即使探测不到也不判异常 */
+    private static final long STARTUP_GRACE_MILLIS = 60_000L;
     private static final String VERSION = "4.6.1";
     private static final long LINUX_AMD64_BINARY_SIZE = 11980866L;
 
@@ -159,7 +170,7 @@ public class EmbeddedRedisShakeService {
             AppDataMigrateStatus status = new AppDataMigrateStatus();
             status.setMigrateId(migrateId);
             status.setMigrateTool(0);
-            status.setMigrateMachineIp("embedded@" + localHostName());
+            status.setMigrateMachineIp(EMBEDDED_MACHINE_PREFIX + localHostName());
             status.setMigrateMachinePort(statusPort);
             status.setSourceMigrateType(sourceType.getIndex());
             status.setTargetMigrateType(targetType.getIndex());
@@ -202,10 +213,14 @@ public class EmbeddedRedisShakeService {
     public AppDataMigrateStatus resync(long id, long userId) {
         AppDataMigrateStatus original = migrateStatusDao.get(id);
         if (original == null) throw new IllegalArgumentException("migration task does not exist: " + id);
-        if (!StringUtils.startsWith(original.getMigrateMachineIp(), "embedded@"))
+        if (!isEmbedded(original))
             throw new IllegalArgumentException("only embedded RedisShake tasks can be resynchronized");
-        if (original.getStatus() != AppDataMigrateStatusEnum.END.getStatus() || isRunning(original))
-            throw new IllegalStateException("only completed migration tasks can be resynchronized");
+        // 异常退出的任务同样允许重来：应用一重启，跑着的 RedisShake 子进程就没了，
+        // 只认 END 的话这些任务会既跑不起来又只能删掉重建。
+        boolean restartable = original.getStatus() == AppDataMigrateStatusEnum.END.getStatus()
+                || original.getStatus() == AppDataMigrateStatusEnum.ERROR.getStatus();
+        if (!restartable || isRunning(original))
+            throw new IllegalStateException("only completed or failed migration tasks can be resynchronized");
 
         String migrateId = original.getMigrateId();
         Path config = Paths.get(original.getConfigPath());
@@ -334,18 +349,12 @@ public class EmbeddedRedisShakeService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("migrateId", status.getMigrateId());
         result.put("running", isRunning(status));
-        try {
-            HttpURLConnection connection = (HttpURLConnection) new URL(
-                    "http://127.0.0.1:" + status.getMigrateMachinePort() + "/").openConnection();
-            connection.setConnectTimeout(1000);
-            connection.setReadTimeout(3000);
-            try (InputStream input = connection.getInputStream()) {
-                Map<String, Object> raw = objectMapper.readValue(input, new TypeReference<Map<String, Object>>() {});
-                result.putAll(summarize(raw));
-                result.put("raw", raw);
-                updateStatusFromProgress(status, raw);
-            }
-        } catch (Exception e) {
+        Map<String, Object> raw = fetchProgress(status, 1000, 3000);
+        if (raw != null) {
+            result.putAll(summarize(raw));
+            result.put("raw", raw);
+            updateStatusFromProgress(status, raw);
+        } else {
             result.put("message", isRunning(status) ? "RedisShake is starting; status endpoint is not ready"
                     : "RedisShake process has exited");
             result.put("recentLog", tail(status.getLogPath(), 30));
@@ -513,11 +522,78 @@ public class EmbeddedRedisShakeService {
                 objectMapper.convertValue(readerValue, new TypeReference<Map<String, Object>>() {}));
     }
 
+    /**
+     * 列表页用的状态刷新。
+     *
+     * <p>状态原先只在 progress() 里推进，也就是只有打开某个任务的进度视图才会更新。
+     * 列表页直接读库，正在迁移的任务于是一直停在「准备阶段」。这里给列表一个短超时的
+     * 刷新入口：拿不到就保持原值，不猜、不改判终态。</p>
+     */
+    public void refreshStatus(AppDataMigrateStatus status) {
+        if (status == null || !isEmbedded(status)) {
+            return;
+        }
+        int current = status.getStatus();
+        // 终态不再回读：已结束/已失败的任务其状态端口早就没了
+        if (current == AppDataMigrateStatusEnum.END.getStatus()
+                || current == AppDataMigrateStatusEnum.ERROR.getStatus()) {
+            return;
+        }
+        // 超时给得比 progress() 短：这是列表页的批量回读，一个卡死的任务不该拖慢整页
+        Map<String, Object> raw = fetchProgress(status, 500, 1000);
+        if (raw != null) {
+            updateStatusFromProgress(status, raw);
+            return;
+        }
+        // 端口不通且进程也没了：任务是异常退出的（应用重启、被 kill、自身崩溃）。
+        // 不收敛成终态的话，这行会永远停在「准备阶段」，而 resync 要求 END、
+        // delete 要求 END/ERROR，等于既跑不起来也删不掉。
+        if (!isRunning(status) && startedLongEnough(status)) {
+            migrateStatusDao.updateStatus(status.getId(), AppDataMigrateStatusEnum.ERROR.getStatus());
+            status.setStatus(AppDataMigrateStatusEnum.ERROR.getStatus());
+        }
+    }
+
+    /**
+     * 刚启动的任务给一段宽限期。
+     *
+     * <p>RedisShake 起来到状态端口可用之间有几秒空窗，这期间 pid 文件也可能还没落盘，
+     * 此时判死会把正常启动的任务误判为异常。</p>
+     */
+    private boolean startedLongEnough(AppDataMigrateStatus status) {
+        Date startTime = status.getStartTime();
+        return startTime == null
+                || System.currentTimeMillis() - startTime.getTime() > STARTUP_GRACE_MILLIS;
+    }
+
+    private boolean isEmbedded(AppDataMigrateStatus status) {
+        return status.getMigrateMachineIp() != null
+                && status.getMigrateMachineIp().startsWith(EMBEDDED_MACHINE_PREFIX);
+    }
+
+    private Map<String, Object> fetchProgress(AppDataMigrateStatus status, int connectTimeout, int readTimeout) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(
+                    "http://127.0.0.1:" + status.getMigrateMachinePort() + "/").openConnection();
+            connection.setConnectTimeout(connectTimeout);
+            connection.setReadTimeout(readTimeout);
+            try (InputStream input = connection.getInputStream()) {
+                return objectMapper.readValue(input, new TypeReference<Map<String, Object>>() {});
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void updateStatusFromProgress(AppDataMigrateStatus status, Map<String, Object> raw) {
         String json = String.valueOf(raw.get("reader"));
         int next = json.contains("syncing aof") ? AppDataMigrateStatusEnum.FULL_END.getStatus()
                 : AppDataMigrateStatusEnum.START.getStatus();
-        if (status.getStatus() != next) migrateStatusDao.updateStatus(status.getId(), next);
+        if (status.getStatus() != next) {
+            migrateStatusDao.updateStatus(status.getId(), next);
+            // 同步回内存对象：调用方（列表页）拿的就是这个实例，只写库的话页面这一轮还是旧值
+            status.setStatus(next);
+        }
     }
 
     private boolean isRunning(AppDataMigrateStatus status) {

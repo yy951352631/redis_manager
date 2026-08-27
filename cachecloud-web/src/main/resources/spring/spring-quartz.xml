@@ -63,6 +63,7 @@
                 <ref bean="riskCommandLatencyArchiveTrigger"/>
                 <ref bean="riskCommandLatencyCleanupTrigger"/>
                 <ref bean="riskMetricCleanupTrigger"/>
+                <ref bean="operationAuditCleanupTrigger"/>
                 <ref bean="appStatGatherTrigger"/>
 
                 <ref bean="cleanupDayDimensionalityTrigger"/>
@@ -82,6 +83,7 @@
                 <ref bean="riskCommandLatencyArchiveJobDetail"/>
                 <ref bean="riskCommandLatencyCleanupJobDetail"/>
                 <ref bean="riskMetricCleanupJobDetail"/>
+                <ref bean="operationAuditCleanupJobDetail"/>
                 <ref bean="appStatGatherJobDetail"/>
 
                 <ref bean="cleanupDayDimensionalityJobDetail"/>
@@ -152,6 +154,21 @@
         <property name="group" value="riskAssess"/>
         <property name="jobDetail" ref="riskMetricCleanupJobDetail"/>
         <property name="cronExpression" value="0 40 3 * * ?"/>
+    </bean>
+
+    <bean id="operationAuditCleanupJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="name" value="operationAuditCleanupJob"/>
+        <property name="group" value="cleanUpDayStatisticsGroup"/>
+        <property name="jobClass" value="com.shcj.cache.schedule.jobs.OperationAuditCleanupJob"/>
+        <property name="durability" value="true"/>
+    </bean>
+
+    <!-- 每天 04:00 清理，与 03:20 命令耗时、03:40 风险指标错开，避免几个批量删除同时压库 -->
+    <bean id="operationAuditCleanupTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="name" value="审计日志清理"/>
+        <property name="group" value="cleanUpDayStatisticsGroup"/>
+        <property name="jobDetail" ref="operationAuditCleanupJobDetail"/>
+        <property name="cronExpression" value="0 0 4 * * ?"/>
     </bean>
 
     <bean id="cleanupMinuteDimensionalityJobDetail" class="org.springframework.scheduling.quartz.JobDetailFactoryBean">

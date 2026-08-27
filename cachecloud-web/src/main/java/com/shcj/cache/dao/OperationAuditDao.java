@@ -30,5 +30,10 @@ public interface OperationAuditDao {
 
     List<String> listModules();
 
-    int deleteBefore(@Param("before") Date before);
+    /**
+     * 删除 {@code before} 之前的审计记录，单次最多 {@code batchSize} 条。
+     *
+     * <p>分批是为了避免首次接上清理时一条语句删掉整段积压——那会是一个长事务。</p>
+     */
+    int deleteBefore(@Param("before") Date before, @Param("batchSize") int batchSize);
 }

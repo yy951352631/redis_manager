@@ -57,7 +57,9 @@
     </select>
 
     <delete id="deleteBefore">
-        delete from operation_audit where create_time &lt; #{before}
+        <!-- 分批删：首次接上清理时积压可能很大，一条语句删完会是一个长事务，
+             既锁表又撑大 binlog。走 idx_create_time。 -->
+        delete from operation_audit where create_time &lt; #{before} limit #{batchSize}
     </delete>
 
 </mapper>

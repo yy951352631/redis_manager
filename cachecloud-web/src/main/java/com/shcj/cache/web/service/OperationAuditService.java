@@ -88,11 +88,51 @@ public class OperationAuditService {
         }
     }
 
+    /** 保留天数。审计记录要留得比监控指标久，出问题时往回追责往往跨月。 */
+    private static final int RETENTION_DAYS = 90;
+
+    /** 必须与 OperationAuditDao.xml 中 delete 语句的 limit 语义一致 */
+    private static final int DELETE_BATCH_SIZE = 5000;
+
+    /** 单次执行的轮次上限，防止异常情况下空转 */
+    private static final int MAX_DELETE_ROUNDS = 500;
+
     /**
-     * 清理过期审计记录。
+     * 清理超过保留期的审计记录。
+     *
+     * <p>这张表此前没有任何清理调用方，deleteBefore 写好了一直没人用，
+     * 上线至今一条没删过。</p>
+     *
+     * @return 实际删除的行数
+     */
+    public int cleanupExpired() {
+        long start = System.currentTimeMillis();
+        Date cutoff = new Date(System.currentTimeMillis() - RETENTION_DAYS * 24L * 3600 * 1000);
+        int total = 0;
+        for (int round = 0; round < MAX_DELETE_ROUNDS; round++) {
+            int deleted;
+            try {
+                deleted = operationAuditDao.deleteBefore(cutoff, DELETE_BATCH_SIZE);
+            } catch (Exception e) {
+                LOGGER.warn("delete operation audit failed cutoff={}: {}", cutoff, e.getMessage());
+                break;
+            }
+            total += deleted;
+            // 单轮不足批量上限说明已删干净
+            if (deleted < DELETE_BATCH_SIZE) {
+                break;
+            }
+        }
+        LOGGER.info("operation audit cleaned create_time<{} retentionDays={} rows={} cost={}ms",
+                cutoff, RETENTION_DAYS, total, System.currentTimeMillis() - start);
+        return total;
+    }
+
+    /**
+     * 清理指定时间之前的审计记录，供测试与手工调用。
      */
     public int cleanup(Date before) {
-        return operationAuditDao.deleteBefore(before);
+        return operationAuditDao.deleteBefore(before, DELETE_BATCH_SIZE);
     }
 
     private String resolveAppName(Long appId, Map<Long, String> cache) {

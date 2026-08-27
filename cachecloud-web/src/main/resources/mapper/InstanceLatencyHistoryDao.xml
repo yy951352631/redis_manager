@@ -21,6 +21,13 @@
         </foreach>
     </insert>
 
+    <select id="getMaxExecuteDateGroupByEvent" resultType="hashmap">
+        select event, max(execute_date) as max_execute_date
+        from instance_latency_history
+        where instance_id = #{instanceId}
+        group by event
+    </select>
+
     <select id="getAppLatencyStats" resultType="hashmap">
         select max(app_id) app_id, count(1) count,
         FROM_UNIXTIME(UNIX_TIMESTAMP(execute_date), '%Y%m%d%H%i') execute_date_min,

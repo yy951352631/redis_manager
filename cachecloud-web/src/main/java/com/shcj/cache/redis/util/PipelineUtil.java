@@ -17,10 +17,6 @@ public class PipelineUtil {
         return pipeline.sendCommand(Command.LATENCY, Keyword.HISTORY.raw, SafeEncoder.encode(event));
     }
 
-    public static Response<Object> latencyReset(Pipeline pipeline, String event){
-        return pipeline.sendCommand(Command.LATENCY, joinParameters(Keyword.RESET.raw, SafeEncoder.encodeMany(event)));
-    }
-
     public static Response<Object> clusterCountKeysInSlot(Pipeline pipeline, int slot){
         byte[][] args = new byte[2][];
         args[0] = SafeEncoder.encode(Protocol.CLUSTER_COUNTKEYINSLOT);
@@ -36,10 +32,4 @@ public class PipelineUtil {
         return pipeline.sendCommand(Command.MEMORY, Keyword.USAGE.raw, SafeEncoder.encode(key));
     }
 
-    private static byte[][] joinParameters(byte[] first, byte[][] rest) {
-        byte[][] result = new byte[rest.length + 1][];
-        result[0] = first;
-        System.arraycopy(rest, 0, result, 1, rest.length);
-        return result;
-    }
 }

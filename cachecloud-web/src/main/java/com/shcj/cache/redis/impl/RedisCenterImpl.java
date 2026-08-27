@@ -2928,6 +2928,33 @@ public class RedisCenterImpl implements RedisCenter {
         return latencyHistoryList;
     }
 
+    /**
+     * 取该实例每个延迟事件已入库的最新时间戳（毫秒），取不到时返回空表。
+     *
+     * <p>查不出来就当作没有水位线全量入库，唯一索引 (instance_id,event,execute_date)
+     * 兜住重复行，宁可多写一轮也不能因为一次查询失败丢掉真实样本。</p>
+     */
+    private Map<String, Long> getLastLatencyTimeByEvent(long instanceId) {
+        Map<String, Long> result = new HashMap<String, Long>();
+        try {
+            List<Map<String, Object>> rows = instanceLatencyHistoryDao.getMaxExecuteDateGroupByEvent(instanceId);
+            if (CollectionUtils.isEmpty(rows)) {
+                return result;
+            }
+            for (Map<String, Object> row : rows) {
+                Object event = row.get("event");
+                Object maxDate = row.get("max_execute_date");
+                if (event == null || !(maxDate instanceof Date)) {
+                    continue;
+                }
+                result.put(String.valueOf(event), ((Date) maxDate).getTime());
+            }
+        } catch (Exception e) {
+            logger.warn("query last latency time failed, instanceId={}: {}", instanceId, e.getMessage());
+        }
+        return result;
+    }
+
     private List<InstanceLatencyHistory> getLatencyLatest(long instanceId, long appId, String host, int port) {
         Jedis jedis = null;
         try {
@@ -2939,18 +2966,24 @@ public class RedisCenterImpl implements RedisCenter {
             if (CollectionUtils.isNotEmpty(latencyItems)) {
                 List<String> eventList = latencyItems.stream().map(latencyItem -> latencyItem.getEvent()).collect(Collectors.toList());
 
+                // 原来每读完一个事件就 LATENCY RESET 掉，靠清空服务端缓冲来保证下一轮不重复。
+                // 代价是实例自身的延迟历史被平台独占：运维手工执行 LATENCY HISTORY / LATENCY DOCTOR
+                // 永远看不到数据。改为只读不写，重复由采集侧按「已入库最新时间」自行过滤。
                 Pipeline pipeline = jedis.pipelined();
                 for (String event : eventList) {
                     PipelineUtil.latencyHistory(pipeline, event);
-                    PipelineUtil.latencyReset(pipeline, event);
                 }
                 subResultList = pipeline.syncAndReturnAll();
 
                 if (CollectionUtils.isNotEmpty(subResultList)) {
+                    Map<String, Long> lastStoredMillis = getLastLatencyTimeByEvent(instanceId);
                     for (int i = 0; i < subResultList.size(); i++) {
                         Object o = subResultList.get(i);
                         if (o instanceof List) {
-                            String event = eventList.get(i / 2);
+                            String event = eventList.get(i);
+                            // Redis 的延迟监控对同一秒只保留一条样本（同秒再次触发是就地取最大值），
+                            // 所以「时间戳严格大于已入库最新值」就是完备的去重条件，不会漏样本。
+                            long watermark = lastStoredMillis.containsKey(event) ? lastStoredMillis.get(event) : Long.MIN_VALUE;
                             List<Object> latencyHistoryItems = (List<Object>) o;
                             List<InstanceLatencyHistory> instanceLatencyHistoryList = latencyHistoryItems.stream()
                                     .map(data -> {
@@ -2961,6 +2994,7 @@ public class RedisCenterImpl implements RedisCenter {
                                                 new Date(latencyHistory.getTimeStamp() * 1000L),
                                                 latencyHistory.getExecutionTime());
                                     })
+                                    .filter(history -> history.getExecuteDate().getTime() > watermark)
                                     .collect(Collectors.toList());
                             resultList.addAll(instanceLatencyHistoryList);
                         }

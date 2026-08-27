@@ -14,6 +14,7 @@ import com.shcj.cache.entity.InstanceSlowLog;
 import com.shcj.cache.entity.RiskAssessDimension;
 import com.shcj.cache.entity.RiskAssessReport;
 import com.shcj.cache.entity.RiskAssessRule;
+import com.shcj.cache.redis.RedisCenter;
 import com.shcj.cache.risk.model.DimensionResult;
 import com.shcj.cache.risk.model.RiskAssessContext;
 import com.shcj.cache.risk.model.RiskDimension;
@@ -67,6 +68,9 @@ public class RiskAssessEngine {
 
     @Autowired
     private RiskAssessReportDao riskAssessReportDao;
+
+    @Autowired
+    private RedisCenter redisCenter;
 
     @Autowired
     private RiskCommandCountLoader commandCountLoader;
@@ -152,6 +156,9 @@ public class RiskAssessEngine {
         context.setInstances(instances);
         // 高可用性维度要数哨兵个数，单独给它一份而不是放宽上面的过滤
         context.setSentinelInstances(sentinels);
+        // 需要读运行时配置的维度（密码强度、持久化）走这一个入口，按实例缓存，
+        // 否则每个维度各发一趟 CONFIG GET *
+        context.setConfigLoader(instanceId -> redisCenter.getRedisConfigList(instanceId));
 
         List<InstanceRiskMetric> metrics = instanceRiskMetricDao.listByAppAndRange(
                 appDesc.getAppId(), beginTime, endTime);

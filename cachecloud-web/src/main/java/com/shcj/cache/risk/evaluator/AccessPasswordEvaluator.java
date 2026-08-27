@@ -1,16 +1,12 @@
 package com.shcj.cache.risk.evaluator;
 
 import com.shcj.cache.entity.InstanceInfo;
-import com.shcj.cache.redis.RedisCenter;
 import com.shcj.cache.risk.model.DimensionResult;
 import com.shcj.cache.risk.model.RiskAssessContext;
 import com.shcj.cache.risk.model.RiskDimension;
 import com.shcj.cache.risk.model.RiskLevel;
 import com.shcj.cache.util.ConstUtils;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -30,13 +26,10 @@ import java.util.Map;
 @Component
 public class AccessPasswordEvaluator extends AbstractDimensionEvaluator {
 
-    private static final Logger logger = LoggerFactory.getLogger(AccessPasswordEvaluator.class);
 
     /** 强密码最小长度 */
     private static final int MIN_LENGTH = 12;
 
-    @Autowired
-    private RedisCenter redisCenter;
 
     @Override
     public RiskDimension dimension() {
@@ -57,21 +50,14 @@ public class AccessPasswordEvaluator extends AbstractDimensionEvaluator {
 
         for (InstanceInfo instance : targets) {
             String hostPort = instance.getIp() + ":" + instance.getPort();
-            String password;
-            try {
-                Map<String, String> config = redisCenter.getRedisConfigList(instance.getId());
-                if (config == null || !config.containsKey("requirepass")) {
-                    unreachable.add(hostPort);
-                    detail.put(hostPort, "读取配置失败");
-                    continue;
-                }
-                password = StringUtils.trimToEmpty(config.get("requirepass"));
-            } catch (Exception e) {
-                logger.warn("read requirepass failed {}: {}", hostPort, e.getMessage());
+            // 走上下文的共享缓存，持久化维度稍后读同一份，不再各发一趟 CONFIG GET *
+            Map<String, String> config = context.getInstanceConfig(instance.getId());
+            if (config == null || !config.containsKey("requirepass")) {
                 unreachable.add(hostPort);
                 detail.put(hostPort, "读取配置失败");
                 continue;
             }
+            String password = StringUtils.trimToEmpty(config.get("requirepass"));
             if (password.isEmpty()) {
                 noPassword.add(hostPort);
                 detail.put(hostPort, "未设置密码");

@@ -1,16 +1,12 @@
 package com.shcj.cache.risk.evaluator;
 
 import com.shcj.cache.entity.InstanceInfo;
-import com.shcj.cache.redis.RedisCenter;
 import com.shcj.cache.risk.model.DimensionResult;
 import com.shcj.cache.risk.model.RiskAssessContext;
 import com.shcj.cache.risk.model.RiskDimension;
 import com.shcj.cache.risk.model.RiskLevel;
 import com.shcj.cache.util.ConstUtils;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -29,10 +25,7 @@ import java.util.Map;
 @Component
 public class PersistenceEvaluator extends AbstractDimensionEvaluator {
 
-    private static final Logger logger = LoggerFactory.getLogger(PersistenceEvaluator.class);
 
-    @Autowired
-    private RedisCenter redisCenter;
 
     @Override
     public RiskDimension dimension() {
@@ -52,13 +45,8 @@ public class PersistenceEvaluator extends AbstractDimensionEvaluator {
 
         for (InstanceInfo instance : targets) {
             String hostPort = instance.getIp() + ":" + instance.getPort();
-            Map<String, String> config;
-            try {
-                config = redisCenter.getRedisConfigList(instance.getId());
-            } catch (Exception e) {
-                logger.warn("read persistence config failed {}: {}", hostPort, e.getMessage());
-                config = null;
-            }
+            // 与密码强度维度共用上下文缓存，每个实例一次评估内只取一次配置
+            Map<String, String> config = context.getInstanceConfig(instance.getId());
             if (config == null || config.isEmpty()) {
                 unreachable.add(hostPort);
                 detail.put(hostPort, "读取配置失败");

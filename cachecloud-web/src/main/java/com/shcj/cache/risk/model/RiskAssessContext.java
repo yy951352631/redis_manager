@@ -70,6 +70,44 @@ public class RiskAssessContext {
     /** 窄表中该集群最早的样本时间，用于判断历史是否够窗口 */
     private Long earliestMetricTime;
 
+    /**
+     * 实例运行时配置（CONFIG GET *）的按需缓存。
+     *
+     * <p>见类注释的约定：维度不自己取数。密码强度和持久化两个维度都要读配置，
+     * 各自调一次就是每个实例两趟 CONFIG GET *（各带一次建连和 AUTH），
+     * 批量评估时再按集群数放大。这里按 instanceId 缓存，一次评估内每个实例只取一次。
+     */
+    private RedisConfigLoader configLoader;
+
+    private Map<Integer, Map<String, String>> configCache = new HashMap<>();
+
+    /**
+     * 取实例的运行时配置，取不到返回 null。
+     *
+     * <p>失败结果同样入缓存：不可达的节点不该被第二个维度再探测一次，
+     * 那只会让本就超时的评估再多等一个连接超时。
+     */
+    public Map<String, String> getInstanceConfig(int instanceId) {
+        if (configCache.containsKey(instanceId)) {
+            return configCache.get(instanceId);
+        }
+        Map<String, String> config = null;
+        if (configLoader != null) {
+            try {
+                config = configLoader.load(instanceId);
+            } catch (Exception e) {
+                config = null;
+            }
+        }
+        configCache.put(instanceId, config);
+        return config;
+    }
+
+    /** 由引擎注入，避免上下文直接依赖 RedisCenter。 */
+    public interface RedisConfigLoader {
+        Map<String, String> load(int instanceId) throws Exception;
+    }
+
     public boolean isCluster() {
         return appDesc != null && com.shcj.cache.util.TypeUtil.isRedisCluster(appDesc.getType());
     }

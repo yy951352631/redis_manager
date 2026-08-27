@@ -22,6 +22,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * 任务流详情。
+ *
+ * <p>任务管理页面已下线，列表与手工重跑随之移除；这里只保留「键值分析」用来
+ * 查询分析任务进度的 getFlow。底层任务框架仍在为数据迁移、键值分析、故障诊断服务。</p>
+ */
 @Service
 public class TaskApiService {
 
@@ -33,60 +39,6 @@ public class TaskApiService {
 
     @Autowired
     private AssistRedisService assistRedisService;
-
-    public TaskListPageDto list(Long searchTaskId, Long appId, String className, Integer status,
-                                int pageNo, int pageSize) {
-        TaskSearch search = new TaskSearch();
-        if (appId != null) {
-            Long resolvedAppId = appService.resolveAppId(appId);
-            if (resolvedAppId == null) {
-                TaskListPageDto empty = new TaskListPageDto();
-                empty.setPageNo(Math.max(pageNo, 1));
-                empty.setPageSize(pageSize > 0 ? pageSize : 20);
-                return empty;
-            }
-            search.setAppId(resolvedAppId);
-        }
-        if (className != null) {
-            search.setClassName(className);
-        }
-        if (status != null) {
-            search.setStatus(status);
-        }
-
-        List<TaskQueue> queues;
-        int total;
-        int safePageNo = Math.max(pageNo, 1);
-        int safePageSize = pageSize > 0 ? Math.min(pageSize, 100) : 30;
-
-        if (searchTaskId != null && searchTaskId > 0) {
-            queues = taskService.getTaskQueueTreeByTaskId(searchTaskId);
-            total = queues == null ? 0 : queues.size();
-        } else {
-            total = taskService.getTaskQueueCount(search);
-            Page page = new Page(safePageNo, safePageSize, total);
-            search.setPage(page);
-            queues = taskService.getTaskQueueList(search);
-        }
-
-        if (queues == null) {
-            queues = Collections.emptyList();
-        }
-        for (TaskQueue q : queues) {
-            q.setTaskStepFlowList(taskService.getTaskStepFlowList(q.getId()));
-        }
-        queues.sort(Comparator.comparingLong(TaskQueue::getId).reversed());
-
-        TaskListPageDto result = new TaskListPageDto();
-        result.setPageNo(safePageNo);
-        result.setPageSize(safePageSize);
-        result.setTotalCount(total);
-        result.setTotalPages(total == 0 ? 0 : (int) Math.ceil(total * 1.0 / safePageSize));
-        for (TaskQueue q : queues) {
-            result.getItems().add(toListItem(q));
-        }
-        return result;
-    }
 
     public TaskFlowDetailDto getFlow(long taskId) {
         TaskQueue task = taskService.getTaskQueueById(taskId);
@@ -135,54 +87,4 @@ public class TaskApiService {
         return dto;
     }
 
-    public void execute(long taskId) {
-        TaskQueue task = taskService.getTaskQueueById(taskId);
-        if (task != null) {
-            new Thread(() -> taskService.executeTask(taskId)).start();
-        }
-    }
-
-    public void updateParam(long taskId, String prettyParam) {
-        JSONObject json = JSONObject.parseObject(prettyParam);
-        OperateResult result = taskService.updateParam(taskId, json.toJSONString());
-        if (!result.isSuccess()) {
-            throw new com.shcj.cache.exception.BizException(result.getMessage());
-        }
-    }
-
-    public void updateFlowStatus(long flowId, int status) {
-        OperateResult result = taskService.updateTaskFlowStatus(flowId, status);
-        if (!result.isSuccess()) {
-            throw new com.shcj.cache.exception.BizException(result.getMessage());
-        }
-    }
-
-    private TaskListItemDto toListItem(TaskQueue q) {
-        TaskListItemDto dto = new TaskListItemDto();
-        dto.setId(q.getId());
-        dto.setAppId(q.getAppId());
-        AppDesc appDesc = appService.getByAppId(q.getAppId());
-        if (appDesc != null) {
-            dto.setClusterNo(com.shcj.cache.util.AppClusterNoSupport.displayClusterNo(appDesc));
-        }
-        dto.setClassName(q.getClassName());
-        dto.setStatus(q.getStatus());
-        dto.setStatusDesc(q.getStatusDesc());
-        dto.setProgress(q.getProgress());
-        dto.setProgressValue(q.getProgressValue());
-        dto.setExecuteIpPort(q.getExecuteIpPort());
-        dto.setFinished(q.isFinished());
-        dto.setRunning(q.isRunning());
-        if (q.getCreateTime() != null) {
-            dto.setCreateTime(DateUtil.formatDate(q.getCreateTime(), "yyyy-MM-dd HH:mm:ss"));
-        }
-        if (q.getStartTime() != null) {
-            dto.setStartTime(DateUtil.formatDate(q.getStartTime(), "yyyy-MM-dd HH:mm:ss"));
-        }
-        if (q.getEndTime() != null) {
-            dto.setEndTime(DateUtil.formatDate(q.getEndTime(), "yyyy-MM-dd HH:mm:ss"));
-        }
-        dto.setCostSeconds(q.getCostSeconds());
-        return dto;
-    }
 }

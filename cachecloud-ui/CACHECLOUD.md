@@ -200,16 +200,6 @@ Controller：`InstanceOperationController`（**已有 JSON 方法，直接抽取
 
 ---
 
-### M14 任务管理 `P3`
-
-| 旧 JSP | API |
-|--------|-----|
-| `manage/task/*.jsp` (4) | `/api/v1/tasks` + `/api/v1/tasks/{id}/flow` |
-
-已有 `flow/progress.json` → 正式化为 SSE 或轮询 API。
-
----
-
 ### M15 调度任务 `P3`
 
 | 旧 JSP | API |
@@ -421,7 +411,7 @@ src/
 | M11 | 报警配置 | ✅ | `instance-alert` | ✅ | |
 | M12 | 系统配置 | ✅ | `config` | ✅ | |
 | M13 | 资源管理 | ✅ | `resource` 5 Tab | ✅ | 含脚本编辑/编译推送 |
-| M14 | 任务管理 | ✅ | `task/list` | ✅ | 含任务流详情 |
+| M14 | 任务管理 | ⛔ 已下线 | — | — | 页面移除；任务流详情接口保留给键值分析 |
 | M15 | 调度任务 | ✅ | `quartz/list` | ✅ | |
 
 ### 管理端扩展页（非菜单）

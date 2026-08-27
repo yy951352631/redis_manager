@@ -578,24 +578,6 @@ export interface InstanceAlertPage {
   specialAlerts: InstanceAlertItem[]
 }
 
-/** 任务管理 */
-export interface TaskListItem {
-  id: number
-  appId: number
-  clusterNo?: number
-  className: string
-  status: number
-  statusDesc: string
-  progress: string
-  progressValue: number
-  createTime?: string
-  startTime?: string
-  endTime?: string
-  costSeconds?: string
-  executeIpPort?: string
-  finished: boolean
-  running: boolean
-}
 export interface RiskAssessOverviewItem {
   appId: number
   appName: string
@@ -700,13 +682,6 @@ export interface AlertRecordPage {
   totalPages: number
   importantLevels: { value: number, label: string }[]
   apps: { appId: number, appName: string }[]
-}
-export interface TaskListPage {
-  items: TaskListItem[]
-  pageNo: number
-  pageSize: number
-  totalCount: number
-  totalPages: number
 }
 export interface TaskFlowStep {
   id: number
@@ -1058,7 +1033,6 @@ export type RiskAssessReportResponseData = ApiResponseData<RiskAssessReport>
 export type RiskAssessHistoryResponseData = ApiResponseData<RiskAssessReport[]>
 export type OperationAuditPageResponseData = ApiResponseData<OperationAuditPage>
 export type AlertRecordPageResponseData = ApiResponseData<AlertRecordPage>
-export type TaskListPageResponseData = ApiResponseData<TaskListPage>
 export type TaskFlowDetailResponseData = ApiResponseData<TaskFlowDetail>
 export type MigrateListPageResponseData = ApiResponseData<MigrateListPage>
 export type AppTopologyResponseData = ApiResponseData<AppTopology>

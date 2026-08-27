@@ -27,7 +27,6 @@ import type {
   DataModelResultResponseData,
   RiskRulesResponseData,
   RiskAssessReportResponseData,
-  TaskListPageResponseData,
   TaskFlowDetailResponseData,
   MigrateListPageResponseData,
   MigrateInitResponseData,
@@ -390,15 +389,9 @@ export function deleteInstanceAlertApi(id: number) {
   return request<ApiResponseData<null>>({ url: `instance-alerts/${id}`, method: "delete" })
 }
 
-/** 任务管理（M14） */
-export function getTaskListApi(params?: Record<string, unknown>) {
-  return request<TaskListPageResponseData>({ url: "tasks", method: "get", params })
-}
+/** 任务流详情：任务管理页面已下线，仅「键值分析」用它查分析任务进度 */
 export function getTaskFlowApi(taskId: number) {
   return request<TaskFlowDetailResponseData>({ url: `tasks/${taskId}`, method: "get" })
-}
-export function executeTaskApi(taskId: number) {
-  return request<ApiResponseData<null>>({ url: `tasks/${taskId}/execute`, method: "post" })
 }
 
 /** 数据迁移（M9） */

@@ -5,7 +5,7 @@ const Layouts = () => import("@/layouts/index.vue")
 /**
  * 侧边栏菜单按定义顺序渲染，因此可见路由的先后即菜单顺序：
  * 全局统计 → 集群管理 → 节点管理 → 数据迁移 → 运维工具 → 风险评估
- * → 报警配置 → 报警记录 → 用户管理 → 调度任务 → 任务管理 → 审计日志。
+ * → 报警配置 → 报警记录 → 用户管理 → 调度任务 → 审计日志。
  * hidden 路由（详情页、旧地址重定向）紧跟各自所属的可见菜单，不影响菜单顺序。
  */
 export const cachecloudRoutes: RouteRecordRaw[] = [
@@ -146,12 +146,6 @@ export const cachecloudRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/cachecloud/quartz/list/index.vue"),
         name: "QuartzList",
         meta: { title: "调度任务", elIcon: "Timer" }
-      },
-      {
-        path: "task/list",
-        component: () => import("@/pages/cachecloud/task/list/index.vue"),
-        name: "TaskList",
-        meta: { title: "任务管理", elIcon: "Finished" }
       },
       {
         path: "audit/list",

@@ -90,6 +90,23 @@
         order by collect_time
     </select>
 
+    <select id="listWindowBoundarySamples" resultType="InstanceRiskMetric">
+        select m.instance_id as instanceId, m.collect_time as collectTime,
+               m.keyspace_hits as keyspaceHits, m.keyspace_misses as keyspaceMisses
+        from instance_risk_metric_minute m
+        join (
+            select instance_id, min(collect_time) as first_time, max(collect_time) as last_time
+            from instance_risk_metric_minute
+            where collect_time &gt;= #{sinceCollectTime}
+              and collect_time &lt;= #{untilCollectTime}
+            group by instance_id
+        ) b on b.instance_id = m.instance_id
+           and (m.collect_time = b.first_time or m.collect_time = b.last_time)
+        where m.collect_time &gt;= #{sinceCollectTime}
+          and m.collect_time &lt;= #{untilCollectTime}
+        order by m.instance_id, m.collect_time
+    </select>
+
     <!-- CPU 使用率：累计秒数的增量 / 首末采样的真实跨度。
          跨度用 collect_time 首末换算，而不是「采样点数×60」——中间有漏采时
          后者会低估跨度，把使用率算高。 -->

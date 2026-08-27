@@ -59,7 +59,8 @@ public class DashboardOpsDto implements Serializable {
         private double keyExpiresRatio;
         private long qps;
         private long qpsPeak;
-        private double hitRate;
+        /** 窗口内命中率；窗口无任何查找时为 null，前端显示「—」而不是 0% */
+        private Double hitRate;
         /** 命中率较昨日变化的百分点；无昨日数据时为 null */
         private Double hitRateDelta;
     }

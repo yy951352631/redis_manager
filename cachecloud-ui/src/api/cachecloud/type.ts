@@ -1635,7 +1635,8 @@ export interface DashboardKpi {
   keyExpiresRatio: number
   qps: number
   qpsPeak: number
-  hitRate: number
+  /** 窗口内无任何查找时为 null，表示「没有流量」而非「命中率为 0」 */
+  hitRate?: number | null
   hitRateDelta?: number | null
 }
 export interface DashboardClusterHealthRow {

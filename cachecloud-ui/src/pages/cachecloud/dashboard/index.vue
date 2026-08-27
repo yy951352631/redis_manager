@@ -289,10 +289,17 @@ onBeforeUnmount(() => {
           命中率
         </div>
         <div class="ops-kpi__value">
-          {{ (kpi?.hitRate ?? 0).toFixed(2) }}%
+          <template v-if="kpi?.hitRate != null">
+            {{ kpi.hitRate.toFixed(2) }}%
+          </template>
+          <!-- 0% 会被读成「全部穿透」，窗口内没有请求就如实显示「—」 -->
+          <template v-else>
+            —
+          </template>
         </div>
         <div class="ops-kpi__sub">
-          <span v-if="kpi?.hitRateDelta != null">
+          <span v-if="kpi?.hitRate == null" class="is-muted">近 {{ ops?.windowMinutes ?? 60 }} 分钟无请求</span>
+          <span v-else-if="kpi?.hitRateDelta != null">
             较昨日
             <b :class="kpi.hitRateDelta >= 0 ? 'is-ok' : 'is-bad'">
               {{ kpi.hitRateDelta >= 0 ? "+" : "" }}{{ kpi.hitRateDelta.toFixed(2) }}%

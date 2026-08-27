@@ -40,6 +40,16 @@ public interface InstanceRiskMetricDao {
     List<InstanceRiskMetric> listWindowSeries(@Param("sinceCollectTime") long sinceCollectTime);
 
     /**
+     * 取窗口内每个实例的首尾两条采样，用于把累计计数器换算成窗口增量。
+     *
+     * <p>keyspace_hits / keyspace_misses 是自实例启动以来的累计值，直接拿最新快照算比值
+     * 得到的是「开机至今的平均命中率」——跑久了分母上百万，一分钟的真实流量根本推不动它。
+     * 只有末值减首值才是这段窗口里真实发生的命中与穿透。</p>
+     */
+    List<InstanceRiskMetric> listWindowBoundarySamples(@Param("sinceCollectTime") long sinceCollectTime,
+                                                       @Param("untilCollectTime") long untilCollectTime);
+
+    /**
      * 主面板 CPU 榜：窗口内各实例的 CPU 累计耗时增量与真实跨度。
      *
      * <p>used_cpu_sys/user 是进程累计秒数，单点取值没有意义，

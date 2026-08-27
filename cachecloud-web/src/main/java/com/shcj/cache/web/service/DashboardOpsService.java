@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -513,15 +514,11 @@ public class DashboardOpsService {
         long memTotal = 0;
         long keys = 0;
         long expires = 0;
-        long hits = 0;
-        long misses = 0;
         for (InstanceRiskMetric m : latest) {
             memUsed += Math.max(0, m.getUsedMemory());
             memTotal += m.getMaxMemory() > 0 ? m.getMaxMemory() : Math.max(0, m.getTotalSystemMemory());
             keys += Math.max(0, m.getKeysCount());
             expires += Math.max(0, m.getExpiresCount());
-            hits += Math.max(0, m.getKeyspaceHits());
-            misses += Math.max(0, m.getKeyspaceMisses());
         }
         kpi.setMemUsed(memUsed);
         kpi.setMemTotal(memTotal);
@@ -541,10 +538,68 @@ public class DashboardOpsService {
         kpi.setQps(qps);
         kpi.setQpsPeak(Math.max(qps, qpsPeak));
 
-        long lookup = hits + misses;
-        kpi.setHitRate(lookup > 0 ? hits * 100d / lookup : 0d);
-        kpi.setHitRateDelta(resolveHitRateDelta(now, kpi.getHitRate()));
+        Double hitRate = windowHitRate(windowStart(now), collectTimeOf(now));
+        kpi.setHitRate(hitRate);
+        kpi.setHitRateDelta(hitRate == null ? null : resolveHitRateDelta(now, hitRate));
         return kpi;
+    }
+
+    /**
+     * 窗口内的命中率，窗口里没有发生任何查找时返回 null。
+     *
+     * <p>返回 null 而不是 0：0% 会被读成「全部穿透」，那是把「这段时间没有请求」
+     * 说成了一个严重结论。前端据此显示「—」。</p>
+     */
+    private Double windowHitRate(long since, long until) {
+        List<InstanceRiskMetric> samples;
+        try {
+            samples = instanceRiskMetricDao.listWindowBoundarySamples(since, until);
+        } catch (Exception e) {
+            logger.error("load hit rate boundary samples failed: {}", e.getMessage(), e);
+            return null;
+        }
+        return hitRateOf(samples);
+    }
+
+    /**
+     * 由窗口首尾采样算出命中率，纯计算，便于测试。
+     */
+    static Double hitRateOf(List<InstanceRiskMetric> samples) {
+        if (samples == null || samples.isEmpty()) {
+            return null;
+        }
+        Map<Long, InstanceRiskMetric> firstByInstance = new HashMap<>();
+        Map<Long, InstanceRiskMetric> lastByInstance = new HashMap<>();
+        for (InstanceRiskMetric sample : samples) {
+            long instanceId = sample.getInstanceId();
+            InstanceRiskMetric first = firstByInstance.get(instanceId);
+            if (first == null || sample.getCollectTime() < first.getCollectTime()) {
+                firstByInstance.put(instanceId, sample);
+            }
+            InstanceRiskMetric last = lastByInstance.get(instanceId);
+            if (last == null || sample.getCollectTime() > last.getCollectTime()) {
+                lastByInstance.put(instanceId, sample);
+            }
+        }
+        long hits = 0;
+        long misses = 0;
+        for (Map.Entry<Long, InstanceRiskMetric> entry : lastByInstance.entrySet()) {
+            InstanceRiskMetric first = firstByInstance.get(entry.getKey());
+            InstanceRiskMetric last = entry.getValue();
+            if (first == null) {
+                continue;
+            }
+            long hitDelta = last.getKeyspaceHits() - first.getKeyspaceHits();
+            long missDelta = last.getKeyspaceMisses() - first.getKeyspaceMisses();
+            // 负增量说明实例在窗口内重启过，累计计数器归了零，这段窗口的样本没法用
+            if (hitDelta < 0 || missDelta < 0) {
+                continue;
+            }
+            hits += hitDelta;
+            misses += missDelta;
+        }
+        long lookup = hits + misses;
+        return lookup > 0 ? hits * 100d / lookup : null;
     }
 
     /**
@@ -555,28 +610,12 @@ public class DashboardOpsService {
      */
     private Double resolveHitRateDelta(Date now, double todayRate) {
         try {
-            long end = Long.parseLong(new SimpleDateFormat("yyyyMMddHHmm")
-                    .format(new Date(now.getTime() - 24 * 3600_000L)));
-            long begin = Long.parseLong(new SimpleDateFormat("yyyyMMddHHmm")
-                    .format(new Date(now.getTime() - 24 * 3600_000L - WINDOW_MINUTES * 60_000L)));
-            List<InstanceRiskMetric> yesterday = instanceRiskMetricDao.listWindowPeak(begin);
-            if (yesterday == null || yesterday.isEmpty()) {
+            Date yesterday = new Date(now.getTime() - 24 * 3600_000L);
+            Double yesterdayRate = windowHitRate(windowStart(yesterday), collectTimeOf(yesterday));
+            if (yesterdayRate == null) {
                 return null;
             }
-            long hits = 0;
-            long misses = 0;
-            for (InstanceRiskMetric m : yesterday) {
-                if (m.getCollectTime() > end) {
-                    continue;
-                }
-                hits += Math.max(0, m.getKeyspaceHits());
-                misses += Math.max(0, m.getKeyspaceMisses());
-            }
-            long lookup = hits + misses;
-            if (lookup <= 0) {
-                return null;
-            }
-            return todayRate - (hits * 100d / lookup);
+            return todayRate - yesterdayRate;
         } catch (Exception e) {
             logger.debug("resolve hit rate delta failed: {}", e.getMessage());
             return null;
@@ -906,6 +945,10 @@ public class DashboardOpsService {
             logger.error("load apps for dashboard failed: {}", e.getMessage(), e);
         }
         return map;
+    }
+
+    private long collectTimeOf(Date time) {
+        return Long.parseLong(new SimpleDateFormat("yyyyMMddHHmm").format(time));
     }
 
     private long windowStart(Date now) {

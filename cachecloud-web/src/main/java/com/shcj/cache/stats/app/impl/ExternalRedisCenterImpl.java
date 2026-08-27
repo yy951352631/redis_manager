@@ -22,6 +22,7 @@ import com.shcj.cache.web.vo.ExternalNodeVO;
 import com.shcj.cache.web.vo.InstanceIpSearchVO;
 import com.shcj.cache.stats.app.ExternalRedisCenter;
 import com.shcj.cache.util.AppClusterNoSupport;
+import com.shcj.cache.util.CollectTimeUtil;
 import com.shcj.cache.util.ConstUtils;
 import com.shcj.cache.util.RedisConstUtils;
 import com.shcj.cache.util.IdempotentConfirmer;
@@ -546,7 +547,7 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
     }
 
     /**
-     * 取该节点最近两条采集快照，按采集时间倒序。
+     * 取该节点最近两条采集快照，按采集时间倒序（首元素最新）。
      *
      * <p>原先两个指标各自调 getStandardStatsByCreateTime，那个查询会把全平台
      * 15 分钟窗口内的行连同 info_json 整片捞回来再在内存里挑出本节点的。
@@ -560,7 +561,7 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         try {
             List<StandardStats> samples = standardStatsDao.getRecentStandardStats(
                     inst.getIp(), inst.getPort(), ConstUtils.REDIS,
-                    new Date(System.currentTimeMillis() - RUNTIME_METRIC_WINDOW_MILLIS), 2);
+                    new Date(System.currentTimeMillis() - RUNTIME_METRIC_WINDOW_MILLIS));
             return samples == null ? Collections.<StandardStats>emptyList() : samples;
         } catch (Exception e) {
             logger.warn("load recent standard stats failed {}:{} {}", inst.getIp(), inst.getPort(), e.getMessage());
@@ -590,14 +591,16 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         StandardStats previous = recentDesc.get(1);
         Map<String, Object> before = previous.getInfoMap();
         Map<String, Object> after = current.getInfoMap();
-        double cpuDelta = Math.max(0D, number(after, "used_cpu_sys") - number(before, "used_cpu_sys"))
-                + Math.max(0D, number(after, "used_cpu_user") - number(before, "used_cpu_user"))
-                + Math.max(0D, number(after, "used_cpu_user_children") - number(before, "used_cpu_user_children"));
-        long intervalSeconds = (current.getCollectTime() / 100 - previous.getCollectTime() / 100) * 60L;
-        if (intervalSeconds <= 0) {
-            return 0.0D;
-        }
-        return Math.round(Math.max(0D, cpuDelta * 100D / intervalSeconds) * 10D) / 10D;
+        // Δtotal = Δsys + Δuser。不计 used_cpu_user_children：那是 fork 出去做 BGSAVE /
+        // AOF 重写的子进程用掉的 CPU，算进来会让备份期间的曲线凭空拱起一个尖峰，
+        // 也与集群管理那一侧的口径不一致。
+        double cpuDelta = (number(after, "used_cpu_sys") - number(before, "used_cpu_sys"))
+                + (number(after, "used_cpu_user") - number(before, "used_cpu_user"));
+        // 原来写的是 (collectTime/100 - collectTime/100) * 60。collect_time 是 yyyyMMddHHmm，
+        // 除以 100 抹掉的是分钟位，同一小时内的两条采样相减恒为 0，于是整点内 CPU 永远显示 0。
+        long intervalSeconds = CollectTimeUtil.secondsBetween(
+                previous.getCollectTime(), current.getCollectTime());
+        return CollectTimeUtil.cpuUsePercent(cpuDelta, intervalSeconds);
     }
 
     @SuppressWarnings("unchecked")

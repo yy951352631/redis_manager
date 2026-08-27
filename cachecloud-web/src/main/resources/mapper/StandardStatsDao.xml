@@ -37,12 +37,19 @@
     </delete>
 
     <select id="getRecentStandardStats" resultType="StandardStats">
+        <!--
+          取该实例最近的两条采样，用于算 CPU 使用率与运行时长。
+
+          用最近两条而不是整个窗口的首尾：CPU 使用率是「当前」指标，按 15 分钟跨度
+          平摊会把刚起来的负载稀释掉——实测节点真实跑在 92.7% 时，15 分钟口径只显示
+          19%。窗口参数在这里只用来兜底限定搜索范围，不参与计算。
+        -->
         select id,collect_time,ip,port,db_type,info_json,diff_json,cluster_info_json,created_time
         from standard_statistics
         where ip = #{ip} and port = #{port} and db_type = #{dbType}
           and created_time &gt;= #{beginTime}
         order by collect_time desc
-        limit #{limit}
+        limit 2
     </select>
 
     <select id="getStandardStatsByCreateTime" resultType="StandardStats">

@@ -10,6 +10,7 @@ import com.shcj.cache.redis.RedisCenter;
 import com.shcj.cache.stats.app.AppStatsCenter;
 import com.shcj.cache.task.constant.ResourceEnum;
 import com.shcj.cache.util.AppClusterNoSupport;
+import com.shcj.cache.util.CollectTimeUtil;
 import com.shcj.cache.util.ConstUtils;
 import com.shcj.cache.util.PandectUtil;
 import com.shcj.cache.util.TypeUtil;
@@ -46,6 +47,9 @@ import java.util.stream.Collectors;
 @Service("appStatsCenter")
 public class AppStatsCenterImpl implements AppStatsCenter {
 
+    /** CPU 使用率的回溯窗口：采集是分钟级，15 分钟足以拿到首尾两条 */
+    private static final long CPU_WINDOW_MILLIS = 15L * 60L * 1000L;
+
     private final static String COLLECT_DATE_FORMAT = "yyyyMMddHHmm";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     @Autowired
@@ -56,6 +60,9 @@ public class AppStatsCenterImpl implements AppStatsCenter {
     private MachineDao machineDao;
     @Autowired
     private AppStatsDao appStatsDao;
+
+    @Autowired
+    private com.shcj.cache.dao.InstanceRiskMetricDao instanceRiskMetricDao;
     @Autowired
     private InstanceLatencyHistoryDao instanceLatencyHistoryDao;
     @Autowired
@@ -462,27 +469,67 @@ public class AppStatsCenterImpl implements AppStatsCenter {
     }
 
     /** INFO CPU 字段是累计秒数，使用相邻两次应用采集值计算当前使用率。 */
+    /**
+     * 集群 CPU 使用率：各数据节点使用率的平均值。
+     *
+     * <p>原实现有两处问题。其一，数据源 app_minute_statistics 的 cpu_sys/cpu_user 是
+     * 整型秒，一个每分钟只用掉 0.13 CPU 秒的集群会被截断成 0；其二，间隔算的是
+     * {@code (collectTime/100 - collectTime/100) * 60}，而 collect_time 是
+     * yyyyMMddHHmm，除以 100 抹掉的是分钟位，同一小时内恒为 0 直接短路返回。
+     * 两个问题叠加，这个值实际上一直是 0。
+     *
+     * <p>改用 instance_risk_metric_minute 的 double 累计值，按实例取窗口首尾两条相减，
+     * 除以真实时间跨度。取平均而非求和：求和在多节点集群上会轻易超过 100%，与旁边
+     * 那列「内存使用率」的口径也对不上。</p>
+     */
     private double calculateCpuUsePercent(long appId) {
-        long end = Long.parseLong(DateUtil.formatDate(new Date(), "yyyyMMddHHmm"));
-        long begin = Long.parseLong(DateUtil.formatDate(new Date(System.currentTimeMillis() - 15 * 60 * 1000L), "yyyyMMddHHmm"));
-        List<AppStats> samples = appStatsDao.getAppStatsByMinute(appId, begin, end);
-        if (samples == null || samples.size() < 2) {
+        long since = NumberUtils.toLong(DateUtil.formatDate(
+                new Date(System.currentTimeMillis() - CPU_WINDOW_MILLIS), "yyyyMMddHHmm"), 0L);
+        List<Map<String, Object>> rows;
+        try {
+            rows = instanceRiskMetricDao.cpuBoundaryByApp(appId, since);
+        } catch (Exception e) {
+            logger.warn("load cpu boundary failed appId={}: {}", appId, e.getMessage());
             return 0.0D;
         }
-        samples.sort(Comparator.comparingLong(AppStats::getCollectTime));
-        AppStats previous = samples.get(samples.size() - 2);
-        AppStats current = samples.get(samples.size() - 1);
-        long intervalSeconds = (current.getCollectTime() - previous.getCollectTime()) % 100;
-        long minuteDelta = current.getCollectTime() / 100 - previous.getCollectTime() / 100;
-        intervalSeconds = minuteDelta * 60L;
-        if (intervalSeconds <= 0) {
+        if (CollectionUtils.isEmpty(rows)) {
             return 0.0D;
         }
-        long cpuDelta = Math.max(0L, current.getCpuSys() - previous.getCpuSys())
-                + Math.max(0L, current.getCpuUser() - previous.getCpuUser())
-                + Math.max(0L, current.getCpuUserChildren() - previous.getCpuUserChildren());
-        double percent = cpuDelta * 100.0D / intervalSeconds;
-        return Math.round(Math.max(0.0D, percent) * 10.0D) / 10.0D;
+        // SQL 已按 (instance_id, collect_time) 排序，同一实例的两行紧挨着且首条在前
+        Map<Long, List<Map<String, Object>>> byInstance = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            long instanceId = NumberUtils.toLong(String.valueOf(row.get("instanceId")), 0L);
+            byInstance.computeIfAbsent(instanceId, key -> new ArrayList<>()).add(row);
+        }
+
+        double totalPercent = 0.0D;
+        int counted = 0;
+        for (List<Map<String, Object>> samples : byInstance.values()) {
+            if (samples.size() < 2) {
+                continue;
+            }
+            Map<String, Object> first = samples.get(0);
+            Map<String, Object> last = samples.get(samples.size() - 1);
+            double delta = cpuSeconds(last) - cpuSeconds(first);
+            long span = CollectTimeUtil.secondsBetween(
+                    NumberUtils.toLong(String.valueOf(first.get("collectTime")), 0L),
+                    NumberUtils.toLong(String.valueOf(last.get("collectTime")), 0L));
+            // 跨度取不到或实例重启过（增量为负）就不计入均值，掺进去只会把结果压低
+            if (span <= 0 || delta < 0) {
+                continue;
+            }
+            totalPercent += CollectTimeUtil.cpuUsePercent(delta, span);
+            counted++;
+        }
+        if (counted == 0) {
+            return 0.0D;
+        }
+        return Math.round(totalPercent / counted * 10.0D) / 10.0D;
+    }
+
+    private double cpuSeconds(Map<String, Object> row) {
+        return NumberUtils.toDouble(String.valueOf(row.get("usedCpuSys")), 0D)
+                + NumberUtils.toDouble(String.valueOf(row.get("usedCpuUser")), 0D);
     }
 
     @SuppressWarnings("unchecked")

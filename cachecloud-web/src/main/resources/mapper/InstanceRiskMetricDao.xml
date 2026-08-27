@@ -129,6 +129,33 @@
     <!-- CPU 使用率：累计秒数的增量 / 首末采样的真实跨度。
          跨度用 collect_time 首末换算，而不是「采样点数×60」——中间有漏采时
          后者会低估跨度，把使用率算高。 -->
+    <select id="cpuBoundaryByApp" resultType="java.util.Map">
+        <!--
+          取该集群最近两轮采集里各实例的 CPU 累计值。
+
+          用最近两轮而不是窗口首尾：CPU 使用率是「当前」指标，按 15 分钟跨度平摊会把
+          刚起来的负载稀释掉——实测节点真实跑在 92.7% 时，15 分钟口径只显示 19%。
+          窗口参数只用来限定搜索范围。
+
+          采集是整批写入的，同一集群各实例共用同一个 collect_time，所以按 collect_time
+          取最近两轮即可；漏采的实例只会拿到一行，上层据此跳过而不是拿旧值凑数。
+        -->
+        select instance_id as instanceId, collect_time as collectTime,
+               used_cpu_sys as usedCpuSys, used_cpu_user as usedCpuUser
+        from instance_risk_metric_minute
+        where app_id = #{appId}
+          and collect_time in (
+              select t.collect_time from (
+                  select distinct collect_time
+                  from instance_risk_metric_minute
+                  where app_id = #{appId} and collect_time &gt;= #{sinceCollectTime}
+                  order by collect_time desc
+                  limit 2
+              ) t
+          )
+        order by instance_id, collect_time
+    </select>
+
     <select id="cpuUsageSince" resultType="java.util.Map">
         select
             app_id as appId, instance_id as instanceId, ip, port,

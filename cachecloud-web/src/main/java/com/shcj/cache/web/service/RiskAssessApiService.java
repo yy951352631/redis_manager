@@ -104,8 +104,10 @@ public class RiskAssessApiService {
         map.put("ACCESS_PASSWORD", "读各数据节点的 requirepass：未设密码判风险；已设但不满足"
                 + "「12 位以上且同时含大小写字母与数字」判关注。以实例上实际生效的配置为准，"
                 + "而不是平台里存的连接密码——后者只说明平台怎么连，前者才决定别人能不能连进来");
-        map.put("HIGH_AVAILABILITY", "检查每个主节点是否配有从节点。无从节点的主节点宕机即丢失该分片服务能力，"
-                + "standalone 单实例同理，均判风险；哨兵架构下若存活哨兵不足 3 个，无法可靠仲裁，判关注");
+        map.put("HIGH_AVAILABILITY", "分两层判定。一是冗余：无从节点的主节点宕机即丢失该分片服务能力，"
+                + "standalone 单实例同理，判严重。二是仲裁能力，按集群类型分别判断——"
+                + "Cluster 模式看存活 master 是否超过 master 总数半数，Sentinel 模式看存活哨兵是否"
+                + "超过哨兵总数半数；未过半则故障转移无法触发，判风险。两层都通过才算具备高可用性");
         map.put("PERSISTENCE", "读各数据节点的 appendonly 与 save：两者皆空表示重启即全量丢数据，判关注。"
                 + "RDB 是否开启只能从 CONFIG GET save 判断，INFO 里没有这个信息");
         return map;
@@ -133,12 +135,17 @@ public class RiskAssessApiService {
                         "将密码改为 12 位以上且同时包含大写字母、小写字母与数字")));
 
         map.put("HIGH_AVAILABILITY", Arrays.asList(
-                categorical("RISK", "主从拓扑", "存在无从节点的主节点，或 standalone 单实例部署",
+                categorical("SEVERE", "主从拓扑", "存在无从节点的主节点，或 standalone 单实例部署",
                         "主节点宕机即丢失该分片的服务能力，无法自动恢复",
                         "为每个主节点配置至少一个从节点；standalone 建议迁移到 sentinel / cluster"),
-                categorical("ATTENTION", "哨兵数量", "哨兵架构下存活哨兵 < 3",
-                        "主从齐全但哨兵不足 3 个时无法达成多数派，故障转移可能不会触发",
-                        "补足至少 3 个哨兵节点")));
+                categorical("RISK", "Cluster 多数派", "Cluster 模式下存活 master 未超过 master 总数的半数",
+                        "Cluster 由 master 之间投票判定节点故障与执行转移，存活 master 不过半时"
+                                + "集群无法完成仲裁，故障转移不会发生",
+                        "恢复故障 master，使存活数超过总数半数"),
+                categorical("RISK", "Sentinel 多数派", "Sentinel 模式下存活哨兵未超过哨兵总数的半数",
+                        "由哨兵投票选主，达不到多数派时故障转移不会触发。门槛按注册总数计算而非固定 3 个："
+                                + "3 个需存活 2 个，4 个和 5 个都需 3 个",
+                        "恢复故障哨兵或补充节点，使存活哨兵超过总数半数")));
 
         map.put("PERSISTENCE", Arrays.asList(
                 categorical("ATTENTION", "appendonly / save", "两者均未开启",

@@ -30,6 +30,14 @@ public class RiskAssessContext {
     /** 采集失败的实例，报告中显式标注，且不参与倾斜判定 */
     private List<InstanceInfo> uncollectedInstances = new ArrayList<>();
 
+    /**
+     * 哨兵节点，单独存放。
+     *
+     * <p>instances 刻意不含哨兵——它不承载数据，参与指标类维度只会稀释统计。
+     * 但高可用性维度需要数哨兵个数判断能否仲裁，故单列一份。</p>
+     */
+    private List<InstanceInfo> sentinelInstances = new ArrayList<>();
+
     /** 评估窗口 */
     private int windowHours;
     private Date windowStart;

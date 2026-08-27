@@ -81,8 +81,21 @@ function exportRulesPdf() {
   return exportPdf(rulesRef.value, `Redis风险评估策略_${stamp()}`)
 }
 
-function exportReportPdf() {
-  return exportPdf(reportRef.value, `Redis风险评估报告_${report.value?.appName ?? ""}_${stamp()}`)
+/** 导出期间强制展开全部证据：折叠态是 display:none，html2canvas 截不到 */
+const forceExpandEvidence = ref(false)
+
+async function exportReportPdf() {
+  forceExpandEvidence.value = true
+  try {
+    await nextTick()
+    // 等一帧，确保展开后的高度已完成布局
+    await new Promise<void>(resolve =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    )
+    await exportPdf(reportRef.value, `Redis风险评估报告_${report.value?.appName ?? ""}_${stamp()}`)
+  } finally {
+    forceExpandEvidence.value = false
+  }
 }
 
 // ---- 批量评估 / 批量导出 ----
@@ -287,13 +300,100 @@ async function openReport(row: RiskAssessOverviewItem) {
 }
 
 /** 证据是后端序列化的 JSON 字符串，展示时格式化 */
-function prettyEvidence(evidence?: string | null) {
-  if (!evidence) return ""
+interface EvidenceTable {
+  title: string
+  columns: string[]
+  rows: string[][]
+  /** 无法结构化的原始片段，退化为纯文本展示 */
+  raw?: string
+}
+
+function cellText(v: unknown): string {
+  if (v === null || v === undefined) return "-"
+  if (typeof v === "object") return JSON.stringify(v)
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(2)
+  return String(v)
+}
+
+/**
+ * 把维度证据的 JSON 拍平成若干张表。
+ *
+ * 证据结构因维度而异，实际有三种形态：
+ *   { instances: { "ip:port": "AOF + RDB" } }              → 键值两列
+ *   { instances: [ { instance, usedMemoryMB, ... } ] }     → 对象数组，列取并集
+ *   { unlimitedInstances: 0 }                              → 标量，并入「其它」表
+ * 无法识别的结构保留原始 JSON，不丢信息。
+ */
+function evidenceTables(evidence?: string | null): EvidenceTable[] {
+  if (!evidence) return []
+  let parsed: unknown
   try {
-    return JSON.stringify(JSON.parse(evidence), null, 2)
+    parsed = JSON.parse(evidence)
   } catch {
-    return evidence
+    return [{ title: "证据", columns: [], rows: [], raw: evidence }]
   }
+  if (parsed === null || typeof parsed !== "object") {
+    return [{ title: "证据", columns: [], rows: [], raw: String(parsed) }]
+  }
+
+  const tables: EvidenceTable[] = []
+  const scalars: string[][] = []
+
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (value === null || value === undefined) {
+      scalars.push([key, "-"])
+      continue
+    }
+    if (Array.isArray(value)) {
+      if (!value.length) {
+        scalars.push([key, "（空）"])
+        continue
+      }
+      const objectRows = value.filter(v => v !== null && typeof v === "object" && !Array.isArray(v))
+      if (objectRows.length === value.length) {
+        // 列取所有对象键的并集：不同元素可能缺字段，漏列会丢数据
+        const cols: string[] = []
+        for (const row of objectRows) {
+          for (const k of Object.keys(row as Record<string, unknown>)) {
+            if (!cols.includes(k)) cols.push(k)
+          }
+        }
+        tables.push({
+          title: key,
+          columns: cols,
+          rows: objectRows.map(row =>
+            cols.map(c => cellText((row as Record<string, unknown>)[c]))
+          )
+        })
+      } else {
+        tables.push({
+          title: key,
+          columns: ["值"],
+          rows: value.map(v => [cellText(v)])
+        })
+      }
+      continue
+    }
+    if (typeof value === "object") {
+      const entries = Object.entries(value as Record<string, unknown>)
+      if (!entries.length) {
+        scalars.push([key, "（空）"])
+        continue
+      }
+      tables.push({
+        title: key,
+        columns: ["项", "值"],
+        rows: entries.map(([k, v]) => [k, cellText(v)])
+      })
+      continue
+    }
+    scalars.push([key, cellText(value)])
+  }
+
+  if (scalars.length) {
+    tables.push({ title: "其它", columns: ["项", "值"], rows: scalars })
+  }
+  return tables
 }
 
 /** 有结论的排前面，其中越严重越靠前 */
@@ -660,9 +760,58 @@ onMounted(fetchList)
               <div v-if="d.suggestion" class="risk-dim__suggestion">
                 建议：{{ d.suggestion }}
               </div>
-              <el-collapse v-if="d.evidence" class="risk-dim__evidence">
+              <!-- 导出时直接平铺，不走折叠面板 -->
+              <div v-if="d.evidence && forceExpandEvidence" class="risk-dim__evidence-flat">
+                <div class="risk-dim__evidence-caption">
+                  收集的证据
+                </div>
+                <div v-for="t in evidenceTables(d.evidence)" :key="`${d.dimension}-${t.title}`" class="risk-ev">
+                  <div class="risk-ev__title">
+                    {{ t.title }}
+                  </div>
+                  <pre v-if="t.raw" class="risk-ev__raw">{{ t.raw }}</pre>
+                  <table v-else class="risk-ev__table">
+                    <thead>
+                      <tr>
+                        <th v-for="c in t.columns" :key="c">
+                          {{ c }}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, i) in t.rows" :key="i">
+                        <td v-for="(cell, j) in row" :key="j">
+                          {{ cell }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <el-collapse v-else-if="d.evidence" class="risk-dim__evidence">
                 <el-collapse-item title="查看证据">
-                  <pre>{{ prettyEvidence(d.evidence) }}</pre>
+                  <div v-for="t in evidenceTables(d.evidence)" :key="`${d.dimension}-${t.title}`" class="risk-ev">
+                    <div class="risk-ev__title">
+                      {{ t.title }}
+                    </div>
+                    <pre v-if="t.raw" class="risk-ev__raw">{{ t.raw }}</pre>
+                    <table v-else class="risk-ev__table">
+                      <thead>
+                        <tr>
+                          <th v-for="c in t.columns" :key="c">
+                            {{ c }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(row, i) in t.rows" :key="i">
+                          <td v-for="(cell, j) in row" :key="j">
+                            {{ cell }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </el-collapse-item>
               </el-collapse>
             </div>
@@ -674,6 +823,56 @@ onMounted(fetchList)
 </template>
 
 <style lang="scss" scoped>
+/* 证据表格：紧凑排版，PDF 里也能塞得下 */
+.risk-dim__evidence-flat {
+  margin-top: 8px;
+}
+
+.risk-dim__evidence-caption {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rp-text-muted, #6b7a90);
+}
+
+.risk-ev {
+  margin-bottom: 10px;
+}
+
+.risk-ev__title {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.risk-ev__table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.risk-ev__table th,
+.risk-ev__table td {
+  padding: 4px 8px;
+  text-align: left;
+  word-break: break-all;
+  border: 1px solid var(--rp-border, #e8edf3);
+}
+
+.risk-ev__table th {
+  font-weight: 600;
+  background: var(--rp-surface-muted, #f8fafc);
+}
+
+.risk-ev__raw {
+  padding: 8px;
+  margin: 0;
+  font-size: 11px;
+  white-space: pre-wrap;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+}
+
 /* 汇总报告舞台：html2canvas 只能截"渲染中"的元素，
    因此不能隐藏，只能做到几乎不可见并且不挡交互。 */
 .risk-batch-stage {

@@ -8,6 +8,7 @@ import com.shcj.cache.dao.RiskAssessReportDao;
 import com.shcj.cache.dao.RiskAssessRuleDao;
 import com.shcj.cache.entity.AppDesc;
 import com.shcj.cache.entity.InstanceInfo;
+import com.shcj.cache.entity.InstanceCommandLatency;
 import com.shcj.cache.entity.InstanceRiskMetric;
 import com.shcj.cache.entity.InstanceSlowLog;
 import com.shcj.cache.entity.RiskAssessDimension;
@@ -137,15 +138,20 @@ public class RiskAssessEngine {
 
         List<InstanceInfo> all = appService.getAppOnlineInstanceInfo(appDesc.getAppId());
         List<InstanceInfo> instances = new ArrayList<>();
+        List<InstanceInfo> sentinels = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(all)) {
             for (InstanceInfo instance : all) {
                 // sentinel 节点不承载数据，指标维度对它无意义
-                if (!TypeUtil.isRedisSentinel(instance.getType())) {
+                if (TypeUtil.isRedisSentinel(instance.getType())) {
+                    sentinels.add(instance);
+                } else {
                     instances.add(instance);
                 }
             }
         }
         context.setInstances(instances);
+        // 高可用性维度要数哨兵个数，单独给它一份而不是放宽上面的过滤
+        context.setSentinelInstances(sentinels);
 
         List<InstanceRiskMetric> metrics = instanceRiskMetricDao.listByAppAndRange(
                 appDesc.getAppId(), beginTime, endTime);
@@ -157,6 +163,12 @@ public class RiskAssessEngine {
         context.setLatestSnapshot(instanceRiskMetricDao.listLatestSnapshot(
                 appDesc.getAppId(), beginTime, endTime));
         context.setEarliestMetricTime(instanceRiskMetricDao.getEarliestCollectTime(appDesc.getAppId()));
+
+        // 命令耗时样本：采集器一直在往 instance_command_latency_minute 写，
+        // 但此前从未被读进上下文，导致 COMMAND_LATENCY 维度恒报「没有采集到样本」。
+        List<InstanceCommandLatency> latencySamples = instanceCommandLatencyDao.listMinuteByAppAndRange(
+                appDesc.getAppId(), beginTime, endTime);
+        context.setCommandSamples(latencySamples == null ? new ArrayList<>() : latencySamples);
 
         // 有实例在窗口内没有任何样本，说明采集失败或刚纳管；倾斜判定需要知道样本是否完整
         List<InstanceInfo> uncollected = new ArrayList<>();

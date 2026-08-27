@@ -12,7 +12,8 @@ const ops = ref<DashboardOps | null>(null)
 
 /** 采集是分钟级，刷新快于 60s 只会拿到同一份数据 */
 const REFRESH_MS = 60_000
-const autoRefresh = ref(true)
+/** 默认关闭：整页数据量不小，让使用者自己决定要不要后台一直拉 */
+const autoRefresh = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
 const trendRef = useTemplateRef<HTMLDivElement>("trendRef")
@@ -22,6 +23,19 @@ let healthChart: ECharts | null = null
 
 const kpi = computed(() => ops.value?.kpi ?? null)
 const health = computed(() => ops.value?.clusterHealth ?? null)
+
+const HEALTH_PAGE_SIZE = 5
+const healthPage = ref(1)
+const healthRows = computed(() => health.value?.rows ?? [])
+const healthPagedRows = computed(() => {
+  const start = (healthPage.value - 1) * HEALTH_PAGE_SIZE
+  return healthRows.value.slice(start, start + HEALTH_PAGE_SIZE)
+})
+// 集群下线后总数会变少，停在越界的页码上会显示成空表
+watch(() => healthRows.value.length, (total) => {
+  const maxPage = Math.max(1, Math.ceil(total / HEALTH_PAGE_SIZE))
+  if (healthPage.value > maxPage) healthPage.value = maxPage
+})
 const posture = computed(() => ops.value?.posture ?? null)
 const unmonitored = computed(() => posture.value?.unmonitoredApps ?? [])
 const unmonitoredVisible = ref(false)
@@ -353,38 +367,49 @@ onBeforeUnmount(() => {
         </template>
         <div class="ops-health">
           <div ref="healthRef" class="ops-health__chart" />
-          <el-table :data="health?.rows ?? []" size="small" class="ops-health__table">
-            <el-table-column label="集群名称" min-width="140" show-overflow-tooltip>
-              <template #default="{ row }">
-                <el-link type="primary" :underline="false" @click="openApp(row.appId, 'app_topology')">
-                  {{ row.appName }}
-                </el-link>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="80">
-              <template #default="{ row }">
-                <el-tag :type="statusTag(row.status)" size="small">
-                  {{ row.statusDesc }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="masterCount" label="主" width="52" align="right" />
-            <el-table-column prop="slaveCount" label="从" width="52" align="right" />
-            <el-table-column label="内存使用率" min-width="150">
-              <template #default="{ row }">
-                <div class="ops-mem">
-                  <span class="ops-mem__bar">
-                    <span
-                      class="ops-mem__fill"
-                      :class="{ 'is-high': row.memRatio >= 90 }"
-                      :style="{ width: `${Math.min(100, row.memRatio)}%` }"
-                    />
-                  </span>
-                  <span class="ops-mem__text">{{ row.memRatio.toFixed(1) }}%</span>
-                </div>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="ops-health__list">
+            <el-table :data="healthPagedRows" size="small" class="ops-health__table">
+              <el-table-column label="集群名称" min-width="140" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <el-link type="primary" :underline="false" @click="openApp(row.appId, 'app_topology')">
+                    {{ row.appName }}
+                  </el-link>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="statusTag(row.status)" size="small">
+                    {{ row.statusDesc }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="masterCount" label="主" width="52" align="right" />
+              <el-table-column prop="slaveCount" label="从" width="52" align="right" />
+              <el-table-column label="内存使用率" min-width="150">
+                <template #default="{ row }">
+                  <div class="ops-mem">
+                    <span class="ops-mem__bar">
+                      <span
+                        class="ops-mem__fill"
+                        :class="{ 'is-high': row.memRatio >= 90 }"
+                        :style="{ width: `${Math.min(100, row.memRatio)}%` }"
+                      />
+                    </span>
+                    <span class="ops-mem__text">{{ row.memRatio.toFixed(1) }}%</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-pagination
+              v-if="healthRows.length > HEALTH_PAGE_SIZE"
+              v-model:current-page="healthPage"
+              :page-size="HEALTH_PAGE_SIZE"
+              :total="healthRows.length"
+              layout="total, prev, pager, next"
+              small
+              class="ops-health__pager"
+            />
+          </div>
         </div>
       </el-card>
 
@@ -787,6 +812,18 @@ onBeforeUnmount(() => {
 
 .ops-health__chart {
   height: 190px;
+}
+
+/* 表格与分页器共占网格右侧那一格，否则分页器会掉到饼图下面去 */
+.ops-health__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ops-health__pager {
+  justify-content: flex-end;
 }
 
 .ops-trend {

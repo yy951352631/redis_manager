@@ -148,10 +148,23 @@ public class AppManageApiService {
             }
         }
 
+        // listExternalNodes 会把全平台节点连同运行时指标整套重建一遍。原先每一行都调一次，
+        // 放大成「行数 × 节点数」次取数，集群列表因此要跑好几秒。整页只需要一次。
+        boolean needsExternalProbe = false;
+        for (AppDesc appDesc : apps) {
+            if (appDesc.getStatus() == AppStatusEnum.STATUS_PUBLISHED.getStatus()
+                    && externalByAppId.containsKey(appDesc.getAppId())) {
+                needsExternalProbe = true;
+                break;
+            }
+        }
+        Map<Long, String> unknownExternalNodes = needsExternalProbe
+                ? loadUnknownExternalDataNodes() : Collections.<Long, String>emptyMap();
+
         List<AppListItemDto> items = new ArrayList<>();
         for (AppDesc appDesc : apps) {
             AppListItemDto item = buildListItem(appDesc, externalByAppId.get(appDesc.getAppId()),
-                    ipHitMap.get(appDesc.getAppId()));
+                    ipHitMap.get(appDesc.getAppId()), unknownExternalNodes);
             if (statusFilter < 0
                     || statusFilter == item.getRuntimeStatus()
                     || (statusFilter == AppStatusEnum.STATUS_UNKNOWN.getStatus()
@@ -250,7 +263,8 @@ public class AppManageApiService {
         return dto;
     }
 
-    private AppListItemDto buildListItem(AppDesc appDesc, ExternalRedis externalRedis, InstanceIpSearchVO ipHit) {
+    private AppListItemDto buildListItem(AppDesc appDesc, ExternalRedis externalRedis, InstanceIpSearchVO ipHit,
+                                         Map<Long, String> unknownExternalNodes) {
         AppListItemDto row = new AppListItemDto();
         long appId = appDesc.getAppId();
         row.setAppId(appId);
@@ -287,7 +301,7 @@ public class AppManageApiService {
         if (appDesc.getStatus() == AppStatusEnum.STATUS_PUBLISHED.getStatus()) {
             String abnormalDetail = buildAbnormalDataNodeDetail(instances);
             if (StringUtils.isBlank(abnormalDetail) && externalRedis != null) {
-                abnormalDetail = getUnknownExternalDataNodeDetail(appId);
+                abnormalDetail = unknownExternalNodes.get(appId);
             }
             if (StringUtils.isNotBlank(abnormalDetail)) {
                 row.setRuntimeStatus(AppStatusEnum.STATUS_ABNORMAL.getStatus());
@@ -462,26 +476,39 @@ public class AppManageApiService {
         return String.join(", ", nodes);
     }
 
-    /**
-     * 节点管理页面对外部纳管节点使用实时探活，未知状态不能只看 instance_info.status，
-     * 否则节点刚失联时集群仍会被错误显示为运行中。
-     */
+    /** 单个集群详情用：只关心一个 appId，一次探测足够 */
     private String getUnknownExternalDataNodeDetail(long appId) {
-        List<String> unknownNodes = new ArrayList<>();
+        return StringUtils.defaultString(loadUnknownExternalDataNodes().get(appId));
+    }
+
+    /**
+     * 一次性列出所有外部纳管集群里状态未知的数据节点，按 appId 归组。
+     *
+     * <p>节点管理页面对外部纳管节点使用实时探活，未知状态不能只看 instance_info.status，
+     * 否则节点刚失联时集群仍会被错误显示为运行中。</p>
+     */
+    private Map<Long, String> loadUnknownExternalDataNodes() {
+        Map<Long, List<String>> byApp = new LinkedHashMap<>();
         try {
             List<ExternalNodeVO> externalNodes = externalRedisCenter.listExternalNodes("");
-            if (externalNodes == null) return "";
-            for (ExternalNodeVO node : externalNodes) {
-                if (node != null && node.getAppId() == appId
-                        && !"sentinel".equalsIgnoreCase(node.getNodeTypeDesc())
-                        && node.getStatus() != InstanceStatusEnum.GOOD_STATUS.getStatus()) {
-                    unknownNodes.add(node.getIp() + ":" + node.getPort());
+            if (externalNodes != null) {
+                for (ExternalNodeVO node : externalNodes) {
+                    if (node == null || "sentinel".equalsIgnoreCase(node.getNodeTypeDesc())
+                            || node.getStatus() == InstanceStatusEnum.GOOD_STATUS.getStatus()) {
+                        continue;
+                    }
+                    byApp.computeIfAbsent(node.getAppId(), key -> new ArrayList<>())
+                            .add(node.getIp() + ":" + node.getPort());
                 }
             }
         } catch (Exception ignored) {
             // Preserve the persisted heartbeat result when the supplementary probe fails.
         }
-        return String.join(", ", unknownNodes);
+        Map<Long, String> result = new LinkedHashMap<>();
+        for (Map.Entry<Long, List<String>> entry : byApp.entrySet()) {
+            result.put(entry.getKey(), String.join(", ", entry.getValue()));
+        }
+        return result;
     }
 
     private boolean hasRunningDataNode(List<InstanceInfo> instances) {

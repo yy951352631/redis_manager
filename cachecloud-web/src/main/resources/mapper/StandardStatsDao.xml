@@ -36,6 +36,15 @@
         ]]>
     </delete>
 
+    <select id="getRecentStandardStats" resultType="StandardStats">
+        select id,collect_time,ip,port,db_type,info_json,diff_json,cluster_info_json,created_time
+        from standard_statistics
+        where ip = #{ip} and port = #{port} and db_type = #{dbType}
+          and created_time &gt;= #{beginTime}
+        order by collect_time desc
+        limit #{limit}
+    </select>
+
     <select id="getStandardStatsByCreateTime" resultType="StandardStats">
         select id,collect_time,ip,port,db_type,info_json,diff_json,cluster_info_json,created_time
         from standard_statistics

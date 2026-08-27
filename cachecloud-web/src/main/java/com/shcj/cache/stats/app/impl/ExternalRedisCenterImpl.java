@@ -69,6 +69,9 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
     private static final Logger logger = LoggerFactory.getLogger(ExternalRedisCenterImpl.class);
     private final AtomicBoolean scheduledCollecting = new AtomicBoolean(false);
 
+    /** 运行时长/CPU 回溯的采样窗口：采集是分钟级，15 分钟足以拿到相邻两条 */
+    private static final long RUNTIME_METRIC_WINDOW_MILLIS = 15L * 60L * 1000L;
+
     /** 单轮采集的并发度，够把死节点的超时摊开又不至于把 Redis 和自身连接数打上去 */
     private static final int COLLECT_CONCURRENCY = 8;
 
@@ -532,29 +535,44 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         if (server != null) {
             vo.setUptimeSeconds(NumberUtils.toLong(String.valueOf(server.get("uptime_in_seconds")), 0L));
         }
+        // 运行时长与 CPU 用的是同一批采样，取一次即可
+        List<StandardStats> recentSamples = loadRecentSamples(inst);
         if (vo.getUptimeSeconds() <= 0) {
-            vo.setUptimeSeconds(loadLatestInstanceUptime(inst));
+            vo.setUptimeSeconds(uptimeOf(recentSamples));
         }
-        vo.setCpuUsePercent(calculateInstanceCpuUsePercent(inst));
+        vo.setCpuUsePercent(cpuUsePercentOf(recentSamples));
         vo.setMemFragmentationRatio(stats.getMemFragmentationRatio());
         vo.setConnectedClients(stats.getCurrConnections());
     }
 
-    @SuppressWarnings("unchecked")
-    private long loadLatestInstanceUptime(InstanceInfo inst) {
-        if (inst == null || StringUtils.isBlank(inst.getIp())) return 0L;
-        List<StandardStats> samples = standardStatsDao.getStandardStatsByCreateTime(
-                new Date(System.currentTimeMillis() - 15 * 60 * 1000L), new Date(), ConstUtils.REDIS);
-        StandardStats latest = null;
-        if (samples != null) {
-            for (StandardStats sample : samples) {
-                if (sample.getPort() == inst.getPort() && inst.getIp().equals(sample.getIp())
-                        && (latest == null || sample.getCollectTime() > latest.getCollectTime())) {
-                    latest = sample;
-                }
-            }
+    /**
+     * 取该节点最近两条采集快照，按采集时间倒序。
+     *
+     * <p>原先两个指标各自调 getStandardStatsByCreateTime，那个查询会把全平台
+     * 15 分钟窗口内的行连同 info_json 整片捞回来再在内存里挑出本节点的。
+     * 节点数一多就是「节点数 × 2」次全窗口查询加上百万字节的 JSON 反序列化，
+     * 集群列表因此要跑好几秒。这里按 ip:port 精确取数，只要两条。</p>
+     */
+    private List<StandardStats> loadRecentSamples(InstanceInfo inst) {
+        if (inst == null || StringUtils.isBlank(inst.getIp())) {
+            return Collections.emptyList();
         }
-        if (latest == null || latest.getInfoMap() == null) return 0L;
+        try {
+            List<StandardStats> samples = standardStatsDao.getRecentStandardStats(
+                    inst.getIp(), inst.getPort(), ConstUtils.REDIS,
+                    new Date(System.currentTimeMillis() - RUNTIME_METRIC_WINDOW_MILLIS), 2);
+            return samples == null ? Collections.<StandardStats>emptyList() : samples;
+        } catch (Exception e) {
+            logger.warn("load recent standard stats failed {}:{} {}", inst.getIp(), inst.getPort(), e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private long uptimeOf(List<StandardStats> recentDesc) {
+        if (recentDesc.isEmpty()) return 0L;
+        StandardStats latest = recentDesc.get(0);
+        if (latest.getInfoMap() == null) return 0L;
         Object server = latest.getInfoMap().get("Server");
         if (!(server instanceof Map)) server = latest.getInfoMap().get("server");
         if (!(server instanceof Map)) return 0L;
@@ -563,31 +581,13 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
     }
 
     /** 实例 CPU 字段是累计秒数，按最近两次分钟采集的差值计算百分比。 */
-    private double calculateInstanceCpuUsePercent(InstanceInfo inst) {
-        if (inst == null || StringUtils.isBlank(inst.getIp())) {
+    private double cpuUsePercentOf(List<StandardStats> recentDesc) {
+        if (recentDesc.size() < 2) {
             return 0.0D;
         }
-        long end = NumberUtils.toLong(DateUtil.formatDate(new Date(), "yyyyMMddHHmm"), 0L);
-        long begin = NumberUtils.toLong(DateUtil.formatDate(
-                new Date(System.currentTimeMillis() - 15 * 60 * 1000L), "yyyyMMddHHmm"), 0L);
-        List<StandardStats> samples = standardStatsDao.getStandardStatsByCreateTime(
-                new Date(System.currentTimeMillis() - 15 * 60 * 1000L), new Date(), ConstUtils.REDIS);
-        if (samples == null || samples.size() < 2) {
-            return 0.0D;
-        }
-        List<StandardStats> nodeSamples = new ArrayList<>();
-        for (StandardStats sample : samples) {
-            if (sample.getPort() == inst.getPort() && inst.getIp().equals(sample.getIp())
-                    && sample.getCollectTime() >= begin && sample.getCollectTime() <= end) {
-                nodeSamples.add(sample);
-            }
-        }
-        nodeSamples.sort((a, b) -> Long.compare(a.getCollectTime(), b.getCollectTime()));
-        if (nodeSamples.size() < 2) {
-            return 0.0D;
-        }
-        StandardStats previous = nodeSamples.get(nodeSamples.size() - 2);
-        StandardStats current = nodeSamples.get(nodeSamples.size() - 1);
+        // 入参是倒序的：第 0 条最新
+        StandardStats current = recentDesc.get(0);
+        StandardStats previous = recentDesc.get(1);
         Map<String, Object> before = previous.getInfoMap();
         Map<String, Object> after = current.getInfoMap();
         double cpuDelta = Math.max(0D, number(after, "used_cpu_sys") - number(before, "used_cpu_sys"))

@@ -94,6 +94,8 @@ public class RedisCenterImpl implements RedisCenter {
     @Lazy
     private MachineCenter machineCenter;
     private volatile Map<String, JedisPool> jedisPoolMap = new HashMap<String, JedisPool>();
+    /** 建池时用的密码，用于识别集群改密后需要重建连接池，见 maintainJedisPool */
+    private final Map<String, String> jedisPoolPasswordMap = new HashMap<String, String>();
     @Autowired
     private AppDao appDao;
     @Autowired
@@ -142,6 +144,27 @@ public class RedisCenterImpl implements RedisCenter {
     private JedisPool maintainJedisPool(String host, int port, String password) {
         String hostAndPort = ObjectConvert.linkIpAndPort(host, port);
         JedisPool jedisPool = jedisPoolMap.get(hostAndPort);
+        // 池只按 host:port 缓存，密码仅在建池那一次生效。集群改密之后这里会一直拿着旧密码的池，
+        // 拓扑同步的 getMaster/getSlave0 就持续 NOAUTH，直到重启才恢复——密码变了必须重建。
+        if (jedisPool != null && !StringUtils.equals(jedisPoolPasswordMap.get(hostAndPort), password)) {
+            lock.lock();
+            try {
+                if (!StringUtils.equals(jedisPoolPasswordMap.get(hostAndPort), password)) {
+                    JedisPool stale = jedisPoolMap.remove(hostAndPort);
+                    jedisPoolPasswordMap.remove(hostAndPort);
+                    if (stale != null) {
+                        try {
+                            stale.destroy();
+                        } catch (Exception e) {
+                            logger.warn("destroy stale jedisPool {} failed: {}", hostAndPort, e.getMessage());
+                        }
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+            jedisPool = jedisPoolMap.get(hostAndPort);
+        }
         if (jedisPool == null) {
             lock.lock();
             try {
@@ -157,6 +180,7 @@ public class RedisCenterImpl implements RedisCenter {
                                     Protocol.DEFAULT_TIMEOUT);
                         }
                         jedisPoolMap.put(hostAndPort, jedisPool);
+                        jedisPoolPasswordMap.put(hostAndPort, password);
                     } catch (Exception e) {
                         logger.error(e.getMessage(), e);
                     } finally {

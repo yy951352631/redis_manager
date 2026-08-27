@@ -52,15 +52,42 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 @Service("externalRedisCenter")
 public class ExternalRedisCenterImpl implements ExternalRedisCenter {
 
     private static final Logger logger = LoggerFactory.getLogger(ExternalRedisCenterImpl.class);
     private final AtomicBoolean scheduledCollecting = new AtomicBoolean(false);
+
+    /** 单轮采集的并发度，够把死节点的超时摊开又不至于把 Redis 和自身连接数打上去 */
+    private static final int COLLECT_CONCURRENCY = 8;
+
+    /** 一轮超过这个时间就要提醒：再慢下去下一轮会被整轮跳过 */
+    private static final long SLOW_ROUND_WARN_MILLIS = 45L * 1000L;
+
+    private final CollectFailureBackoff collectFailureBackoff = new CollectFailureBackoff();
+
+    private final ExecutorService collectExecutor = Executors.newFixedThreadPool(COLLECT_CONCURRENCY,
+            new ThreadFactory() {
+                private final AtomicInteger seq = new AtomicInteger();
+
+                @Override
+                public Thread newThread(Runnable runnable) {
+                    Thread thread = new Thread(runnable, "external-redis-collect-" + seq.incrementAndGet());
+                    thread.setDaemon(true);
+                    return thread;
+                }
+            });
 
     @Autowired
     private ExternalRedisDao externalRedisDao;
@@ -119,18 +146,25 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         }
     }
 
+    @PreDestroy
+    public void shutdownCollectExecutor() {
+        collectExecutor.shutdownNow();
+    }
+
     @Override
     public void collectStatistics() {
         if (!scheduledCollecting.compareAndSet(false, true)) {
             logger.warn("external redis statistics collection skipped because the previous run is still active");
             return;
         }
+        long startMillis = System.currentTimeMillis();
         int appCount = 0;
-        int nodeCount = 0;
         try {
             List<ExternalRedis> records = externalRedisDao.listAll();
             if (records == null || records.isEmpty()) return;
             long collectTime = Long.parseLong(DateUtil.formatDate(new Date(), "yyyyMMddHHmm"));
+
+            List<CollectTarget> targets = new ArrayList<CollectTarget>();
             for (ExternalRedis record : records) {
                 if (record == null || record.getAppId() == null || record.getAppId() <= 0) continue;
                 AppDesc app = appService.getByAppId(record.getAppId());
@@ -141,22 +175,129 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
                 for (InstanceInfo instance : instances) {
                     // 心跳停止的节点也要继续采集，否则存活探测无法发现恢复（详见 isCollectable）
                     if (!instance.isCollectable() || TypeUtil.isRedisSentinel(instance.getType())) continue;
-                    try {
-                        redisCenter.collectRedisInfo(app.getAppId(), collectTime, instance.getIp(), instance.getPort());
-                        redisCenter.collectRedisSlowLog(app.getAppId(), collectTime, instance.getIp(), instance.getPort());
-                        redisCenter.collectRedisLatencyInfo(app.getAppId(), collectTime, instance.getIp(), instance.getPort());
-                        nodeCount++;
-                    } catch (Exception e) {
-                        logger.warn("scheduled external redis collect failed appId={} {}:{} {}",
-                                app.getAppId(), instance.getIp(), instance.getPort(), e.getMessage());
-                    }
+                    targets.add(new CollectTarget(app.getAppId(), instance.getIp(), instance.getPort()));
                 }
             }
-            logger.info("external redis statistics collection submitted apps={} nodes={} collectTime={}",
-                    appCount, nodeCount, collectTime);
+            if (targets.isEmpty()) {
+                return;
+            }
+
+            Set<String> activeKeys = new LinkedHashSet<String>();
+            for (CollectTarget target : targets) {
+                activeKeys.add(target.key());
+            }
+            // 下线/删除的节点不该继续占着退避表
+            collectFailureBackoff.retainOnly(activeKeys);
+
+            CollectSummary summary = runCollectRound(targets, collectTime);
+            long cost = System.currentTimeMillis() - startMillis;
+            if (cost > SLOW_ROUND_WARN_MILLIS) {
+                // 一轮跑过 60 秒，下一轮就会被 scheduledCollecting 挡掉，等于全平台丢一分钟数据
+                logger.warn("external redis statistics collection is running late apps={} nodes={} ok={} failed={} "
+                                + "skipped={} cost={}ms collectTime={}", appCount, targets.size(), summary.succeeded,
+                        summary.failed, summary.skipped, cost, collectTime);
+            } else {
+                logger.info("external redis statistics collection submitted apps={} nodes={} ok={} failed={} "
+                                + "skipped={} cost={}ms collectTime={}", appCount, targets.size(), summary.succeeded,
+                        summary.failed, summary.skipped, cost, collectTime);
+            }
         } finally {
             scheduledCollecting.set(false);
         }
+    }
+
+    /**
+     * 并发跑完一轮采集，等所有任务结束才返回。
+     *
+     * <p>刻意不设「到点放弃、剩下的任务继续在后台跑」：线程池是固定大小的，
+     * 被放弃的任务会一直占着线程，下一轮的任务全部堵在队列里，比现在更糟。
+     * 卡死的节点由退避表负责在后续轮次里直接跳过。
+     */
+    private CollectSummary runCollectRound(List<CollectTarget> targets, final long collectTime) {
+        CollectSummary summary = new CollectSummary();
+        List<Future<Boolean>> futures = new ArrayList<Future<Boolean>>(targets.size());
+        List<CollectTarget> submitted = new ArrayList<CollectTarget>(targets.size());
+        long now = System.currentTimeMillis();
+        for (final CollectTarget target : targets) {
+            if (collectFailureBackoff.shouldSkip(target.key(), now)) {
+                summary.skipped++;
+                continue;
+            }
+            submitted.add(target);
+            futures.add(collectExecutor.submit(new Callable<Boolean>() {
+                @Override
+                public Boolean call() {
+                    return collectOneInstance(target, collectTime);
+                }
+            }));
+        }
+        for (int i = 0; i < futures.size(); i++) {
+            CollectTarget target = submitted.get(i);
+            boolean ok;
+            try {
+                ok = Boolean.TRUE.equals(futures.get(i).get());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("external redis collect interrupted while waiting {}", target.key());
+                return summary;
+            } catch (Exception e) {
+                ok = false;
+                logger.warn("external redis collect task failed {}: {}", target.key(), e.getMessage());
+            }
+            if (ok) {
+                collectFailureBackoff.onSuccess(target.key());
+                summary.succeeded++;
+            } else {
+                collectFailureBackoff.onFailure(target.key(), System.currentTimeMillis());
+                summary.failed++;
+            }
+        }
+        return summary;
+    }
+
+    /**
+     * 采集单个实例，返回是否拿到了 info 数据。
+     *
+     * <p>底层的采集方法把异常都吞在内部了，连不上只会返回空 infoMap，
+     * 所以存活与否只能以 info 的返回值为准，不能指望这里的 catch。
+     */
+    private boolean collectOneInstance(CollectTarget target, long collectTime) {
+        try {
+            Map<?, ?> infoMap = redisCenter.collectRedisInfo(target.appId, collectTime, target.ip, target.port);
+            boolean alive = infoMap != null && !infoMap.isEmpty();
+            if (!alive) {
+                return false;
+            }
+            redisCenter.collectRedisSlowLog(target.appId, collectTime, target.ip, target.port);
+            redisCenter.collectRedisLatencyInfo(target.appId, collectTime, target.ip, target.port);
+            return true;
+        } catch (Exception e) {
+            logger.warn("scheduled external redis collect failed appId={} {} {}",
+                    target.appId, target.key(), e.getMessage());
+            return false;
+        }
+    }
+
+    private static final class CollectTarget {
+        private final long appId;
+        private final String ip;
+        private final int port;
+
+        private CollectTarget(long appId, String ip, int port) {
+            this.appId = appId;
+            this.ip = ip;
+            this.port = port;
+        }
+
+        private String key() {
+            return ip + ":" + port;
+        }
+    }
+
+    private static final class CollectSummary {
+        private int succeeded;
+        private int failed;
+        private int skipped;
     }
 
     private void ensureSentinelPasswordColumn() {

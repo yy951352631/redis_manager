@@ -135,8 +135,12 @@ public class DashboardOpsDto implements Serializable {
         private static final long serialVersionUID = 1L;
         private String time;
         private String userName;
-        private String action;
-        private String target;
+        /** 原始的「控制器简名#方法名」，界面按 audit-handler-meta 映射成中文简述 */
+        private String handler;
+        /** 操作对象：集群名，没有集群时退化为节点，都没有则为空 */
+        private String objectLabel;
+        /** 有 appId 时界面把操作对象做成集群详情的链接 */
+        private long appId;
         private boolean success;
     }
 

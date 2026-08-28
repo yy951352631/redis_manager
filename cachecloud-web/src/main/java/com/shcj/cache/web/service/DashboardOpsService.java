@@ -114,7 +114,7 @@ public class DashboardOpsService {
         dto.setTrend(buildTrend(windowStart(now, TREND_MINUTES), appMap));
         dto.setResources(buildResources(latest, peak, since, appMap));
         dto.setSlowCommands(buildSlowCommands(now));
-        dto.setRecentOps(buildRecentOps());
+        dto.setRecentOps(buildRecentOps(appMap));
         return dto;
     }
 
@@ -870,7 +870,7 @@ public class DashboardOpsService {
         return list;
     }
 
-    private List<DashboardOpsDto.RecentOpDto> buildRecentOps() {
+    private List<DashboardOpsDto.RecentOpDto> buildRecentOps(Map<Long, AppDesc> appMap) {
         List<DashboardOpsDto.RecentOpDto> list = new ArrayList<>();
         try {
             List<com.shcj.cache.entity.OperationAudit> rows =
@@ -883,8 +883,9 @@ public class DashboardOpsService {
                 DashboardOpsDto.RecentOpDto dto = new DashboardOpsDto.RecentOpDto();
                 dto.setTime(row.getCreateTime() == null ? "-" : fmt.format(row.getCreateTime()));
                 dto.setUserName(StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(row.getUserName()), "-"));
-                dto.setAction(StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(row.getModule()), "-"));
-                dto.setTarget(StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(row.getHandler()), "-"));
+                dto.setHandler(StringUtils.trimToEmpty(row.getHandler()));
+                dto.setAppId(row.getAppId() == null ? 0L : row.getAppId());
+                dto.setObjectLabel(resolveOpObject(row, appMap));
                 dto.setSuccess(row.getSuccess() == 1);
                 list.add(dto);
             }
@@ -892,6 +893,27 @@ public class DashboardOpsService {
             logger.error("build recent ops failed: {}", e.getMessage(), e);
         }
         return list;
+    }
+
+    /**
+     * 操作对象：优先集群名，退化到节点，都没有则留空。
+     *
+     * <p>与审计日志页「对象」列同口径，两处看到的应当是同一件事。</p>
+     */
+    private String resolveOpObject(com.shcj.cache.entity.OperationAudit row, Map<Long, AppDesc> appMap) {
+        Long appId = row.getAppId();
+        if (appId != null && appId > 0) {
+            AppDesc app = appMap == null ? null : appMap.get(appId);
+            if (app != null && StringUtils.isNotBlank(app.getName())) {
+                return app.getName();
+            }
+            return "集群 " + appId;
+        }
+        Long instanceId = row.getInstanceId();
+        if (instanceId != null && instanceId > 0) {
+            return "节点 " + instanceId;
+        }
+        return "";
     }
 
     private List<InstanceInfo> safeInstances() {

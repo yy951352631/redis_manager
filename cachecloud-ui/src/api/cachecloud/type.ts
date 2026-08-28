@@ -1661,8 +1661,11 @@ export interface DashboardSlowCommand {
 export interface DashboardRecentOp {
   time: string
   userName: string
-  action: string
-  target: string
+  /** 原始的「控制器简名#方法名」，界面按 audit-handler-meta 映射成中文简述 */
+  handler: string
+  /** 操作对象：集群名，没有集群时退化为节点 */
+  objectLabel?: string
+  appId?: number
   success: boolean
 }
 export interface DashboardOps {

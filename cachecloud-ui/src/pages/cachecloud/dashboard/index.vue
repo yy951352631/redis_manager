@@ -3,6 +3,7 @@ import type { ECharts } from "echarts"
 import type { DashboardActiveAlert, DashboardOps, DashboardTopBoard, DashboardTopBoardRow } from "@/api/cachecloud"
 import { Refresh } from "@element-plus/icons-vue"
 import { getDashboardOpsApi } from "@/api/cachecloud"
+import { formatAuditHandler, hasAuditHandlerText } from "@/common/utils/audit-handler-meta"
 import { initGrafanaChart } from "@/common/utils/chart-theme"
 
 const router = useRouter()
@@ -578,8 +579,27 @@ onBeforeUnmount(() => {
         <el-table v-if="recentOps.length" :data="recentOps" size="small">
           <el-table-column prop="time" label="时间" width="110" />
           <el-table-column prop="userName" label="用户" width="90" />
-          <el-table-column prop="action" label="业务域" min-width="110" show-overflow-tooltip />
-          <el-table-column prop="target" label="操作" min-width="180" show-overflow-tooltip />
+          <el-table-column label="操作" min-width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              <!-- 与审计日志共用同一张映射表，映射不到时保留原始方法名 -->
+              <span :class="{ 'ops-recent__handler-raw': !hasAuditHandlerText(row.handler) }">
+                {{ formatAuditHandler(row.handler) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作对象" min-width="130" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-link
+                v-if="row.appId > 0"
+                type="primary"
+                :underline="false"
+                @click="openApp(row.appId, 'app_stat')"
+              >
+                {{ row.objectLabel }}
+              </el-link>
+              <span v-else>{{ row.objectLabel || "-" }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="结果" width="76">
             <template #default="{ row }">
               <el-tag :type="row.success ? 'success' : 'danger'" size="small" effect="plain">
@@ -820,6 +840,10 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+}
+
+.ops-recent__handler-raw {
+  color: var(--rp-text-muted, #6b7a90);
 }
 
 .ops-health__pager {

@@ -91,6 +91,9 @@ public class DashboardOpsService {
     @Autowired
     private com.shcj.cache.dao.OperationAuditDao operationAuditDao;
 
+    @Autowired
+    private OperationAuditService operationAuditService;
+
     public DashboardOpsDto build() {
         DashboardOpsDto dto = new DashboardOpsDto();
         Date now = new Date();
@@ -909,11 +912,8 @@ public class DashboardOpsService {
             }
             return "集群 " + appId;
         }
-        Long instanceId = row.getInstanceId();
-        if (instanceId != null && instanceId > 0) {
-            return "节点 " + instanceId;
-        }
-        return "";
+        // 节点与迁移任务的文案与审计日志页共用同一套口径，两处看到的应当是同一件事
+        return StringUtils.defaultString(operationAuditService.resolveObjectLabel(row));
     }
 
     private List<InstanceInfo> safeInstances() {

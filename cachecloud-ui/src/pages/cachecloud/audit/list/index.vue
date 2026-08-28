@@ -157,13 +157,13 @@ onMounted(fetchList)
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="对象" min-width="170" show-overflow-tooltip>
+        <el-table-column label="对象" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
+            <!-- 文案由服务端统一算好：集群名 / 节点 ip:port / 迁移的「源 → 目标」 -->
             <router-link v-if="row.appId" :to="`/app/detail/${row.appId}`">
-              {{ row.appName || `集群 ${row.appId}` }}
+              {{ row.objectLabel || `集群 ${row.appId}` }}
             </router-link>
-            <span v-else-if="row.instanceId">节点 {{ row.instanceId }}</span>
-            <span v-else>-</span>
+            <span v-else>{{ row.objectLabel || "-" }}</span>
           </template>
         </el-table-column>
         <el-table-column label="结果" width="90">

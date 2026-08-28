@@ -598,24 +598,93 @@ public class EmbeddedRedisShakeService {
 
     private boolean isRunning(AppDataMigrateStatus status) {
         Process process = processes.get(status.getMigrateId());
-        if (process != null) return process.isAlive();
-        Path pid = new File(status.getConfigPath()).toPath().getParent().resolve("pid");
-        if (!Files.exists(pid)) return false;
+        if (process != null) {
+            return process.isAlive();
+        }
+        Long pid = readPidFile(status);
+        return pid != null && isOwnShakeProcess(pid, status);
+    }
+
+    /**
+     * 确认这个 pid 当前确实是本任务的 RedisShake 进程。
+     *
+     * <p>原来只做 {@code kill -0}，那只能说明「有这么个 pid」。pid 文件在进程退出后
+     * 不会消失，而 pid 是会被复用的——应用重启后，文件里记的 198 已经变成 Tomcat
+     * 自己的 JVM，于是任务永远被判为「运行中」：既不能重新同步（要求非运行态），
+     * 也不能删除（同样要求非运行态），彻底卡死。更糟的是停止任务会照着这个 pid
+     * 发 SIGTERM，等于把平台自己关掉。
+     *
+     * <p>所以要核对命令行里出现的是本任务自己的配置文件路径——每个任务的
+     * shake.toml 路径带 migrateId，是唯一的。</p>
+     */
+    private boolean isOwnShakeProcess(long pid, AppDataMigrateStatus status) {
+        String configPath = StringUtils.trimToEmpty(status.getConfigPath());
+        if (configPath.isEmpty()) {
+            return false;
+        }
+        String cmdline = readCmdline(pid);
+        return cmdline != null && cmdline.contains(configPath);
+    }
+
+    private String readCmdline(long pid) {
+        // Linux 容器里直接读 /proc，最省事也最准
+        Path proc = Paths.get("/proc", String.valueOf(pid), "cmdline");
+        if (Files.exists(proc)) {
+            try {
+                return new String(Files.readAllBytes(proc), StandardCharsets.UTF_8).replace('\0', ' ');
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        // 非 Linux 环境退回 ps
         try {
-            String value = new String(Files.readAllBytes(pid), StandardCharsets.US_ASCII).trim();
-            Process probe = new ProcessBuilder("/bin/sh", "-c", "kill -0 " + Long.parseLong(value)).start();
-            return probe.waitFor() == 0;
-        } catch (Exception e) { return false; }
+            Process probe = new ProcessBuilder("/bin/sh", "-c",
+                    "ps -p " + pid + " -o args=").redirectErrorStream(true).start();
+            String output;
+            try (InputStream input = probe.getInputStream()) {
+                output = new String(readAll(input), StandardCharsets.UTF_8);
+            }
+            probe.waitFor();
+            return output;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Long readPidFile(AppDataMigrateStatus status) {
+        if (StringUtils.isBlank(status.getConfigPath())) {
+            return null;
+        }
+        Path pid = new File(status.getConfigPath()).toPath().getParent().resolve("pid");
+        if (!Files.exists(pid)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(new String(Files.readAllBytes(pid), StandardCharsets.US_ASCII).trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void killPidFile(AppDataMigrateStatus status) {
         try {
-            Path pid = new File(status.getConfigPath()).toPath().getParent().resolve("pid");
-            if (Files.exists(pid)) {
-                long value = Long.parseLong(new String(Files.readAllBytes(pid), StandardCharsets.US_ASCII).trim());
-                new ProcessBuilder("/bin/kill", String.valueOf(value)).start().waitFor();
+            Long pid = readPidFile(status);
+            // 同样要先确认是本任务的进程：pid 复用之下，照着陈旧 pid 发信号可能打到平台自己
+            if (pid == null || !isOwnShakeProcess(pid, status)) {
+                return;
             }
+            new ProcessBuilder("/bin/kill", String.valueOf(pid)).start().waitFor();
         } catch (Exception ignored) { }
+    }
+
+    private byte[] readAll(InputStream input) throws java.io.IOException {
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        byte[] chunk = new byte[4096];
+        int read;
+        while ((read = input.read(chunk)) != -1) {
+            buffer.write(chunk, 0, read);
+        }
+        return buffer.toByteArray();
     }
 
     private long processPid(Process process) {

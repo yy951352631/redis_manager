@@ -650,6 +650,8 @@ export interface OperationAuditItem {
   appId?: number | null
   appName?: string | null
   instanceId?: number | null
+  /** 操作对象展示文案：集群名 / 节点 ip:port / 迁移的「源 → 目标」，由服务端算好 */
+  objectLabel?: string | null
   params?: string
   clientIp?: string
   statusCode?: number

@@ -359,6 +359,10 @@ services:
     environment:
       TZ: Asia/Shanghai
       WORKLOAD_QPS: "6"
+      # 目标实例设了 requirepass 时在这里给出；未设密码留空即可
+      WORKLOAD_CLUSTER_PASSWORD: "${WORKLOAD_CLUSTER_PASSWORD:-}"
+      WORKLOAD_SENTINEL_PASSWORD: "${WORKLOAD_SENTINEL_PASSWORD:-}"
+      WORKLOAD_SENTINEL_DATA_PASSWORD: "${WORKLOAD_SENTINEL_DATA_PASSWORD:-}"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
     depends_on:

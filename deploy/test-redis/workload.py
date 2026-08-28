@@ -369,10 +369,16 @@ class Traffic:
                     (" | 出错场景: %s（最近: %s）" % (bad, self.last_error)) if self.errors else ""))
 
 
+def auth_kwargs(password):
+    """没设密码时不能把 password=None 传下去，某些版本会当成空密码去 AUTH。"""
+    return {"password": password} if password else {}
+
+
 def build_cluster(cfg):
     nodes = [ClusterNode(h, p) for h, p in cfg.cluster_nodes]
     common = dict(startup_nodes=nodes, decode_responses=True,
-                  socket_timeout=3, socket_connect_timeout=3)
+                  socket_timeout=3, socket_connect_timeout=3,
+                  **auth_kwargs(cfg.cluster_password))
     try:
         # 5.3 起 read_from_replicas 被 load_balancing_strategy 取代，旧版没有这个参数
         from redis.cluster import LoadBalancingStrategy
@@ -384,10 +390,13 @@ def build_cluster(cfg):
 
 
 def build_sentinel(cfg):
-    sentinel = Sentinel(cfg.sentinel_nodes, socket_timeout=3, decode_responses=True)
-    master = sentinel.master_for(cfg.master_name, socket_timeout=3, decode_responses=True)
+    # 哨兵自身的密码与数据节点的密码是两回事，分开传
+    sentinel = Sentinel(cfg.sentinel_nodes, socket_timeout=3, decode_responses=True,
+                        **auth_kwargs(cfg.sentinel_password))
+    data_auth = auth_kwargs(cfg.sentinel_data_password)
+    master = sentinel.master_for(cfg.master_name, socket_timeout=3, decode_responses=True, **data_auth)
     # 读写分离：从节点也要有 commandstats，否则平台上从节点永远是零流量
-    replica = sentinel.slave_for(cfg.master_name, socket_timeout=3, decode_responses=True)
+    replica = sentinel.slave_for(cfg.master_name, socket_timeout=3, decode_responses=True, **data_auth)
     master.ping()
     return master, replica
 
@@ -428,6 +437,12 @@ def main():
     parser.add_argument("--log-every", type=int, default=60, help="统计输出间隔（秒）")
     parser.add_argument("--no-seed-bigkeys", dest="seed_bigkeys", action="store_false",
                         help="跳过大 key 播种")
+    parser.add_argument("--cluster-password", default=os.environ.get("WORKLOAD_CLUSTER_PASSWORD", ""),
+                        help="Cluster 的 requirepass，未设密码时留空（也可用环境变量 WORKLOAD_CLUSTER_PASSWORD）")
+    parser.add_argument("--sentinel-password", default=os.environ.get("WORKLOAD_SENTINEL_PASSWORD", ""),
+                        help="Sentinel 自身的密码，未设密码时留空")
+    parser.add_argument("--sentinel-data-password", default=os.environ.get("WORKLOAD_SENTINEL_DATA_PASSWORD", ""),
+                        help="Sentinel 架构下数据节点的 requirepass，未设密码时留空")
     parser.add_argument("--cluster-nodes", default=",".join("%s:%d" % n for n in CLUSTER_NODES))
     parser.add_argument("--sentinel-nodes", default=",".join("%s:%d" % n for n in SENTINEL_NODES))
     parser.add_argument("--master-name", default=MASTER_NAME)

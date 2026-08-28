@@ -159,11 +159,12 @@ onMounted(fetchList)
         </el-table-column>
         <el-table-column label="对象" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
-            <!-- 文案由服务端统一算好：集群名 / 节点 ip:port / 迁移的「源 → 目标」 -->
-            <router-link v-if="row.appId" :to="`/app/detail/${row.appId}`">
-              {{ row.objectLabel || `集群 ${row.appId}` }}
-            </router-link>
-            <span v-else>{{ row.objectLabel || "-" }}</span>
+            <!--
+              文案由服务端统一算好：集群名 / 节点 ip:port / 迁移的「源 → 目标」。
+              不做跳转：审计记的是当时那一刻，而链接指向的是集群此刻的样子，
+              集群若已删除更是跳不过去；这里只作陈述。
+            -->
+            <span>{{ row.objectLabel || (row.appId ? `集群 ${row.appId}` : "-") }}</span>
           </template>
         </el-table-column>
         <el-table-column label="结果" width="90">

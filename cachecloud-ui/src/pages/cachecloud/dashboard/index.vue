@@ -589,15 +589,8 @@ onBeforeUnmount(() => {
           </el-table-column>
           <el-table-column label="操作对象" min-width="130" show-overflow-tooltip>
             <template #default="{ row }">
-              <el-link
-                v-if="row.appId > 0"
-                type="primary"
-                :underline="false"
-                @click="openApp(row.appId, 'app_stat')"
-              >
-                {{ row.objectLabel }}
-              </el-link>
-              <span v-else>{{ row.objectLabel || "-" }}</span>
+              <!-- 与审计日志一致，只陈述不跳转：见该页「对象」列的说明 -->
+              <span>{{ row.objectLabel || "-" }}</span>
             </template>
           </el-table-column>
           <el-table-column label="结果" width="76">

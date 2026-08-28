@@ -912,7 +912,10 @@ public class DashboardOpsService {
             }
             return "集群 " + appId;
         }
-        // 节点与迁移任务的文案与审计日志页共用同一套口径，两处看到的应当是同一件事
+        // 同审计日志页：优先用写入时固化的快照，历史行才回退实时解析
+        if (StringUtils.isNotBlank(row.getObjectLabel())) {
+            return row.getObjectLabel();
+        }
         return StringUtils.defaultString(operationAuditService.resolveObjectLabel(row));
     }
 

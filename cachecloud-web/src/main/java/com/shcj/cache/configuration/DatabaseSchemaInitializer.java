@@ -54,6 +54,7 @@ public class DatabaseSchemaInitializer {
                     + "success TINYINT NOT NULL DEFAULT 1,"
                     + "error_msg VARCHAR(1024) DEFAULT NULL,"
                     + "cost_ms BIGINT NOT NULL DEFAULT 0,"
+                    + "object_label VARCHAR(255) DEFAULT NULL COMMENT '操作对象，写入时固化的快照',"
                     + "create_time DATETIME NOT NULL,"
                     + "PRIMARY KEY (id),"
                     + "KEY idx_create_time (create_time),"
@@ -83,6 +84,9 @@ public class DatabaseSchemaInitializer {
         ensureColumn("instance_risk_metric_minute", "total_system_memory",
                 "ALTER TABLE instance_risk_metric_minute ADD COLUMN total_system_memory BIGINT NOT NULL DEFAULT 0 "
                         + "COMMENT '机器总内存' AFTER max_memory");
+        ensureColumn("operation_audit", "object_label",
+                "ALTER TABLE operation_audit ADD COLUMN object_label VARCHAR(255) DEFAULT NULL "
+                        + "COMMENT '操作对象，写入时固化的快照' AFTER instance_id");
         ensureRedisVersionColumn();
         ensureInstanceStatsUptimeColumn();
         logger.info("runtime database schema initialized");

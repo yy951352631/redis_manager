@@ -221,7 +221,12 @@ public class OperationAuditService {
         dto.setAppId(record.getAppId());
         dto.setAppName(resolveAppName(record.getAppId(), appNameCache));
         dto.setInstanceId(record.getInstanceId());
-        dto.setObjectLabel(resolveObjectLabel(record, dto.getAppName(), instanceCache, migrateCache));
+        // 优先用写入时固化的快照——迁移任务、集群、报警配置被删掉之后，
+        // 实时回查只会得到「已删除」，而审计要能独立于其他数据存在。
+        // 只有本次改动之前的历史行没有这个字段，才退回实时解析。
+        dto.setObjectLabel(StringUtils.isNotBlank(record.getObjectLabel())
+                ? record.getObjectLabel()
+                : resolveObjectLabel(record, dto.getAppName(), instanceCache, migrateCache));
         dto.setParams(record.getParams());
         dto.setClientIp(record.getClientIp());
         dto.setStatusCode(record.getStatusCode());
@@ -239,6 +244,86 @@ public class OperationAuditService {
      * apps 也没有 instances，拦截器解析不出 appId/instanceId，只能顺着任务 id
      * 回查；start / check 这类没有任务 id 的，从请求体里取源和目标。</p>
      */
+    /**
+     * 依赖数据库状态的那部分操作对象，供拦截器在请求处理「之前」调用。
+     *
+     * <p>集群、节点、迁移任务、报警配置、离线分析记录这几类，删除操作会把被引用的
+     * 记录一并带走。事后再查只能得到「已删除」，所以必须赶在业务处理之前取一次，
+     * 把结果固化进审计行。</p>
+     */
+    public String resolveStatefulObjectLabel(String requestUri, Long appId, Long instanceId) {
+        String uri = StringUtils.trimToEmpty(requestUri);
+        Map<Long, String> instanceCache = new HashMap<>();
+
+        if (appId != null && appId > 0) {
+            String name = resolveAppName(appId, new HashMap<Long, String>());
+            return StringUtils.isNotBlank(name) ? name : "集群 " + appId;
+        }
+        if (instanceId != null && instanceId > 0) {
+            String hostPort = resolveInstanceHostPort(instanceId, instanceCache);
+            return StringUtils.isNotBlank(hostPort) ? hostPort : "节点 " + instanceId;
+        }
+        Long pathAppId = pathIdAfter(uri, "external-redis");
+        if (pathAppId != null && pathAppId > 0) {
+            String name = resolveAppName(pathAppId, new HashMap<Long, String>());
+            return StringUtils.isNotBlank(name) ? name : "集群 " + pathAppId;
+        }
+        String migrateLabel = resolveMigrateFromTable(uri, new HashMap<Long, String>());
+        if (StringUtils.isNotBlank(migrateLabel)) {
+            return migrateLabel;
+        }
+        String alertLabel = resolveAlertConfigLabel(uri, instanceCache);
+        if (StringUtils.isNotBlank(alertLabel)) {
+            return alertLabel;
+        }
+        return resolveOfflineAnalysisLabel(uri);
+    }
+
+    /**
+     * 只看请求本身就能确定的操作对象，与数据库状态无关，什么时候算都一样。
+     */
+    public String resolveStatelessObjectLabel(String requestUri, Map<String, String> params) {
+        String rawParams;
+        try {
+            rawParams = params == null ? null
+                    : JSON.toJSONString(new LinkedHashMap<String, String>(params));
+        } catch (Exception e) {
+            rawParams = null;
+        }
+        String uri = StringUtils.trimToEmpty(requestUri);
+        // 迁移的 start/check 没有任务 id，源和目标用的是自己的一套字段名
+        if (uri.contains("/migrates")) {
+            String migrateLabel = migrateLabelFromBody(rawParams);
+            if (StringUtils.isNotBlank(migrateLabel)) {
+                return migrateLabel;
+            }
+        }
+        String bodyLabel = resolveBodyObject(rawParams);
+        if (StringUtils.isNotBlank(bodyLabel)) {
+            return bodyLabel;
+        }
+        String resourceLabel = resolveResourceLabel(uri);
+        if (StringUtils.isNotBlank(resourceLabel)) {
+            return resourceLabel;
+        }
+        if (AUTH_MODULE.equals(moduleOf(uri))) {
+            return PLATFORM_OBJECT;
+        }
+        return null;
+    }
+
+    /** 与拦截器 resolveModule 同口径：/api/v1/{module} */
+    private String moduleOf(String uri) {
+        String[] segments = StringUtils.split(uri, '/');
+        if (segments == null || segments.length == 0) {
+            return "";
+        }
+        if ("api".equals(segments[0])) {
+            return segments.length >= 3 ? segments[2] : "api";
+        }
+        return segments.length >= 2 ? segments[0] + "/" + segments[1] : segments[0];
+    }
+
     /**
      * 单条记录的操作对象文案，供主页「最近操作」复用。
      *
@@ -463,6 +548,15 @@ public class OperationAuditService {
 
     private String resolveMigrateLabel(OperationAudit record, Map<Long, String> cache) {
         String uri = StringUtils.trimToEmpty(record.getRequestUri());
+        String fromTable = resolveMigrateFromTable(uri, cache);
+        if (StringUtils.isNotBlank(fromTable)) {
+            return fromTable;
+        }
+        // start / check 没有任务 id，源和目标只在请求体里
+        return uri.contains("/migrates") ? migrateLabelFromBody(record.getParams()) : null;
+    }
+
+    private String resolveMigrateFromTable(String uri, Map<Long, String> cache) {
         if (!uri.contains("/migrates")) {
             return null;
         }
@@ -486,8 +580,7 @@ public class OperationAuditService {
             cache.put(migrateId, label);
             return label;
         }
-        // start / check 没有任务 id，源和目标只在请求体里
-        return migrateLabelFromBody(record.getParams());
+        return null;
     }
 
     private String migrateLabelFromBody(String params) {

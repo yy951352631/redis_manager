@@ -37,6 +37,10 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
 
     private static final String START_TIME_ATTR = "cachecloud.audit.startTime";
 
+    private static final String OBJECT_LABEL_ATTR = OperationAuditInterceptor.class.getName() + ".OBJECT_LABEL";
+
+    private static final int MAX_OBJECT_LABEL_LENGTH = 255;
+
     /** 需要脱敏的参数名片段 */
     private static final String[] SENSITIVE_KEYS = {"password", "passwd", "pwd", "token", "secret", "apikey", "api_key"};
 
@@ -56,6 +60,9 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (isMutating(request)) {
             request.setAttribute(START_TIME_ATTR, System.currentTimeMillis());
+            // 必须在业务处理之前解析：删除类操作会把被引用的记录一并带走，
+            // 等到 afterCompletion 再查，删除任务/集群/配置的那一条自己就查不到对象了
+            captureObjectLabel(request);
         }
         return true;
     }
@@ -85,6 +92,7 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
         audit.setHandler(resolveHandler(handler));
         audit.setAppId(resolveId(uri, params, "apps", "appId"));
         audit.setInstanceId(resolveId(uri, params, "instances", "instanceId"));
+        audit.setObjectLabel(resolveObjectLabel(request, uri, params));
         audit.setParams(truncate(new JSONObject(new LinkedHashMap<String, Object>(params)).toJSONString(), MAX_PARAM_LENGTH));
         audit.setClientIp(resolveClientIp(request));
 
@@ -239,6 +247,49 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
             }
         } catch (Exception e) {
             LOGGER.debug("collect upload file name failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 请求处理前先把依赖数据库的那部分操作对象解析出来，存进请求属性。
+     *
+     * <p>只解析会被本次请求改动的那些来源（集群、节点、迁移任务、报警配置、
+     * 离线分析记录）。请求体里的字段不依赖库中状态，留到落库时再取也一样。</p>
+     */
+    private void captureObjectLabel(HttpServletRequest request) {
+        try {
+            String uri = request.getRequestURI();
+            Map<String, String> pathParams = new LinkedHashMap<>();
+            for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+                String[] value = entry.getValue();
+                pathParams.put(entry.getKey(), value == null || value.length == 0 ? "" : value[0]);
+            }
+            Long appId = resolveId(uri, pathParams, "apps", "appId");
+            Long instanceId = resolveId(uri, pathParams, "instances", "instanceId");
+            String label = operationAuditService.resolveStatefulObjectLabel(uri, appId, instanceId);
+            if (StringUtils.isNotBlank(label)) {
+                request.setAttribute(OBJECT_LABEL_ATTR, label);
+            }
+        } catch (Exception e) {
+            // 审计取不到对象不能影响正常请求
+            LOGGER.debug("capture audit object label failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 最终写入审计的操作对象：优先用处理前抓到的快照，否则退回请求体里的信息。
+     */
+    private String resolveObjectLabel(HttpServletRequest request, String uri, Map<String, String> params) {
+        Object captured = request.getAttribute(OBJECT_LABEL_ATTR);
+        if (captured instanceof String && StringUtils.isNotBlank((String) captured)) {
+            return truncate((String) captured, MAX_OBJECT_LABEL_LENGTH);
+        }
+        try {
+            String label = operationAuditService.resolveStatelessObjectLabel(uri, params);
+            return StringUtils.isBlank(label) ? null : truncate(label, MAX_OBJECT_LABEL_LENGTH);
+        } catch (Exception e) {
+            LOGGER.debug("resolve audit object label failed: {}", e.getMessage());
+            return null;
         }
     }
 

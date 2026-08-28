@@ -36,6 +36,14 @@ public class OperationAudit implements Serializable {
     /** 涉及的实例 id（能识别时填充） */
     private Long instanceId;
 
+    /**
+     * 操作对象，在请求处理时就固化下来。
+     *
+     * <p>不能等到展示时再回查：删除类操作会把被引用的记录一并带走，回查得到的
+     * 只会是「已删除」。审计要能独立于其他数据存在，当时是什么就永远是什么。</p>
+     */
+    private String objectLabel;
+
     /** 请求参数，敏感字段已脱敏，超长会截断 */
     private String params;
 

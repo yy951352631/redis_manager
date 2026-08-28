@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -17,9 +19,12 @@ import org.springframework.web.util.WebUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -209,6 +214,34 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
     /**
      * 取业务域：/api/v1/apps/... → apps；/manage/instance/... → manage/instance。
      */
+    /**
+     * 文件上传的作用对象只体现在上传的文件本身上。
+     *
+     * <p>multipart 请求的 body 不会进 params，不记下文件名的话，审计里这类操作的
+     * 「操作对象」只能是空的。在 afterCompletion 里读取是安全的：此时 Spring 尚未
+     * 清理 multipart，且请求体早已被 Controller 消费完，不会影响上传本身。</p>
+     */
+    private void collectUploadFileNames(HttpServletRequest request, Map<String, String> params) {
+        if (!(request instanceof MultipartHttpServletRequest)) {
+            return;
+        }
+        try {
+            MultipartHttpServletRequest multipart = (MultipartHttpServletRequest) request;
+            List<String> names = new ArrayList<>();
+            for (Iterator<String> it = multipart.getFileNames(); it.hasNext(); ) {
+                MultipartFile file = multipart.getFile(it.next());
+                if (file != null && StringUtils.isNotBlank(file.getOriginalFilename())) {
+                    names.add(file.getOriginalFilename());
+                }
+            }
+            if (!names.isEmpty()) {
+                params.put("uploadFileName", String.join(", ", names));
+            }
+        } catch (Exception e) {
+            LOGGER.debug("collect upload file name failed: {}", e.getMessage());
+        }
+    }
+
     private String resolveModule(String uri) {
         String[] segments = StringUtils.split(uri, '/');
         if (segments == null || segments.length == 0) {
@@ -259,6 +292,7 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
 
     private Map<String, String> collectParams(HttpServletRequest request) {
         Map<String, String> params = new LinkedHashMap<>();
+        collectUploadFileNames(request, params);
         for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
             String value = entry.getValue() == null ? "" : String.join(",", Arrays.asList(entry.getValue()));
             params.put(entry.getKey(), maskIfSensitive(entry.getKey(), value));

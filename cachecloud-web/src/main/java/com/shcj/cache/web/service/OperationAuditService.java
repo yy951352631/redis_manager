@@ -6,7 +6,9 @@ import com.shcj.cache.dao.AppDao;
 import com.shcj.cache.dao.OperationAuditDao;
 import com.shcj.cache.entity.AppDesc;
 import com.shcj.cache.entity.AppDataMigrateStatus;
+import com.shcj.cache.entity.InstanceAlertConfig;
 import com.shcj.cache.entity.InstanceInfo;
+import com.shcj.cache.entity.OfflineAnalysisRecord;
 import com.shcj.cache.entity.OperationAudit;
 import com.shcj.cache.web.controller.api.dto.OperationAuditItemDto;
 import com.shcj.cache.web.controller.api.dto.OperationAuditPageDto;
@@ -21,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +48,12 @@ public class OperationAuditService {
 
     @Autowired
     private AppService appService;
+
+    @Autowired
+    private com.shcj.cache.dao.InstanceAlertConfigDao instanceAlertConfigDao;
+
+    @Autowired
+    private com.shcj.cache.dao.OfflineAnalysisRecordDao offlineAnalysisRecordDao;
 
     @Autowired
     private com.shcj.cache.dao.AppDataMigrateStatusDao appDataMigrateStatusDao;
@@ -117,6 +126,28 @@ public class OperationAuditService {
 
     /** 平台自身作为操作对象时的展示名 */
     private static final String PLATFORM_OBJECT = "Redis管理平台";
+
+    /**
+     * 请求体里可能承载操作对象的字段，按优先级排列。
+     *
+     * <p>node/servers 是诊断类接口的目标节点，name 是纳管时填的集群名，
+     * appInstanceInfo 是纳管的节点串（校验接口没有 name，只能退到它）。</p>
+     */
+    private static final String[] BODY_OBJECT_KEYS =
+            {"uploadFileName", "node", "servers", "name", "appInstanceInfo"};
+
+    /** 兜底用的「路径资源段 -> 中文名」，用于对象已被删除或接口已下线的记录 */
+    private static final Map<String, String> RESOURCE_LABELS;
+
+    static {
+        Map<String, String> labels = new LinkedHashMap<>();
+        labels.put("offline-analysis", "离线分析记录");
+        labels.put("instance-alerts", "报警配置");
+        labels.put("migrates", "迁移任务");
+        labels.put("tasks", "任务");
+        labels.put("users", "用户");
+        RESOURCE_LABELS = java.util.Collections.unmodifiableMap(labels);
+    }
 
     /**
      * 清理超过保留期的审计记录。
@@ -231,15 +262,186 @@ public class OperationAuditService {
             String hostPort = resolveInstanceHostPort(instanceId, instanceCache);
             return StringUtils.isNotBlank(hostPort) ? hostPort : "节点 " + instanceId;
         }
+        String uri = StringUtils.trimToEmpty(record.getRequestUri());
+
+        // 纳管相关接口的路径形如 /external-redis/{appId}/instances，appId 就在路径里，
+        // 但拦截器只认 apps 和 instances 两个段，解析不到，这里补上
+        Long pathAppId = pathIdAfter(uri, "external-redis");
+        if (pathAppId != null && pathAppId > 0) {
+            String name = resolveAppName(pathAppId, new HashMap<Long, String>());
+            return StringUtils.isNotBlank(name) ? name : "集群 " + pathAppId;
+        }
+
         String migrateLabel = resolveMigrateLabel(record, migrateCache);
         if (StringUtils.isNotBlank(migrateLabel)) {
             return migrateLabel;
         }
+
+        String alertLabel = resolveAlertConfigLabel(uri, instanceCache);
+        if (StringUtils.isNotBlank(alertLabel)) {
+            return alertLabel;
+        }
+
+        String offlineLabel = resolveOfflineAnalysisLabel(uri);
+        if (StringUtils.isNotBlank(offlineLabel)) {
+            return offlineLabel;
+        }
+
+        // 剩下的接口把作用对象放在请求体里，按已知字段名依次探测
+        String bodyLabel = resolveBodyObject(record.getParams());
+        if (StringUtils.isNotBlank(bodyLabel)) {
+            return bodyLabel;
+        }
+
+        // 最后按「资源段 + id」兜底，至少说清操作的是哪一条记录
+        String resourceLabel = resolveResourceLabel(uri);
+        if (StringUtils.isNotBlank(resourceLabel)) {
+            return resourceLabel;
+        }
+
         // 登录/登出/改个人资料操作的对象既不是集群也不是节点，就是平台本身
         if (AUTH_MODULE.equals(StringUtils.trimToEmpty(record.getModule()))) {
             return PLATFORM_OBJECT;
         }
         return null;
+    }
+
+    /**
+     * 报警配置的操作对象。
+     *
+     * <p>路径里的 id 是配置项自己的 id，不是集群也不是节点。绑定到实例的配置显示
+     * 「ip:port 的 指标名」，instance_id=0 的是平台级模板，只显示指标名。</p>
+     */
+    private String resolveAlertConfigLabel(String uri, Map<Long, String> instanceCache) {
+        if (!uri.contains("/instance-alerts")) {
+            return null;
+        }
+        Long configId = pathIdAfter(uri, "instance-alerts");
+        if (configId == null) {
+            return null;
+        }
+        try {
+            InstanceAlertConfig config = instanceAlertConfigDao.get(configId.intValue());
+            if (config == null) {
+                return "报警配置 " + configId;
+            }
+            String metric = StringUtils.defaultIfBlank(
+                    StringUtils.trimToEmpty(config.getConfigInfo()),
+                    StringUtils.trimToEmpty(config.getAlertConfig()));
+            if (config.getInstanceId() > 0) {
+                String hostPort = resolveInstanceHostPort(config.getInstanceId(), instanceCache);
+                if (StringUtils.isNotBlank(hostPort)) {
+                    return StringUtils.isBlank(metric) ? hostPort : hostPort + " 的 " + metric;
+                }
+            }
+            return StringUtils.isBlank(metric) ? "报警配置 " + configId : "报警配置：" + metric;
+        } catch (Exception e) {
+            LOGGER.warn("resolve alert config object failed id={}: {}", configId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从请求体里找作用对象。
+     *
+     * <p>纳管、诊断这类接口不带路径 id，作用对象只体现在请求体的某个字段上。
+     * 按已知字段名依次探测，比给每个接口写一条规则省事，新接口只要沿用同样的
+     * 字段名就自动生效。</p>
+     */
+    private String resolveBodyObject(String params) {
+        // 上传的文件名记在 params 顶层，其余字段在 _body 里，两处都要看
+        JSONObject outer = parseJson(params);
+        JSONObject body = parseBody(params);
+        for (String key : BODY_OBJECT_KEYS) {
+            String value = firstNonBlank(outer, body, key);
+            if (StringUtils.isNotBlank(value)) {
+                return abbreviateNodeList(value);
+            }
+        }
+        return null;
+    }
+
+    private String firstNonBlank(JSONObject outer, JSONObject body, String key) {
+        String value = outer == null ? null : StringUtils.trimToEmpty(outer.getString(key));
+        if (StringUtils.isNotBlank(value)) {
+            return value;
+        }
+        return body == null ? null : StringUtils.trimToEmpty(body.getString(key));
+    }
+
+    private JSONObject parseJson(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return null;
+        }
+        try {
+            return JSON.parseObject(raw);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 节点串可能是多行的一整批，列表里放不下，压成「首个节点 等 N 个节点」。
+     */
+    private String abbreviateNodeList(String value) {
+        String[] lines = StringUtils.split(value, "\n,");
+        if (lines == null || lines.length == 0) {
+            return value;
+        }
+        String first = StringUtils.trimToEmpty(lines[0]);
+        if (lines.length == 1) {
+            return first;
+        }
+        return first + " 等 " + lines.length + " 个节点";
+    }
+
+    /** 离线分析记录：路径里有 id 时用真实文件名，比「记录 2」有用得多 */
+    private String resolveOfflineAnalysisLabel(String uri) {
+        if (!uri.contains("/offline-analysis")) {
+            return null;
+        }
+        Long recordId = pathIdAfter(uri, "offline-analysis");
+        if (recordId == null) {
+            return null;
+        }
+        try {
+            OfflineAnalysisRecord record = offlineAnalysisRecordDao.getById(recordId);
+            if (record != null && StringUtils.isNotBlank(record.getFileName())) {
+                return record.getFileName();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("resolve offline analysis object failed id={}: {}", recordId, e.getMessage());
+        }
+        return "离线分析记录 " + recordId;
+    }
+
+    /**
+     * 兜底：路径里若出现「已知资源段 + 数字 id」，就用中文名加 id 表述。
+     *
+     * <p>对象记录已被删掉、或接口本身已下线时，这是唯一还能说清「操作的是哪一条」
+     * 的信息，比一个 - 强。</p>
+     */
+    private String resolveResourceLabel(String uri) {
+        for (Map.Entry<String, String> entry : RESOURCE_LABELS.entrySet()) {
+            Long id = pathIdAfter(uri, entry.getKey());
+            if (id != null && id > 0) {
+                return entry.getValue() + " " + id;
+            }
+        }
+        return null;
+    }
+
+    private JSONObject parseBody(String params) {
+        if (StringUtils.isBlank(params)) {
+            return null;
+        }
+        try {
+            JSONObject outer = JSON.parseObject(params);
+            String body = outer == null ? null : outer.getString("_body");
+            return StringUtils.isBlank(body) ? outer : JSON.parseObject(body);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String resolveInstanceHostPort(Long instanceId, Map<Long, String> cache) {
@@ -274,6 +476,9 @@ public class OperationAuditService {
                 AppDataMigrateStatus status = appDataMigrateStatusDao.get(migrateId);
                 if (status != null) {
                     label = arrow(status.getSourceServers(), status.getTargetServers());
+                } else {
+                    // 任务记录已被删掉，源和目标无从查起，但至少说清操作的是哪个任务
+                    label = "迁移任务 " + migrateId + "（已删除）";
                 }
             } catch (Exception e) {
                 LOGGER.warn("resolve migrate object failed id={}: {}", migrateId, e.getMessage());
@@ -286,16 +491,8 @@ public class OperationAuditService {
     }
 
     private String migrateLabelFromBody(String params) {
-        if (StringUtils.isBlank(params)) {
-            return null;
-        }
         try {
-            JSONObject outer = JSON.parseObject(params);
-            String body = outer == null ? null : outer.getString("_body");
-            if (StringUtils.isBlank(body)) {
-                return null;
-            }
-            JSONObject payload = JSON.parseObject(body);
+            JSONObject payload = parseBody(params);
             if (payload == null) {
                 return null;
             }

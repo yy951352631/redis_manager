@@ -427,7 +427,7 @@ public class AppStatsCenterImpl implements AppStatsCenter {
 
         resultVO.setCurrentKeyCount(resultVO.getCurrentObjNum());
         resultVO.setUptimeSeconds(maxUptimeSeconds);
-        resultVO.setCpuUsePercent(calculateCpuUsePercent(appId));
+        applyCpuAndQps(appId, resultVO);
 
         // 授权用户
         List<AppUser> userList = userService.getByAppId(appId);
@@ -452,6 +452,10 @@ public class AppStatsCenterImpl implements AppStatsCenter {
         //最大碎片率及对应实例Id
         resultVO.setHighestMemFragRatio(highestMemFragRatio);
         resultVO.setInstIdWithHighestMemFragRatio(instId);
+
+        // 界面要把命中率公式带数字展示，原始分子分母一并给出去
+        resultVO.setKeyspaceHits(hits);
+        resultVO.setKeyspaceMisses(miss);
 
         if (miss == 0L) {
             if (hits > 0) {
@@ -482,19 +486,20 @@ public class AppStatsCenterImpl implements AppStatsCenter {
      * 除以真实时间跨度。取平均而非求和：求和在多节点集群上会轻易超过 100%，与旁边
      * 那列「内存使用率」的口径也对不上。</p>
      */
-    private double calculateCpuUsePercent(long appId) {
+    private void applyCpuAndQps(long appId, AppDetailVO resultVO) {
         long since = NumberUtils.toLong(DateUtil.formatDate(
                 new Date(System.currentTimeMillis() - CPU_WINDOW_MILLIS), "yyyyMMddHHmm"), 0L);
         List<Map<String, Object>> rows;
         try {
             rows = instanceRiskMetricDao.cpuBoundaryByApp(appId, since);
         } catch (Exception e) {
-            logger.warn("load cpu boundary failed appId={}: {}", appId, e.getMessage());
-            return 0.0D;
+            logger.warn("load cpu/ops boundary failed appId={}: {}", appId, e.getMessage());
+            return;
         }
         if (CollectionUtils.isEmpty(rows)) {
-            return 0.0D;
+            return;
         }
+        resultVO.setQps(sumLatestOps(rows));
         // SQL 已按 (instance_id, collect_time) 排序，同一实例的两行紧挨着且首条在前
         Map<Long, List<Map<String, Object>>> byInstance = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
@@ -522,9 +527,31 @@ public class AppStatsCenterImpl implements AppStatsCenter {
             counted++;
         }
         if (counted == 0) {
-            return 0.0D;
+            return;
         }
-        return Math.round(totalPercent / counted * 10.0D) / 10.0D;
+        resultVO.setCpuUsePercent(Math.round(totalPercent / counted * 10.0D) / 10.0D);
+    }
+
+    /**
+     * 集群 QPS：各数据节点最近一次采集的 instantaneous_ops_per_sec 之和。
+     *
+     * <p>这个字段是 Redis 给的瞬时速率而不是累计计数，取最新一条即可，不用作差。
+     * 只累加最后一轮：入参里同时含有前一轮，混在一起会把 QPS 算成两倍。</p>
+     */
+    private long sumLatestOps(List<Map<String, Object>> rows) {
+        long latestCollectTime = 0L;
+        for (Map<String, Object> row : rows) {
+            latestCollectTime = Math.max(latestCollectTime,
+                    NumberUtils.toLong(String.valueOf(row.get("collectTime")), 0L));
+        }
+        long qps = 0L;
+        for (Map<String, Object> row : rows) {
+            if (NumberUtils.toLong(String.valueOf(row.get("collectTime")), 0L) != latestCollectTime) {
+                continue;
+            }
+            qps += Math.max(0L, NumberUtils.toLong(String.valueOf(row.get("instantaneousOps")), 0L));
+        }
+        return qps;
     }
 
     private double cpuSeconds(Map<String, Object> row) {

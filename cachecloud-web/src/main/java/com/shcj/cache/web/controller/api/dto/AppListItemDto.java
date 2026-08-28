@@ -45,6 +45,14 @@ public class AppListItemDto implements Serializable {
     private long keyCount;
     /** 最近两次采集计算出的集群 CPU 使用率（百分比）。 */
     private double cpuUsePercent;
+
+    /** 集群 QPS：各数据节点最近一次采集的 instantaneous_ops_per_sec 之和 */
+    private long qps;
+
+    /** 命中率的原始分子分母，界面上把公式带数字展示 */
+    private long keyspaceHits;
+
+    private long keyspaceMisses;
     /** 实例运行时长，单位秒。 */
     private long uptimeSeconds;
     private int appRunDays;

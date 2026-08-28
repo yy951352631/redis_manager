@@ -141,8 +141,13 @@ export interface AppListItem {
   highestMemFragRatio: number
   instIdWithHighestMemFragRatio: number
   hitPercent: number
+  /** 命中率的原始分子分母，用于把公式带数字展示 */
+  keyspaceHits?: number
+  keyspaceMisses?: number
   keyCount: number
   cpuUsePercent: number
+  /** 集群 QPS：各数据节点最近一次采集的 instantaneous_ops_per_sec 之和 */
+  qps?: number
   uptimeSeconds: number
   appRunDays: number
 }

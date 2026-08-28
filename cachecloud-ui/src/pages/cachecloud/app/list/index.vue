@@ -39,6 +39,26 @@ function memProgressStatus(ratio: number) {
   return "success"
 }
 
+/**
+ * 命中率公式，带入实际数字。
+ *
+ * keyspace_hits / keyspace_misses 是自实例启动以来的累计计数，所以末行明说口径，
+ * 免得被当成「最近一段时间」的命中率来读。
+ */
+function hitFormula(row: AppListItem) {
+  const hits = Number(row.keyspaceHits ?? 0)
+  const misses = Number(row.keyspaceMisses ?? 0)
+  const lookups = hits + misses
+  if (lookups <= 0) return "该集群自启动以来没有读请求"
+  return [
+    "命中率 = 命中次数 / (命中次数 + 未命中次数) × 100%",
+    `= ${hits.toLocaleString()} / (${hits.toLocaleString()} + ${misses.toLocaleString()}) × 100%`,
+    `= ${hits.toLocaleString()} / ${lookups.toLocaleString()} × 100%`,
+    `= ${row.hitPercent}%`,
+    "统计口径：各节点自实例启动以来的累计值"
+  ].join("<br/>")
+}
+
 function hitTagType(hit: number) {
   if (hit <= 0) return "info"
   if (hit <= 30) return "danger"
@@ -364,16 +384,18 @@ onMounted(fetchList)
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="CPU使用率" min-width="100" align="center">
+        <el-table-column label="集群QPS" min-width="100" align="center">
           <template #default="{ row }">
-            {{ Number(row.cpuUsePercent || 0).toFixed(1) }}%
+            {{ Number(row.qps || 0).toLocaleString() }}
           </template>
         </el-table-column>
         <el-table-column label="命中率" min-width="88" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.hitPercent > 0" :type="hitTagType(row.hitPercent)" size="small">
-              {{ row.hitPercent }}%
-            </el-tag>
+            <el-tooltip v-if="row.hitPercent > 0" placement="top" raw-content :content="hitFormula(row)">
+              <el-tag :type="hitTagType(row.hitPercent)" size="small">
+                {{ row.hitPercent }}%
+              </el-tag>
+            </el-tooltip>
             <span v-else>无</span>
           </template>
         </el-table-column>

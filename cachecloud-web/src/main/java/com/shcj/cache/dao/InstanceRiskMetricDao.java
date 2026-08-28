@@ -58,7 +58,8 @@ public interface InstanceRiskMetricDao {
     List<Map<String, Object>> cpuUsageSince(@Param("sinceCollectTime") long sinceCollectTime);
 
     /**
-     * 取某个集群最近两轮采集里各实例的 CPU 累计值，用于算集群 CPU 使用率。
+     * 取某个集群最近两轮采集里各实例的 CPU 累计值与瞬时 ops，
+     * 用于算集群 CPU 使用率与集群 QPS。
      *
      * <p>只回两条而不是 max-min：实例重启会让累计计数器归零，max-min 会把重启前的
      * 高值减重启后的低值，算出一个凭空冒出来的巨大增量。两条相减为负才认得出这种情况。</p>

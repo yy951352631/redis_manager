@@ -318,6 +318,9 @@ public class AppManageApiService {
                 row.setHighestMemFragRatio(detail.getHighestMemFragRatio());
                 row.setInstIdWithHighestMemFragRatio(detail.getInstIdWithHighestMemFragRatio());
                 row.setHitPercent(detail.getHitPercent());
+                row.setKeyspaceHits(detail.getKeyspaceHits());
+                row.setKeyspaceMisses(detail.getKeyspaceMisses());
+                row.setQps(detail.getQps());
                 row.setKeyCount(detail.getCurrentKeyCount());
                 row.setCpuUsePercent(detail.getCpuUsePercent());
                 row.setUptimeSeconds(detail.getUptimeSeconds());

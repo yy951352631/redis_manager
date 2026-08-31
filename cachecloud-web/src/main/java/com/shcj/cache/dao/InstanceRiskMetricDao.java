@@ -64,6 +64,14 @@ public interface InstanceRiskMetricDao {
      * <p>只回两条而不是 max-min：实例重启会让累计计数器归零，max-min 会把重启前的
      * 高值减重启后的低值，算出一个凭空冒出来的巨大增量。两条相减为负才认得出这种情况。</p>
      */
+    /**
+     * 取某个集群窗口内每个实例的首尾两条命中计数，用于按窗口算集群命中率。
+     *
+     * <p>只回首尾两条：实例重启会让累计计数器归零，首尾相减为负才认得出这种情况。</p>
+     */
+    List<Map<String, Object>> hitBoundaryByApp(@Param("appId") long appId,
+                                               @Param("sinceCollectTime") long sinceCollectTime);
+
     List<Map<String, Object>> cpuBoundaryByApp(@Param("appId") long appId,
                                                @Param("sinceCollectTime") long sinceCollectTime);
 

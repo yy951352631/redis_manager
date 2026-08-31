@@ -42,20 +42,20 @@ function memProgressStatus(ratio: number) {
 /**
  * 命中率公式，带入实际数字。
  *
- * keyspace_hits / keyspace_misses 是自实例启动以来的累计计数，所以末行明说口径，
- * 免得被当成「最近一段时间」的命中率来读。
+ * 分子分母是窗口内的增量（末值减首值），不是累计值——口径与主页 KPI 一致，
+ * 末行写明窗口，免得被当成开机至今的平均值来读。
  */
 function hitFormula(row: AppListItem) {
   const hits = Number(row.keyspaceHits ?? 0)
   const misses = Number(row.keyspaceMisses ?? 0)
   const lookups = hits + misses
-  if (lookups <= 0) return "该集群自启动以来没有读请求"
+  if (lookups <= 0) return "近 1 小时该集群没有读请求"
   return [
     "命中率 = 命中次数 / (命中次数 + 未命中次数) × 100%",
     `= ${hits.toLocaleString()} / (${hits.toLocaleString()} + ${misses.toLocaleString()}) × 100%`,
     `= ${hits.toLocaleString()} / ${lookups.toLocaleString()} × 100%`,
     `= ${row.hitPercent}%`,
-    "统计口径：各节点自实例启动以来的累计值"
+    "统计口径：近 1 小时各数据节点的命中增量汇总"
   ].join("<br/>")
 }
 

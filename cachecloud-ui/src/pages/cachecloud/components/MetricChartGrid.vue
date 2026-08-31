@@ -78,7 +78,9 @@ function buildOption(config: MetricSeriesConfig, zoomable: boolean) {
     symbol: "circle",
     symbolSize: 4,
     lineStyle: { width: 2 },
-    yAxisIndex: dualAxis && index === 1 ? 1 : 0,
+    // 双轴图里走右轴的永远是最后一条序列（命中率% / 耗时 ms）。
+    // 原来写死 index===1，命中统计合入第三条序列后就会挂错轴。
+    yAxisIndex: dualAxis && index === seriesList.length - 1 ? 1 : 0,
     data: item.data,
     ...(item.name.endsWith("总内存")
       ? { lineStyle: { width: 2, type: "dashed" as const, color: "#0d233a" } }

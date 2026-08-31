@@ -50,6 +50,9 @@ public class AppStatsCenterImpl implements AppStatsCenter {
     /** CPU 使用率的回溯窗口：采集是分钟级，15 分钟足以拿到首尾两条 */
     private static final long CPU_WINDOW_MILLIS = 15L * 60L * 1000L;
 
+    /** 命中率的统计窗口：与主页 KPI 的口径保持一致，都是最近 1 小时 */
+    private static final long HIT_WINDOW_MILLIS = 60L * 60L * 1000L;
+
     private final static String COLLECT_DATE_FORMAT = "yyyyMMddHHmm";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     @Autowired
@@ -453,26 +456,74 @@ public class AppStatsCenterImpl implements AppStatsCenter {
         resultVO.setHighestMemFragRatio(highestMemFragRatio);
         resultVO.setInstIdWithHighestMemFragRatio(instId);
 
-        // 界面要把命中率公式带数字展示，原始分子分母一并给出去
-        resultVO.setKeyspaceHits(hits);
-        resultVO.setKeyspaceMisses(miss);
-
-        if (miss == 0L) {
-            if (hits > 0) {
-                resultVO.setHitPercent(100.0D);
-            } else {
-                resultVO.setHitPercent(0.0D);
-            }
-        } else {
-            double percent = 100 * (double) hits / (hits + miss);
-            DecimalFormat df = new DecimalFormat("##.##");
-            resultVO.setHitPercent(Double.parseDouble(df.format(percent)));
-        }
+        applyWindowHitRate(appId, resultVO);
 
         return resultVO;
     }
 
     /** INFO CPU 字段是累计秒数，使用相邻两次应用采集值计算当前使用率。 */
+    /**
+     * 集群命中率：近 {@link #HIT_WINDOW_MILLIS} 内各数据节点的命中增量汇总。
+     *
+     * <p>原先直接累加 instance_statistics 的 hits/misses，那是自实例启动以来的累计值，
+     * 算出来的是「开机至今的平均命中率」——跑久了分母上百万，最近一小时的真实流量根本
+     * 推不动它，页面上看起来就是个常数。</p>
+     *
+     * <p>取不到窗口样本时保持 0：这一列在界面上以「无」呈现，比拿一个陈旧的累计值
+     * 冒充当前命中率要诚实。</p>
+     */
+    private void applyWindowHitRate(long appId, AppDetailVO resultVO) {
+        long since = NumberUtils.toLong(DateUtil.formatDate(
+                new Date(System.currentTimeMillis() - HIT_WINDOW_MILLIS), "yyyyMMddHHmm"), 0L);
+        List<Map<String, Object>> rows;
+        try {
+            rows = instanceRiskMetricDao.hitBoundaryByApp(appId, since);
+        } catch (Exception e) {
+            logger.warn("load hit boundary failed appId={}: {}", appId, e.getMessage());
+            return;
+        }
+        if (CollectionUtils.isEmpty(rows)) {
+            return;
+        }
+        Map<Long, List<Map<String, Object>>> byInstance = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            long instanceId = NumberUtils.toLong(String.valueOf(row.get("instanceId")), 0L);
+            byInstance.computeIfAbsent(instanceId, key -> new ArrayList<>()).add(row);
+        }
+
+        long hits = 0L;
+        long misses = 0L;
+        for (List<Map<String, Object>> samples : byInstance.values()) {
+            if (samples.size() < 2) {
+                continue;
+            }
+            Map<String, Object> first = samples.get(0);
+            Map<String, Object> last = samples.get(samples.size() - 1);
+            long hitDelta = counter(last, "keyspaceHits") - counter(first, "keyspaceHits");
+            long missDelta = counter(last, "keyspaceMisses") - counter(first, "keyspaceMisses");
+            // 负增量说明实例在窗口内重启过，累计计数器归了零，这段样本没法用
+            if (hitDelta < 0 || missDelta < 0) {
+                continue;
+            }
+            hits += hitDelta;
+            misses += missDelta;
+        }
+
+        // 界面要把命中率公式带数字展示，窗口内的分子分母一并给出去
+        resultVO.setKeyspaceHits(hits);
+        resultVO.setKeyspaceMisses(misses);
+        long lookups = hits + misses;
+        if (lookups <= 0) {
+            return;
+        }
+        DecimalFormat df = new DecimalFormat("##.##");
+        resultVO.setHitPercent(Double.parseDouble(df.format(100.0D * hits / lookups)));
+    }
+
+    private long counter(Map<String, Object> row, String key) {
+        return NumberUtils.toLong(String.valueOf(row.get(key)), 0L);
+    }
+
     /**
      * 集群 CPU 使用率：各数据节点使用率的平均值。
      *

@@ -43,13 +43,13 @@ export interface MetricSeriesConfig {
   cpuPercent?: boolean
 }
 
-/** 与旧版 appStat.jsp 图表顺序一致（共 16 张），也是「恢复默认顺序」的基准 */
+/** 图表槽位与默认顺序，也是「恢复默认顺序」的基准（原 16 张，命中率并入命中统计后 15 张） */
 export const METRIC_CHART_SLOTS: MetricChartSlot[] = [
   { key: "commands", title: "全命令统计", source: "app", statNames: ["commandCount"], seriesNames: ["命令趋势图"] },
-  { key: "hits", title: "命中统计", source: "app", statNames: ["hits"], seriesNames: ["命中趋势图"] },
+  // 命中/未命中/命中率三条放在一张图里看才有意义：只看命中次数涨跌分不清是流量变了还是缓存失效了
+  { key: "hits", title: "命中统计", source: "app", statNames: ["hits", "misses", "hitPercent"], seriesNames: ["命中(hits)", "未命中(misses)", "命中率(%)"], dualHitRate: true },
   { key: "net", title: "网络流量", source: "app", statNames: ["netInput", "netOutput"], seriesNames: ["net_input", "net_output"], netUnit: true },
   { key: "cpu", title: "CPU消耗率", source: "app", statNames: ["cpuSys", "cpuUser", "cpuUserChildren"], seriesNames: ["sys", "user", "user_children"], yAxisName: "%", cpuPercent: true },
-  { key: "hitPercent", title: "未命中 / 命中率", source: "app", statNames: ["misses", "hitPercent"], seriesNames: ["未命中(misses)", "命中率(%)"], dualHitRate: true },
   { key: "memFragRatio", title: "内存碎片率", source: "app", statNames: ["memFragRatio"], seriesNames: ["内存碎片率"], yAxisName: "比率" },
   { key: "aofSize", title: "AOF 大小", source: "ops", statNames: ["aof_current_size", "aof_base_size"], seriesNames: ["AOF当前大小", "AOF基准大小"], yAxisName: "MB" },
   { key: "replOffset", title: "复制 Offset", source: "ops", statNames: ["master_repl_offset"], seriesNames: ["master_repl_offset"], yAxisName: "MB" },

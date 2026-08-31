@@ -290,7 +290,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="ops-kpi">
         <div class="ops-kpi__label">
-          QPS
+          总QPS
         </div>
         <div class="ops-kpi__value">
           {{ (kpi?.qps ?? 0).toLocaleString() }}
@@ -305,7 +305,9 @@ onBeforeUnmount(() => {
         </div>
         <div class="ops-kpi__value">
           <template v-if="kpi?.hitRate != null">
-            {{ kpi.hitRate.toFixed(2) }}%
+            <el-tooltip placement="top" content="近一小时数据节点平均命中率">
+              <span>{{ kpi.hitRate.toFixed(2) }}%</span>
+            </el-tooltip>
           </template>
           <!-- 0% 会被读成「全部穿透」，窗口内没有请求就如实显示「—」 -->
           <template v-else>

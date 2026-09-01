@@ -46,7 +46,7 @@ export interface MetricSeriesConfig {
   integerOnly?: boolean
 }
 
-/** 图表槽位与默认顺序，也是「恢复默认顺序」的基准（原 16 张，命中率并入命中统计、新增持久化耗时与读写命令后 17 张） */
+/** 图表槽位与默认顺序，也是「恢复默认顺序」的基准（原 16 张，命中率并入命中统计、移除 AOF 大小、新增持久化耗时与读写命令后 16 张） */
 export const METRIC_CHART_SLOTS: MetricChartSlot[] = [
   { key: "commands", title: "全命令统计", source: "app", statNames: ["commandCount"], seriesNames: ["命令趋势图"] },
   // 命中/未命中/命中率三条放在一张图里看才有意义：只看命中次数涨跌分不清是流量变了还是缓存失效了
@@ -54,7 +54,6 @@ export const METRIC_CHART_SLOTS: MetricChartSlot[] = [
   { key: "net", title: "网络流量", source: "app", statNames: ["netInput", "netOutput"], seriesNames: ["net_input", "net_output"], netUnit: true },
   { key: "cpu", title: "CPU消耗率", source: "app", statNames: ["cpuSys", "cpuUser", "cpuUserChildren"], seriesNames: ["sys", "user", "user_children"], yAxisName: "%", cpuPercent: true },
   { key: "memFragRatio", title: "内存碎片率", source: "app", statNames: ["memFragRatio"], seriesNames: ["内存碎片率"], yAxisName: "比率" },
-  { key: "aofSize", title: "AOF 大小", source: "ops", statNames: ["aof_current_size", "aof_base_size"], seriesNames: ["AOF当前大小", "AOF基准大小"], yAxisName: "MB" },
   { key: "replOffset", title: "复制 Offset", source: "ops", statNames: ["master_repl_offset"], seriesNames: ["master_repl_offset"], yAxisName: "MB" },
   { key: "replicationFault", title: "拒绝连接 / 复制异常", source: "ops", statNames: ["rejected_connections", "sync_full", "sync_partial_err"], seriesNames: ["拒绝连接", "全量复制", "部分复制失败"], yAxisName: "次数" },
   { key: "replication", title: "主从复制", source: "ops", statNames: ["repl_lag_max", "repl_link_down"], seriesNames: ["复制滞后(秒)", "链路异常数"], yAxisName: "值" },

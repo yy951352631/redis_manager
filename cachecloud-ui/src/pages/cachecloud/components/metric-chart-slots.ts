@@ -46,29 +46,30 @@ export interface MetricSeriesConfig {
   integerOnly?: boolean
 }
 
-/** 图表槽位与默认顺序，也是「恢复默认顺序」的基准（原 16 张，命中率并入命中统计、移除 AOF 大小、新增持久化耗时与读写命令后 16 张） */
+/** 图表槽位与默认顺序，也是「恢复默认顺序」的基准（共 16 张） */
 export const METRIC_CHART_SLOTS: MetricChartSlot[] = [
-  { key: "commands", title: "全命令统计", source: "app", statNames: ["commandCount"], seriesNames: ["命令趋势图"] },
-  // 命中/未命中/命中率三条放在一张图里看才有意义：只看命中次数涨跌分不清是流量变了还是缓存失效了
-  { key: "hits", title: "命中统计", source: "app", statNames: ["hits", "misses", "hitPercent"], seriesNames: ["命中(hits)", "未命中(misses)", "命中率(%)"], dualHitRate: true },
-  { key: "net", title: "网络流量", source: "app", statNames: ["netInput", "netOutput"], seriesNames: ["net_input", "net_output"], netUnit: true },
-  { key: "cpu", title: "CPU消耗率", source: "app", statNames: ["cpuSys", "cpuUser", "cpuUserChildren"], seriesNames: ["sys", "user", "user_children"], yAxisName: "%", cpuPercent: true },
-  { key: "memFragRatio", title: "内存碎片率", source: "app", statNames: ["memFragRatio"], seriesNames: ["内存碎片率"], yAxisName: "比率" },
-  { key: "replOffset", title: "复制 Offset", source: "ops", statNames: ["master_repl_offset"], seriesNames: ["master_repl_offset"], yAxisName: "MB" },
-  { key: "replicationFault", title: "拒绝连接 / 复制异常", source: "ops", statNames: ["rejected_connections", "sync_full", "sync_partial_err"], seriesNames: ["拒绝连接", "全量复制", "部分复制失败"], yAxisName: "次数" },
-  { key: "replication", title: "主从复制", source: "ops", statNames: ["repl_lag_max", "repl_link_down"], seriesNames: ["复制滞后(秒)", "链路异常数"], yAxisName: "值" },
-  { key: "qps", title: "实时 QPS", source: "ops", statNames: ["instantaneous_ops_per_sec"], seriesNames: ["QPS"], yAxisName: "次/秒" },
-  { key: "persistence", title: "持久化阻塞", source: "ops", statNames: ["aof_delayed_fsync", "latest_fork_usec"], seriesNames: ["AOF刷盘延迟次数", "fork耗时(ms)"], dualPersistence: true },
-  // 上一次 RDB / AOF 重写的写盘耗时，是快照不是增量，集群侧按节点取最大值
-  { key: "persistenceCost", title: "持久化耗时", source: "ops", statNames: ["rdb_last_bgsave_time_sec", "aof_last_rewrite_time_sec"], seriesNames: ["上次RDB写盘耗时", "上次AOF重写耗时"], yAxisName: "秒" },
   { key: "memory", title: "内存使用量", source: "app", statNames: ["usedMemory", "usedMemoryRss"], seriesNames: ["used_memory", "used_memory_rss"], yAxisName: "MB", memTotalLine: true },
-  { key: "clients", title: "客户端连接统计", source: "app", statNames: ["connectedClient"], seriesNames: ["connected_clients"], yAxisName: "个", integerOnly: true },
-  // 读写比例比命令总量更能说明负载性质，两条放一张图才好比。
+  { key: "cpu", title: "CPU消耗率", source: "app", statNames: ["cpuSys", "cpuUser", "cpuUserChildren"], seriesNames: ["sys", "user", "user_children"], yAxisName: "%", cpuPercent: true },
+  { key: "commands", title: "全命令统计", source: "app", statNames: ["commandCount"], seriesNames: ["命令趋势图"] },
   // 走 ops 源：这两个是按 diff_json 里的 cmdstat_* 现场归类汇总出来的，
   // app 源读的是 app_minute_statistics，那张表没有逐命令明细。
-  { key: "readWrite", title: "读写命令统计", source: "ops", statNames: ["read_command_count", "write_command_count"], seriesNames: ["读命令", "写命令"], yAxisName: "次" },
+  { key: "readWrite", title: "读/写命令统计", source: "ops", statNames: ["read_command_count", "write_command_count"], seriesNames: ["读命令", "写命令"], yAxisName: "次" },
+  { key: "net", title: "网络流量", source: "app", statNames: ["netInput", "netOutput"], seriesNames: ["net_input", "net_output"], netUnit: true },
+  { key: "qps", title: "实时 QPS", source: "ops", statNames: ["instantaneous_ops_per_sec"], seriesNames: ["QPS"], yAxisName: "次/秒" },
+  // 命中/未命中/命中率三条放在一张图里看才有意义：只看命中次数涨跌分不清是流量变了还是缓存失效了
+  { key: "hits", title: "缓存命中统计", source: "app", statNames: ["hits", "misses", "hitPercent"], seriesNames: ["命中(hits)", "未命中(misses)", "命中率(%)"], dualHitRate: true },
+  { key: "memFragRatio", title: "内存碎片率", source: "app", statNames: ["memFragRatio"], seriesNames: ["内存碎片率"], yAxisName: "比率" },
+  { key: "replication", title: "主从复制", source: "ops", statNames: ["repl_lag_max", "repl_link_down"], seriesNames: ["复制滞后(秒)", "链路异常数"], yAxisName: "值", integerOnly: true },
+  { key: "replOffset", title: "复制偏移量 Offset", source: "ops", statNames: ["master_repl_offset"], seriesNames: ["master_repl_offset"], yAxisName: "MB" },
+  // 拒绝连接与连接数同源同轴：连接被拒往往就是连接数顶到 maxclients 的直接后果，
+  // 分在两张图里得来回对时间点。为此本槽位改走 ops 源（app 源没有 rejected_connections）。
+  { key: "clients", title: "客户端连接数 / 拒绝连接数", source: "ops", statNames: ["connected_clients", "rejected_connections"], seriesNames: ["客户端连接数", "拒绝连接数"], yAxisName: "个", integerOnly: true },
+  { key: "replicationFault", title: "主从复制异常统计", source: "ops", statNames: ["sync_full", "sync_partial_err"], seriesNames: ["全量复制", "部分复制失败"], yAxisName: "次数" },
   { key: "dbsize", title: "键个数统计", source: "app", statNames: ["objectSize"], seriesNames: ["object_size"], yAxisName: "个" },
-  { key: "expired", title: "过期/淘汰键统计", source: "app", statNames: ["expiredKeys", "evictedKeys"], seriesNames: ["expired_keys", "evicted_keys"], yAxisName: "次" }
+  { key: "expired", title: "键过期/淘汰数统计", source: "app", statNames: ["expiredKeys", "evictedKeys"], seriesNames: ["expired_keys", "evicted_keys"], yAxisName: "次" },
+  { key: "persistence", title: "持久化阻塞事件记录 AOF/RDB", source: "ops", statNames: ["aof_delayed_fsync", "latest_fork_usec"], seriesNames: ["AOF刷盘延迟次数", "fork耗时(ms)"], dualPersistence: true },
+  // 上一次 RDB / AOF 重写的写盘耗时，是快照不是增量，集群侧按节点取最大值
+  { key: "persistenceCost", title: "持久化耗时统计 AOF/RDB", source: "ops", statNames: ["rdb_last_bgsave_time_sec", "aof_last_rewrite_time_sec"], seriesNames: ["上次RDB写盘耗时", "上次AOF重写耗时"], yAxisName: "秒" }
 ]
 
 /** 图表配色，两个页面原先各自维护一份相同的数组 */

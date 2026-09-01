@@ -2,7 +2,6 @@
 import type { ECharts } from "echarts"
 import { initGrafanaChart } from "@/common/utils/chart-theme"
 import { formatMetricValue } from "@/common/utils/metric-format"
-import { METRIC_CHART_COLORS } from "./metric-chart-slots"
 
 export interface MetricPiePoint {
   name: string
@@ -17,6 +16,12 @@ const props = withDefaults(defineProps<{
   title: "命令分布统计",
   loading: false
 })
+
+/**
+ * 配色取自键值分析的类型环，与那边的圆环保持同一套观感。
+ * 不用 METRIC_CHART_COLORS：那组是给折线图配的，深色偏多，做成环形色块偏闷。
+ */
+const DONUT_COLORS = ["#ff9d3f", "#4d8dff", "#22c55e", "#ef4444", "#14b8a6", "#8b5cf6", "#facc15", "#64748b"]
 
 const expandedVisible = ref(false)
 
@@ -44,25 +49,45 @@ const shareRows = computed(() =>
 )
 
 function buildOption(expanded: boolean) {
+  const hasData = props.points.length > 0
   return {
     animation: false,
-    color: METRIC_CHART_COLORS,
+    color: DONUT_COLORS,
     tooltip: {
       trigger: "item",
       formatter: (params: { name: string, value: number, percent: number }) =>
         `${params.name}<br/>次数: ${formatMetricValue(params.value)}<br/>占比: ${formatMetricValue(params.percent)}%`
     },
-    legend: { bottom: 8, left: "center", type: "scroll", textStyle: { fontSize: 12, color: "#6b7a90" } },
+    // 中空处标出总次数，省得为了知道基数还要去看展开表
+    title: hasData
+      ? {
+          text: formatMetricValue(total.value),
+          subtext: "总次数",
+          left: "center",
+          top: expanded ? "40%" : "37%",
+          textStyle: { color: "#1e293b", fontSize: expanded ? 24 : 20, fontWeight: 600 },
+          subtextStyle: { color: "#64748b", fontSize: 12, lineHeight: 18 }
+        }
+      : undefined,
+    legend: { bottom: 4, left: "center", type: "scroll", textStyle: { fontSize: 11, color: "#6b7a90" } },
     series: [{
       type: "pie",
-      radius: expanded ? "62%" : "58%",
-      center: ["50%", "48%"],
-      label: expanded
-        ? { formatter: (params: { name: string, percent: number }) => `${params.name} ${formatMetricValue(params.percent)}%` }
-        : { show: false },
-      data: props.points.length
+      radius: expanded ? ["36%", "60%"] : ["34%", "58%"],
+      center: ["50%", expanded ? "47%" : "44%"],
+      avoidLabelOverlap: true,
+      data: hasData
         ? props.points.map(p => ({ name: p.name, value: p.value }))
-        : [{ name: "暂无数据", value: 0 }]
+        : [{ name: "暂无数据", value: 0 }],
+      // 引线标出命令名与占比。数据源是 top5，切片最多 5 片，
+      // 紧凑卡片里也放得下完整文案，不必为省地方把命令名藏起来。
+      label: {
+        show: hasData,
+        formatter: (params: { name: string, percent: number }) =>
+          `${params.name} ${formatMetricValue(params.percent)}%`,
+        fontSize: expanded ? 13 : 12,
+        overflow: "break"
+      },
+      labelLine: { show: hasData, length: 10, length2: 8 }
     }]
   }
 }

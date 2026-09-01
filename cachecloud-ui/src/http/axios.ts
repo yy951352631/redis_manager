@@ -104,6 +104,10 @@ function createInstance() {
 function createRequest(instance: AxiosInstance) {
   return <T>(config: AxiosRequestConfig): Promise<T> => {
     const token = getToken()
+    // FormData 必须由浏览器自己写 Content-Type，它要在里面带上 multipart 的 boundary。
+    // 这里如果照旧塞 application/json，请求体是 FormData 但头部声明是 JSON，
+    // 后端解析不出 multipart，报「Current request is not a multipart request」。
+    const isFormData = typeof FormData !== "undefined" && config.data instanceof FormData
     // 默认配置
     const defaultConfig: AxiosRequestConfig = {
       // 接口地址
@@ -112,7 +116,7 @@ function createRequest(instance: AxiosInstance) {
       headers: {
         // 携带 Token
         "Authorization": token ? `Bearer ${token}` : undefined,
-        "Content-Type": "application/json"
+        "Content-Type": isFormData ? undefined : "application/json"
       },
       // 请求体
       data: {},

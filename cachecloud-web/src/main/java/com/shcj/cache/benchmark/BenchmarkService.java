@@ -55,6 +55,9 @@ public class BenchmarkService {
      */
     private static final int SOCKET_TIMEOUT_MS = 5000;
 
+    /** 承压节点 CPU 的采样间隔。太密会让采样自身成为负载，太疏则短压测取不到几个点 */
+    private static final long TARGET_CPU_SAMPLE_INTERVAL_MS = 3000L;
+
     @Autowired
     private AppService appService;
 
@@ -89,6 +92,18 @@ public class BenchmarkService {
         private volatile long currentQps = 0L;
         private volatile String status = "RUNNING";
         private volatile double clientCpuPercent = 0D;
+        /** 承压节点最近一次采样的 CPU（各节点取最忙者，按单核计） */
+        private volatile double targetCpuPercent = 0D;
+        /** 全程累计，用于算平均——单看瞬时值判断不了整轮压力水平 */
+        private final java.util.concurrent.atomic.AtomicLong targetCpuSumTenth =
+                new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicInteger targetCpuSamples =
+                new java.util.concurrent.atomic.AtomicInteger();
+
+        private double avgTargetCpuPercent() {
+            int count = targetCpuSamples.get();
+            return count <= 0 ? 0D : targetCpuSumTenth.get() / 10.0D / count;
+        }
 
         private RunningTask(BenchmarkOptions options) {
             this.options = options;
@@ -215,6 +230,7 @@ public class BenchmarkService {
             progress.setP99Ms(stored.getP99Ms());
             progress.setMaxMs(stored.getMaxMs());
             progress.setClientCpuPercent(stored.getClientCpuPercent());
+            progress.setAvgTargetCpuPercent(stored.getAvgTargetCpuPercent());
             progress.setRampMessage(stored.getRampMessage());
             if (StringUtils.isNotBlank(stored.getRampJson())) {
                 try {
@@ -248,6 +264,8 @@ public class BenchmarkService {
         progress.setP99Ms(task.stats.percentileUs(99) / 1000.0);
         progress.setMaxMs(task.stats.getMaxLatencyUs() / 1000.0);
         progress.setClientCpuPercent(task.clientCpuPercent);
+        progress.setTargetCpuPercent(task.targetCpuPercent);
+        progress.setAvgTargetCpuPercent(Math.round(task.avgTargetCpuPercent() * 10.0) / 10.0);
         progress.setErrorTypes(task.stats.errorTypes());
         progress.setCurrentConcurrency(task.currentConcurrency);
         progress.setRampSteps(new ArrayList<>(task.rampSteps));
@@ -293,6 +311,7 @@ public class BenchmarkService {
         // 从根上避免 Cluster 的 MOVED 重定向
         List<NodePlan> plans = buildNodePlans(task.getId(), appDesc, options, hashTags);
         String errorMsg = null;
+        Thread sampler = null;
         try {
             BenchmarkExecutor executor = new BenchmarkExecutor(options,
                     index -> plans.get(index % plans.size()).planner,
@@ -301,6 +320,7 @@ public class BenchmarkService {
             if (!executor.hasCommands()) {
                 throw new BizException("勾选的命令无法识别");
             }
+            sampler = startTargetCpuSampler(appDesc, plans, runningTask);
             if (options.isQuickMode()) {
                 runRamp(appDesc, options, plans, runningTask);
             } else {
@@ -314,9 +334,82 @@ public class BenchmarkService {
             runningTask.status = "FAILED";
             LOGGER.error("benchmark task {} failed: {}", task.getId(), e.getMessage(), e);
         } finally {
+            if (sampler != null) {
+                sampler.interrupt();
+            }
             finish(task, options, plans, runningTask, errorMsg, appDesc);
             running.remove(task.getId());
         }
+    }
+
+    /**
+     * 后台采样承压节点的 CPU。
+     *
+     * <p>单开一条线程而不是搭在进度轮询上：进度接口跑在 HTTP 线程里，在那里发 INFO
+     * 会让页面刷新等着 Redis 返回；而且轮询频率由前端决定，采样间隔就不可控了。
+     *
+     * <p>连接建一次复用到底——每 5 秒重建连接，采样本身就成了压测的一部分。</p>
+     */
+    private Thread startTargetCpuSampler(AppDesc appDesc, List<NodePlan> plans, RunningTask runningTask) {
+        Thread sampler = new Thread(() -> {
+            Map<String, Jedis> connections = new LinkedHashMap<>();
+            try {
+                for (NodePlan plan : plans) {
+                    String key = plan.hostPort == null ? "self" : plan.hostPort;
+                    try {
+                        connections.put(key, openJedis(appDesc, plan.hostPort));
+                    } catch (Exception e) {
+                        LOGGER.warn("cpu sampler connect failed node={}: {}", plan.hostPort, e.getMessage());
+                    }
+                }
+                Map<String, Double> previous = readCpuSeconds(connections);
+                long previousMillis = System.currentTimeMillis();
+                while (!Thread.currentThread().isInterrupted() && !runningTask.stopped.get()) {
+                    Thread.sleep(TARGET_CPU_SAMPLE_INTERVAL_MS);
+                    Map<String, Double> current = readCpuSeconds(connections);
+                    long now = System.currentTimeMillis();
+                    double cpu = maxCpuPercent(previous, current, now - previousMillis);
+                    previous = current;
+                    previousMillis = now;
+                    if (cpu <= 0) {
+                        continue;
+                    }
+                    runningTask.targetCpuPercent = Math.round(cpu * 10.0) / 10.0;
+                    runningTask.targetCpuSumTenth.addAndGet(Math.round(cpu * 10.0));
+                    runningTask.targetCpuSamples.incrementAndGet();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                LOGGER.warn("target cpu sampler stopped: {}", e.getMessage());
+            } finally {
+                for (Jedis jedis : connections.values()) {
+                    try {
+                        jedis.close();
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        }, "benchmark-cpu-sampler");
+        sampler.setDaemon(true);
+        // 与压测线程同为最低优先级：采样不该跟平台自身的作业抢 CPU
+        sampler.setPriority(Thread.MIN_PRIORITY);
+        sampler.start();
+        return sampler;
+    }
+
+    private Map<String, Double> readCpuSeconds(Map<String, Jedis> connections) {
+        Map<String, Double> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Jedis> entry : connections.entrySet()) {
+            try {
+                String info = entry.getValue().info("cpu");
+                result.put(entry.getKey(),
+                        parseInfoDouble(info, "used_cpu_sys") + parseInfoDouble(info, "used_cpu_user"));
+            } catch (Exception e) {
+                LOGGER.debug("read cpu failed node={}: {}", entry.getKey(), e.getMessage());
+            }
+        }
+        return result;
     }
 
     /**
@@ -511,6 +604,7 @@ public class BenchmarkService {
         task.setMaxMs(stats.getMaxLatencyUs() / 1000.0);
         task.setAvgMs(stats.getAvgLatencyUs() / 1000.0);
         task.setClientCpuPercent(runningTask.clientCpuPercent);
+        task.setAvgTargetCpuPercent(Math.round(runningTask.avgTargetCpuPercent() * 10.0) / 10.0);
         Map<String, Object> commandStats = new LinkedHashMap<>();
         commandStats.put("counts", stats.commandCounts());
         commandStats.put("avgMs", stats.commandAvgLatencyUs());

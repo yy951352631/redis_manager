@@ -35,6 +35,12 @@ public class BenchmarkProgress {
     /** 压测期间平台自身的 CPU 占用，用于判断瓶颈是否在压测机这一侧 */
     private double clientCpuPercent;
 
+    /** 承压节点最近一次采样的 CPU（各节点取最忙者，按单核计） */
+    private double targetCpuPercent;
+
+    /** 承压节点的全程平均 CPU */
+    private double avgTargetCpuPercent;
+
     private Map<String, Long> errorTypes = new LinkedHashMap<>();
 
     /** 快捷压测：当前档的并发数 */

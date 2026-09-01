@@ -34,7 +34,8 @@ public class BenchmarkOptions {
     /** 终止条件：总请求数。0 表示不按请求数终止 */
     private long totalRequests = 0L;
 
-    private int pipeline = 20;
+    /** 默认 1：一来一回才是业务真实感受到的延迟，管线会把 QPS 抬高数倍 */
+    private int pipeline = 1;
 
     /** true = 热点分布（约两成 key 承担八成访问），false = 均匀随机 */
     private boolean hotspot = false;

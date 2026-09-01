@@ -60,6 +60,9 @@ public class BenchmarkTask {
     /** 快捷压测：峰值档下目标节点的 CPU（单核百分比） */
     private double targetCpuPercent;
 
+    /** 压测全程承压节点的平均 CPU（各节点取最忙者，按单核计） */
+    private double avgTargetCpuPercent;
+
     private String userName;
 
     private String errorMsg;

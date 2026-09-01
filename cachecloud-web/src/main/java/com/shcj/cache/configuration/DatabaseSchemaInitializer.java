@@ -60,6 +60,7 @@ public class DatabaseSchemaInitializer {
                     + "ramp_message VARCHAR(512) DEFAULT NULL COMMENT '快捷压测结论',"
                     + "peak_concurrency INT NOT NULL DEFAULT 0 COMMENT '峰值所在并发档',"
                     + "target_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '峰值档下目标节点CPU(单核%)',"
+                    + "avg_target_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '全程承压节点平均CPU(单核%)',"
                     + "error_stats_json TEXT,"
                     + "user_name VARCHAR(64) NOT NULL DEFAULT '',"
                     + "error_msg VARCHAR(1024) DEFAULT NULL,"
@@ -122,6 +123,9 @@ public class DatabaseSchemaInitializer {
                         + "ADD COLUMN ramp_message VARCHAR(512) DEFAULT NULL COMMENT '快捷压测结论', "
                         + "ADD COLUMN peak_concurrency INT NOT NULL DEFAULT 0 COMMENT '峰值所在并发档', "
                         + "ADD COLUMN target_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '峰值档下目标节点CPU'");
+        ensureColumn("benchmark_task", "avg_target_cpu_percent",
+                "ALTER TABLE benchmark_task ADD COLUMN avg_target_cpu_percent DOUBLE NOT NULL DEFAULT 0 "
+                        + "COMMENT '全程承压节点平均CPU(单核%)'");
         ensureColumn("operation_audit", "object_label",
                 "ALTER TABLE operation_audit ADD COLUMN object_label VARCHAR(255) DEFAULT NULL "
                         + "COMMENT '操作对象，写入时固化的快照' AFTER instance_id");

@@ -1701,6 +1701,10 @@ export interface BenchmarkProgress {
   maxMs: number
   /** 压测期间平台自身 CPU，用于判断瓶颈是否在压测机一侧 */
   clientCpuPercent: number
+  /** 承压节点最近一次采样的 CPU（各节点取最忙者，按单核计） */
+  targetCpuPercent?: number
+  /** 承压节点的全程平均 CPU */
+  avgTargetCpuPercent?: number
   errorTypes?: Record<string, number>
   /** 快捷压测：当前档并发 */
   currentConcurrency?: number
@@ -1748,5 +1752,7 @@ export interface BenchmarkResult {
   rampMessage?: string | null
   peakConcurrency?: number
   targetCpuPercent?: number
+  /** 压测全程承压节点的平均 CPU */
+  avgTargetCpuPercent?: number
   rampSteps?: BenchmarkRampStep[] | null
 }

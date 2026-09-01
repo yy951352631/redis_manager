@@ -39,7 +39,7 @@ const form = reactive({
   /** 界面按分钟填，提交时换算成秒；最低 1 分钟——几十秒的压测受连接建立与预热影响太大 */
   durationMinutes: 1,
   totalRequests: 1000000,
-  pipeline: 20,
+  pipeline: 1,
   hotspot: false,
   readWeight: 5,
   writeWeight: 5,
@@ -459,6 +459,13 @@ onBeforeUnmount(stopPolling)
           <div class="benchmark-tab__kpi-label">平台 CPU</div>
           <div class="benchmark-tab__kpi-value">{{ progress.clientCpuPercent.toFixed(1) }}<small>%</small></div>
         </div>
+        <div class="benchmark-tab__kpi">
+          <div class="benchmark-tab__kpi-label">承压节点 CPU</div>
+          <div class="benchmark-tab__kpi-value" :class="{ 'is-bad': (progress.targetCpuPercent ?? 0) >= 90 }">
+            {{ (progress.targetCpuPercent ?? 0).toFixed(1) }}<small>%</small>
+          </div>
+          <div class="benchmark-tab__kpi-sub">均值 {{ (progress.avgTargetCpuPercent ?? 0).toFixed(1) }}%</div>
+        </div>
       </div>
       <div v-if="progress.rampMessage" class="benchmark-tab__ramp-msg">
         {{ progress.rampMessage }}
@@ -537,8 +544,15 @@ onBeforeUnmount(stopPolling)
             <span :class="{ 'is-bad': row.errorCount > 0 }">{{ row.errorCount.toLocaleString() }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="平台CPU" width="92" align="right">
+        <el-table-column label="平台CPU" width="88" align="right">
           <template #default="{ row }">{{ row.clientCpuPercent.toFixed(1) }}%</template>
+        </el-table-column>
+        <el-table-column label="承压节点CPU" width="112" align="right">
+          <template #default="{ row }">
+            <span :class="{ 'is-bad': (row.avgTargetCpuPercent ?? 0) >= 90 }">
+              {{ (row.avgTargetCpuPercent ?? 0).toFixed(1) }}%
+            </span>
+          </template>
         </el-table-column>
         <el-table-column label="操作" width="130" fixed="right">
           <template #default="{ row }">
@@ -581,9 +595,14 @@ onBeforeUnmount(stopPolling)
           <el-descriptions-item label="P99">{{ detailRow.p99Ms.toFixed(2) }} ms</el-descriptions-item>
           <el-descriptions-item label="最大延迟">{{ detailRow.maxMs.toFixed(2) }} ms</el-descriptions-item>
           <el-descriptions-item label="平台 CPU">{{ detailRow.clientCpuPercent.toFixed(1) }} %</el-descriptions-item>
+          <el-descriptions-item label="承压节点平均 CPU">
+            {{ (detailRow.avgTargetCpuPercent ?? 0).toFixed(1) }} %
+          </el-descriptions-item>
         </el-descriptions>
         <div class="benchmark-tab__hint benchmark-tab__detail-note">
           分位数由延迟直方图给出，是「不超过该值」的上界估计；Pipeline &gt; 1 时单条延迟为整批平摊值。
+          承压节点 CPU 按单核计——Redis 执行命令是单线程的，取各目标节点中最忙的那个；
+          平台 CPU 若接近饱和，说明瓶颈可能在压测端而非 Redis。
         </div>
 
         <template v-if="detailRow.rampSteps && detailRow.rampSteps.length">
@@ -707,12 +726,18 @@ onBeforeUnmount(stopPolling)
 
 .benchmark-tab__kpis {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 12px;
 }
 
 .benchmark-tab__kpi-label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.benchmark-tab__kpi-sub {
+  margin-top: 2px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }

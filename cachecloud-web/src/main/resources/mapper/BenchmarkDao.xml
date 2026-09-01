@@ -6,7 +6,7 @@
     <sql id="cols">
         app_id,app_name,target_desc,options_json,status,total_requests,error_count,qps,
         p50_ms,p95_ms,p99_ms,max_ms,avg_ms,client_cpu_percent,
-        command_stats_json,error_stats_json,ramp_json,ramp_message,peak_concurrency,target_cpu_percent,avg_target_cpu_percent,
+        command_stats_json,error_stats_json,ramp_json,ramp_message,peak_concurrency,target_cpu_percent,avg_target_cpu_percent,peak_target_cpu_percent,
         user_name,error_msg,start_time,end_time
     </sql>
 
@@ -15,7 +15,7 @@
         insert into benchmark_task(<include refid="cols"/>)
         values(#{appId},#{appName},#{targetDesc},#{optionsJson},#{status},#{totalRequests},#{errorCount},#{qps},
                #{p50Ms},#{p95Ms},#{p99Ms},#{maxMs},#{avgMs},#{clientCpuPercent},
-               #{commandStatsJson},#{errorStatsJson},#{rampJson},#{rampMessage},#{peakConcurrency},#{targetCpuPercent},#{avgTargetCpuPercent},
+               #{commandStatsJson},#{errorStatsJson},#{rampJson},#{rampMessage},#{peakConcurrency},#{targetCpuPercent},#{avgTargetCpuPercent},#{peakTargetCpuPercent},
                #{userName},#{errorMsg},#{startTime},#{endTime})
     </insert>
 
@@ -28,6 +28,7 @@
             ramp_json = #{rampJson}, ramp_message = #{rampMessage},
             peak_concurrency = #{peakConcurrency}, target_cpu_percent = #{targetCpuPercent},
             avg_target_cpu_percent = #{avgTargetCpuPercent},
+            peak_target_cpu_percent = #{peakTargetCpuPercent},
             error_msg = #{errorMsg}, end_time = #{endTime}
         where id = #{id}
     </update>

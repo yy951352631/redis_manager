@@ -63,6 +63,9 @@ public class BenchmarkTask {
     /** 压测全程承压节点的平均 CPU（各节点取最忙者，按单核计） */
     private double avgTargetCpuPercent;
 
+    /** 压测全程承压节点的峰值 CPU */
+    private double peakTargetCpuPercent;
+
     private String userName;
 
     private String errorMsg;

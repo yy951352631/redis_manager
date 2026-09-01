@@ -41,6 +41,9 @@ public class BenchmarkProgress {
     /** 承压节点的全程平均 CPU */
     private double avgTargetCpuPercent;
 
+    /** 承压节点的全程峰值 CPU */
+    private double peakTargetCpuPercent;
+
     private Map<String, Long> errorTypes = new LinkedHashMap<>();
 
     /** 快捷压测：当前档的并发数 */

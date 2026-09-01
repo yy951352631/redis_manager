@@ -31,7 +31,7 @@ const form = reactive({
   targetMode: "cluster" as "cluster" | "node",
   targetNodes: [] as string[],
   commands: ["GET", "SET"] as string[],
-  concurrency: 50,
+  concurrency: 1,
   keySpace: 100000,
   valueSize: 128,
   ttlSeconds: 86400,
@@ -547,7 +547,7 @@ onBeforeUnmount(stopPolling)
         <el-table-column label="平台CPU" width="88" align="right">
           <template #default="{ row }">{{ row.clientCpuPercent.toFixed(1) }}%</template>
         </el-table-column>
-        <el-table-column label="承压节点CPU" width="112" align="right">
+        <el-table-column label="承压节点平均CPU" width="132" align="right">
           <template #default="{ row }">
             <span :class="{ 'is-bad': (row.avgTargetCpuPercent ?? 0) >= 90 }">
               {{ (row.avgTargetCpuPercent ?? 0).toFixed(1) }}%
@@ -598,10 +598,16 @@ onBeforeUnmount(stopPolling)
           <el-descriptions-item label="承压节点平均 CPU">
             {{ (detailRow.avgTargetCpuPercent ?? 0).toFixed(1) }} %
           </el-descriptions-item>
+          <el-descriptions-item label="承压节点峰值 CPU">
+            <span :class="{ 'is-bad': (detailRow.peakTargetCpuPercent ?? 0) >= 90 }">
+              {{ (detailRow.peakTargetCpuPercent ?? 0).toFixed(1) }} %
+            </span>
+          </el-descriptions-item>
         </el-descriptions>
         <div class="benchmark-tab__hint benchmark-tab__detail-note">
           分位数由延迟直方图给出，是「不超过该值」的上界估计；Pipeline &gt; 1 时单条延迟为整批平摊值。
-          承压节点 CPU 按单核计——Redis 执行命令是单线程的，取各目标节点中最忙的那个；
+          承压节点 CPU 按单核计——Redis 执行命令是单线程的，取各目标节点中最忙的那个。
+          均值会被低压阶段拉低，判断「有没有被压满过」要看峰值；
           平台 CPU 若接近饱和，说明瓶颈可能在压测端而非 Redis。
         </div>
 

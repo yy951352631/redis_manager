@@ -176,6 +176,7 @@ public class BenchmarkApiController extends AbstractAdminApiController {
         item.put("peakConcurrency", task.getPeakConcurrency());
         item.put("targetCpuPercent", task.getTargetCpuPercent());
         item.put("avgTargetCpuPercent", task.getAvgTargetCpuPercent());
+        item.put("peakTargetCpuPercent", task.getPeakTargetCpuPercent());
         item.put("rampSteps", parse(task.getRampJson()));
         item.put("userName", task.getUserName());
         item.put("errorMsg", task.getErrorMsg());

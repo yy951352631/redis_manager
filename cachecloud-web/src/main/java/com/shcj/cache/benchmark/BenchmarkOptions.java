@@ -18,7 +18,8 @@ public class BenchmarkOptions {
     /** 勾选的命令名 */
     private List<String> commands = new ArrayList<>();
 
-    private int concurrency = 50;
+    /** 默认 1：先看单连接能压出多少，再按需往上加，避免一上来就把节点打满 */
+    private int concurrency = 1;
 
     private int keySpace = 100000;
 

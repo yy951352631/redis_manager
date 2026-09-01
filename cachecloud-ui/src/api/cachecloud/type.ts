@@ -1705,6 +1705,8 @@ export interface BenchmarkProgress {
   targetCpuPercent?: number
   /** 承压节点的全程平均 CPU */
   avgTargetCpuPercent?: number
+  /** 承压节点的全程峰值 CPU */
+  peakTargetCpuPercent?: number
   errorTypes?: Record<string, number>
   /** 快捷压测：当前档并发 */
   currentConcurrency?: number
@@ -1754,5 +1756,7 @@ export interface BenchmarkResult {
   targetCpuPercent?: number
   /** 压测全程承压节点的平均 CPU */
   avgTargetCpuPercent?: number
+  /** 压测全程承压节点的峰值 CPU */
+  peakTargetCpuPercent?: number
   rampSteps?: BenchmarkRampStep[] | null
 }

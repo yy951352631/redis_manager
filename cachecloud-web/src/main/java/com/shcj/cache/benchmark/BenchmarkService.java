@@ -99,6 +99,8 @@ public class BenchmarkService {
                 new java.util.concurrent.atomic.AtomicLong();
         private final java.util.concurrent.atomic.AtomicInteger targetCpuSamples =
                 new java.util.concurrent.atomic.AtomicInteger();
+        /** 全程峰值——均值会被低压阶段拉低，判断「有没有被压满过」要看这个 */
+        private volatile double peakTargetCpuPercent = 0D;
 
         private double avgTargetCpuPercent() {
             int count = targetCpuSamples.get();
@@ -231,6 +233,7 @@ public class BenchmarkService {
             progress.setMaxMs(stored.getMaxMs());
             progress.setClientCpuPercent(stored.getClientCpuPercent());
             progress.setAvgTargetCpuPercent(stored.getAvgTargetCpuPercent());
+            progress.setPeakTargetCpuPercent(stored.getPeakTargetCpuPercent());
             progress.setRampMessage(stored.getRampMessage());
             if (StringUtils.isNotBlank(stored.getRampJson())) {
                 try {
@@ -266,6 +269,7 @@ public class BenchmarkService {
         progress.setClientCpuPercent(task.clientCpuPercent);
         progress.setTargetCpuPercent(task.targetCpuPercent);
         progress.setAvgTargetCpuPercent(Math.round(task.avgTargetCpuPercent() * 10.0) / 10.0);
+        progress.setPeakTargetCpuPercent(task.peakTargetCpuPercent);
         progress.setErrorTypes(task.stats.errorTypes());
         progress.setCurrentConcurrency(task.currentConcurrency);
         progress.setRampSteps(new ArrayList<>(task.rampSteps));
@@ -374,7 +378,11 @@ public class BenchmarkService {
                     if (cpu <= 0) {
                         continue;
                     }
-                    runningTask.targetCpuPercent = Math.round(cpu * 10.0) / 10.0;
+                    double rounded = Math.round(cpu * 10.0) / 10.0;
+                    runningTask.targetCpuPercent = rounded;
+                    if (rounded > runningTask.peakTargetCpuPercent) {
+                        runningTask.peakTargetCpuPercent = rounded;
+                    }
                     runningTask.targetCpuSumTenth.addAndGet(Math.round(cpu * 10.0));
                     runningTask.targetCpuSamples.incrementAndGet();
                 }
@@ -605,6 +613,7 @@ public class BenchmarkService {
         task.setAvgMs(stats.getAvgLatencyUs() / 1000.0);
         task.setClientCpuPercent(runningTask.clientCpuPercent);
         task.setAvgTargetCpuPercent(Math.round(runningTask.avgTargetCpuPercent() * 10.0) / 10.0);
+        task.setPeakTargetCpuPercent(runningTask.peakTargetCpuPercent);
         Map<String, Object> commandStats = new LinkedHashMap<>();
         commandStats.put("counts", stats.commandCounts());
         commandStats.put("avgMs", stats.commandAvgLatencyUs());

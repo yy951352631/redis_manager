@@ -38,6 +38,34 @@ public class DatabaseSchemaInitializer {
                     + "KEY idx_collect_time (collect_time)"
                     + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
+    private static final String CREATE_BENCHMARK_TASK =
+            "CREATE TABLE IF NOT EXISTS benchmark_task ("
+                    + "id BIGINT NOT NULL AUTO_INCREMENT,"
+                    + "app_id BIGINT NOT NULL DEFAULT 0,"
+                    + "app_name VARCHAR(128) NOT NULL DEFAULT '',"
+                    + "target_desc VARCHAR(512) NOT NULL DEFAULT '' COMMENT '整集群或选中的节点',"
+                    + "options_json TEXT COMMENT '参数快照，用于两次压测的可比性',"
+                    + "status VARCHAR(16) NOT NULL DEFAULT '',"
+                    + "total_requests BIGINT NOT NULL DEFAULT 0,"
+                    + "error_count BIGINT NOT NULL DEFAULT 0,"
+                    + "qps BIGINT NOT NULL DEFAULT 0,"
+                    + "p50_ms DOUBLE NOT NULL DEFAULT 0,"
+                    + "p95_ms DOUBLE NOT NULL DEFAULT 0,"
+                    + "p99_ms DOUBLE NOT NULL DEFAULT 0,"
+                    + "max_ms DOUBLE NOT NULL DEFAULT 0,"
+                    + "avg_ms DOUBLE NOT NULL DEFAULT 0,"
+                    + "client_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '压测期间平台自身CPU',"
+                    + "command_stats_json TEXT,"
+                    + "error_stats_json TEXT,"
+                    + "user_name VARCHAR(64) NOT NULL DEFAULT '',"
+                    + "error_msg VARCHAR(1024) DEFAULT NULL,"
+                    + "start_time DATETIME NOT NULL,"
+                    + "end_time DATETIME DEFAULT NULL,"
+                    + "PRIMARY KEY (id),"
+                    + "KEY idx_app_start (app_id, start_time),"
+                    + "KEY idx_start_time (start_time)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='压测任务与结果'";
+
     private static final String CREATE_OPERATION_AUDIT =
             "CREATE TABLE IF NOT EXISTS operation_audit ("
                     + "id BIGINT NOT NULL AUTO_INCREMENT,"
@@ -80,6 +108,7 @@ public class DatabaseSchemaInitializer {
     public void initialize() {
         jdbcTemplate.execute(CREATE_APP_CLIENT_MINUTE_COST_TOTAL);
         jdbcTemplate.execute(CREATE_OPERATION_AUDIT);
+        jdbcTemplate.execute(CREATE_BENCHMARK_TASK);
         executeScript("sql/risk-assess-schema.sql");
         ensureColumn("instance_risk_metric_minute", "total_system_memory",
                 "ALTER TABLE instance_risk_metric_minute ADD COLUMN total_system_memory BIGINT NOT NULL DEFAULT 0 "

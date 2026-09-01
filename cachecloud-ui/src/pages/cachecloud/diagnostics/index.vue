@@ -7,6 +7,7 @@ import DiagnosticTaskTab from "./tabs/DiagnosticTaskTab.vue"
 import OnlineVerifyTab from "./tabs/OnlineVerifyTab.vue"
 import RedisCliTab from "./tabs/RedisCliTab.vue"
 import OfflineAnalysisTab from "./tabs/OfflineAnalysisTab.vue"
+import BenchmarkTab from "./tabs/BenchmarkTab.vue"
 import "@/common/assets/styles/app-tab.scss"
 import "@/common/assets/styles/diagnostics.scss"
 
@@ -32,7 +33,8 @@ const tabs: DiagnosticTabDef[] = [
   { key: "scan", label: "scan查询", component: DiagnosticTaskTab, taskConfig: TASK_TAB_CONFIGS.scan },
   { key: "deleteKey", label: "key清理", component: DiagnosticTaskTab, taskConfig: TASK_TAB_CONFIGS.deleteKey },
   { key: "slotAnalysis", label: "集群slot分析", component: DiagnosticTaskTab, taskConfig: TASK_TAB_CONFIGS.slotAnalysis },
-  { key: "offlineAnalysis", label: "离线数据分析", component: OfflineAnalysisTab }
+  { key: "offlineAnalysis", label: "离线数据分析", component: OfflineAnalysisTab },
+  { key: "benchmark", label: "压测工具", component: BenchmarkTab }
 ]
 
 const activeTab = ref("onlineVerify")

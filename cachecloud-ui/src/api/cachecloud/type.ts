@@ -1685,3 +1685,46 @@ export interface DashboardOps {
   boards: DashboardTopBoard[]
 }
 export type DashboardOpsResponseData = ApiResponseData<DashboardOps>
+
+/** 压测运行期进度 */
+export interface BenchmarkProgress {
+  taskId: number
+  status: string
+  elapsedSeconds: number
+  totalRequests: number
+  errorCount: number
+  currentQps: number
+  avgQps: number
+  p50Ms: number
+  p95Ms: number
+  p99Ms: number
+  maxMs: number
+  /** 压测期间平台自身 CPU，用于判断瓶颈是否在压测机一侧 */
+  clientCpuPercent: number
+  errorTypes?: Record<string, number>
+}
+
+/** 压测结果（落库的汇总） */
+export interface BenchmarkResult {
+  id: number
+  appId: number
+  appName: string
+  targetDesc: string
+  status: string
+  totalRequests: number
+  errorCount: number
+  qps: number
+  p50Ms: number
+  p95Ms: number
+  p99Ms: number
+  maxMs: number
+  avgMs: number
+  clientCpuPercent: number
+  userName?: string
+  errorMsg?: string | null
+  startTime?: string
+  endTime?: string | null
+  options?: Record<string, any> | null
+  commandStats?: { counts?: Record<string, number>, avgMs?: Record<string, number> } | null
+  errorStats?: Record<string, number> | null
+}

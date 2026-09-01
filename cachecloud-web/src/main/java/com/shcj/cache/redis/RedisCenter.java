@@ -299,6 +299,14 @@ public interface RedisCenter {
     public Map<String, String> getRedisConfigList(int instanceId);
 
     /**
+     * slot -> 持有它的节点 hostPort。
+     *
+     * <p>压测要把 key 定向到指定节点，得先知道每个节点持有哪些槽位。
+     * 实现早就有了，此前只在内部使用。</p>
+     */
+    public Map<Integer, String> getSlotHostPortMap(long appId, String host, int port);
+
+    /**
      * 获取redis实例慢查询
      *
      * @param instanceId

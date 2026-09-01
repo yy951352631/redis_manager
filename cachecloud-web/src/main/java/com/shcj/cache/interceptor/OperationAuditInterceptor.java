@@ -265,6 +265,11 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
                 pathParams.put(entry.getKey(), value == null || value.length == 0 ? "" : value[0]);
             }
             Long appId = resolveId(uri, pathParams, "apps", "appId");
+            if (appId == null) {
+                // 压测这类接口把 appId 放在请求体里，路径上没有 apps 段；
+                // preHandle 读不到 body，只能从查询串兜一层
+                appId = parseLong(request.getParameter("appId"));
+            }
             Long instanceId = resolveId(uri, pathParams, "instances", "instanceId");
             String label = operationAuditService.resolveStatefulObjectLabel(uri, appId, instanceId);
             if (StringUtils.isNotBlank(label)) {

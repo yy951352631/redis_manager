@@ -74,7 +74,9 @@ import type {
   InstanceCommandResultResponseData,
   InstanceCommandAnalysisResponseData,
   InstanceCommandChartResponseData,
-  AppStatChartsBatchResponseData
+  AppStatChartsBatchResponseData,
+  BenchmarkProgress,
+  BenchmarkResult
 } from "./type"
 import { getToken } from "@@/utils/local-storage"
 import { request } from "@/http/axios"
@@ -884,6 +886,37 @@ export function getDashboardApi() {
   return request<DashboardResponseData>({
     url: "dashboard",
     method: "get"
+  })
+}
+
+/** 压测工具 */
+export function getBenchmarkCommandsApi() {
+  return request<ApiResponseData<Record<string, { name: string, kind: string }[]>>>({
+    url: "benchmark/commands",
+    method: "get"
+  })
+}
+export function getBenchmarkTargetsApi(appId: number) {
+  return request<ApiResponseData<{ hostPort: string, slotRange: string, slotCount: number }[]>>({
+    url: "benchmark/targets",
+    method: "get",
+    params: { appId }
+  })
+}
+export function startBenchmarkApi(data: Record<string, unknown>) {
+  return request<ApiResponseData<{ taskId: number }>>({ url: "benchmark/start", method: "post", data })
+}
+export function stopBenchmarkApi(taskId: number) {
+  return request<ApiResponseData<null>>({ url: `benchmark/${taskId}/stop`, method: "post" })
+}
+export function getBenchmarkProgressApi(taskId: number) {
+  return request<ApiResponseData<BenchmarkProgress>>({ url: `benchmark/${taskId}/progress`, method: "get" })
+}
+export function getBenchmarkListApi(params?: Record<string, unknown>) {
+  return request<ApiResponseData<{ items: BenchmarkResult[], totalCount: number }>>({
+    url: "benchmark",
+    method: "get",
+    params
   })
 }
 

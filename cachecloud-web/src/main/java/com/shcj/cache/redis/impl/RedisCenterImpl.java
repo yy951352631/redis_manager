@@ -3032,6 +3032,11 @@ public class RedisCenterImpl implements RedisCenter {
      * @param port
      * @return
      */
+    @Override
+    public Map<Integer, String> getSlotHostPortMap(long appId, String host, int port) {
+        return getSlotsHostPortMap(appId, host, port);
+    }
+
     private Map<Integer, String> getSlotsHostPortMap(long appId, String host, int port) {
         Map<Integer, String> slotHostPortMap = new HashMap<Integer, String>();
         Jedis jedis = null;

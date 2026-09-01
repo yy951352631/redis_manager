@@ -52,6 +52,10 @@ public class CleanupDayDimensionalityJob extends CacheBaseJob {
 
     private static final String CLEAN_COMMAND_LATENCY_HOUR = "delete from instance_command_latency_hour where collect_time < ? limit " + BATCH_SIZE;
 
+    // 压测记录：一次压测一行，量很小，与其他统计表同一套保留期即可
+    private static final String CLEAN_BENCHMARK_TASK =
+            "delete from benchmark_task where start_time < ? limit " + BATCH_SIZE;
+
     JdbcTemplate jdbcTemplate = null;
 
     @Override
@@ -119,6 +123,11 @@ public class CleanupDayDimensionalityJob extends CacheBaseJob {
                     new SimpleDateFormat("yyyyMMddHH").format(DateUtils.addDays(new Date(), -14)));
             cleanCount = scrollDelete(CLEAN_COMMAND_LATENCY_HOUR, latencyHourTime);
             logger.info("clean_instance_command_latency_hour timeFormat={} count={}", latencyHourTime, cleanCount);
+
+            // 压测记录：保留 90 天。一次压测一行，量很小，留久一点便于纵向对比历次结果
+            Date benchmarkCutoff = DateUtils.addDays(new Date(), -90);
+            cleanCount = scrollDelete(CLEAN_BENCHMARK_TASK, benchmarkCutoff);
+            logger.info("clean_benchmark_task before={} count={}", benchmarkCutoff, cleanCount);
 
             //注销此逻辑，其操作的表已废弃，待统一删除
             //清除客户端耗时数据(保存2天)

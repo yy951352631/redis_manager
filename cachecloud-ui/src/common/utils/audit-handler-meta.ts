@@ -82,6 +82,10 @@ const AUDIT_HANDLER_TEXT: Record<string, string> = {
   "DiagnosticsApiController#onlineVerify": "在线校验诊断结果",
   "DiagnosticsApiController#executeCommand": "执行诊断命令",
 
+  // ── 压测工具 ─────────────────────────────────────
+  "BenchmarkApiController#start": "启动压测",
+  "BenchmarkApiController#stop": "停止压测",
+
   // ── 风险评估 ─────────────────────────────────────
   "RiskAssessApiController#assess": "执行风险评估",
 

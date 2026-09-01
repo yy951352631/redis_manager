@@ -146,6 +146,7 @@ public class OperationAuditService {
         labels.put("migrates", "迁移任务");
         labels.put("tasks", "任务");
         labels.put("users", "用户");
+        labels.put("benchmark", "压测任务");
         RESOURCE_LABELS = java.util.Collections.unmodifiableMap(labels);
     }
 
@@ -296,6 +297,13 @@ public class OperationAuditService {
             String migrateLabel = migrateLabelFromBody(rawParams);
             if (StringUtils.isNotBlank(migrateLabel)) {
                 return migrateLabel;
+            }
+        }
+        // 压测接口的目标集群在请求体的 appId 上
+        if (uri.contains("/benchmark")) {
+            String benchmarkLabel = benchmarkLabelFromBody(rawParams);
+            if (StringUtils.isNotBlank(benchmarkLabel)) {
+                return benchmarkLabel;
             }
         }
         String bodyLabel = resolveBodyObject(rawParams);
@@ -581,6 +589,24 @@ public class OperationAuditService {
             return label;
         }
         return null;
+    }
+
+    /** 压测：集群名，指定节点时附上节点 */
+    private String benchmarkLabelFromBody(String params) {
+        JSONObject payload = parseBody(params);
+        if (payload == null) {
+            return null;
+        }
+        Long appId = payload.getLong("appId");
+        if (appId == null || appId <= 0) {
+            return null;
+        }
+        String label = appLabel(appId);
+        Object nodes = payload.get("targetNodes");
+        if (nodes instanceof java.util.List && !((java.util.List<?>) nodes).isEmpty()) {
+            return label + " / " + StringUtils.join((java.util.List<?>) nodes, ", ");
+        }
+        return label;
     }
 
     private String migrateLabelFromBody(String params) {

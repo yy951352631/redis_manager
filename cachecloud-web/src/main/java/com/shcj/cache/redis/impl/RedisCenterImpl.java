@@ -74,6 +74,14 @@ import java.util.stream.Collectors;
 @Service("redisCenter")
 public class RedisCenterImpl implements RedisCenter {
     public static final int REDIS_DEFAULT_TIME = 1000;
+
+    /** 慢日志入库遇到死锁时的重试次数 */
+    private static final int SLOW_LOG_SAVE_MAX_ATTEMPTS = 3;
+
+    private static final long SLOW_LOG_RETRY_BASE_MILLIS = 50L;
+
+    /** MySQL 死锁的错误码 */
+    private static final int MYSQL_DEADLOCK_ERROR_CODE = 1213;
     public static final String REDIS_SLOWLOG_POOL = "redis-slowlog-pool";
     private static final int COUNT = 1000;
     private static final long CLIENT_LIST_CACHE_TTL_MS = 30_000L;
@@ -258,13 +266,7 @@ public class RedisCenterImpl implements RedisCenter {
         boolean isOk = asyncService.submitFuture(getThreadPoolKey(), new KeyCallable<Boolean>(key) {
             @Override
             public Boolean execute() {
-                try {
-                    instanceSlowLogDao.batchSave(instanceSlowLogList);
-                    return true;
-                } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
-                    return false;
-                }
+                return batchSaveWithRetry(instanceSlowLogList);
             }
         });
         if (!isOk) {
@@ -275,6 +277,52 @@ public class RedisCenterImpl implements RedisCenter {
     }
 
     /** 查询失败不应阻断采集：拿不到基准时间就退回全量写入，由 insert ignore 兜底 */
+    /**
+     * 慢日志入库，死锁时重试。
+     *
+     * <p>instance_slow_log 上有 (instance_id, slow_log_id, execute_time) 的唯一索引，
+     * insert ignore 为了判重会在唯一索引上加间隙锁。采集改成并发之后，多个实例的慢日志
+     * 批次同时写入，两个事务按不同顺序拿锁就会死锁——MySQL 回滚其中一个并明确建议重试。
+     *
+     * <p>不重试的话这一批慢日志会被静默丢掉：异常在这里被吞，采集看起来一切正常，
+     * 只是慢查询页面少了几条记录，事后根本无从发现。</p>
+     */
+    private boolean batchSaveWithRetry(List<InstanceSlowLog> instanceSlowLogList) {
+        for (int attempt = 1; attempt <= SLOW_LOG_SAVE_MAX_ATTEMPTS; attempt++) {
+            try {
+                instanceSlowLogDao.batchSave(instanceSlowLogList);
+                return true;
+            } catch (Exception e) {
+                if (!isDeadlock(e) || attempt == SLOW_LOG_SAVE_MAX_ATTEMPTS) {
+                    logger.error("save slow log failed after {} attempt(s): {}", attempt, e.getMessage(), e);
+                    return false;
+                }
+                logger.warn("save slow log deadlock, retry {}/{}", attempt, SLOW_LOG_SAVE_MAX_ATTEMPTS);
+                try {
+                    // 错开重试时刻，两个事务同时重试只会再撞一次
+                    Thread.sleep(SLOW_LOG_RETRY_BASE_MILLIS * attempt);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isDeadlock(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof java.sql.SQLException
+                    && ((java.sql.SQLException) cause).getErrorCode() == MYSQL_DEADLOCK_ERROR_CODE) {
+                return true;
+            }
+            if (cause.getMessage() != null && cause.getMessage().contains("Deadlock found")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Timestamp getLastSlowLogExecuteTime(long instanceId) {
         try {
             return instanceSlowLogDao.getMaxExecuteTimeByInstanceId(instanceId);

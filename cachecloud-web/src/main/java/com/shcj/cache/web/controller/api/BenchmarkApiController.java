@@ -7,6 +7,7 @@ import com.shcj.cache.benchmark.BenchmarkService;
 import com.shcj.cache.benchmark.BenchmarkTask;
 import com.shcj.cache.web.vo.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -70,6 +71,18 @@ public class BenchmarkApiController extends AbstractAdminApiController {
         if (denied != null) return denied;
         try {
             benchmarkService.stop(taskId);
+            return ApiResponse.ok();
+        } catch (Exception e) {
+            return ApiResponse.fail(400, e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{taskId}")
+    public ApiResponse<Void> delete(HttpServletRequest request, @PathVariable long taskId) {
+        ApiResponse<Void> denied = requireAdmin(request);
+        if (denied != null) return denied;
+        try {
+            benchmarkService.delete(taskId);
             return ApiResponse.ok();
         } catch (Exception e) {
             return ApiResponse.fail(400, e.getMessage());

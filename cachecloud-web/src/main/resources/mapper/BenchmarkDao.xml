@@ -48,6 +48,10 @@
         </where>
     </select>
 
+    <delete id="delete">
+        delete from benchmark_task where id = #{id}
+    </delete>
+
     <delete id="deleteBefore">
         delete from benchmark_task where start_time &lt; #{before} limit #{batchSize}
     </delete>

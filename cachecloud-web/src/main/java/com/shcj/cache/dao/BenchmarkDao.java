@@ -21,5 +21,7 @@ public interface BenchmarkDao {
 
     int count(@Param("appId") Long appId);
 
+    int delete(@Param("id") long id);
+
     int deleteBefore(@Param("before") Date before, @Param("batchSize") int batchSize);
 }

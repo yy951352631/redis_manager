@@ -226,6 +226,18 @@ public class BenchmarkService {
         return task;
     }
 
+    /** 删除一条历史记录；运行中的任务不允许删 */
+    public void delete(long taskId) {
+        if (running.containsKey(taskId)) {
+            throw new BizException("压测进行中，请先停止再删除");
+        }
+        BenchmarkTask task = benchmarkDao.get(taskId);
+        if (task == null) {
+            throw new BizException("压测记录不存在");
+        }
+        benchmarkDao.delete(taskId);
+    }
+
     public List<BenchmarkTask> list(Long appId, int pageNo, int pageSize) {
         int safePageNo = Math.max(1, pageNo);
         int safePageSize = pageSize <= 0 || pageSize > 100 ? 20 : pageSize;

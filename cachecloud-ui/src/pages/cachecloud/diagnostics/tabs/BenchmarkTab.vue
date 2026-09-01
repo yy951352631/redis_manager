@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { BenchmarkProgress, BenchmarkResult, DiagnosticAppOption } from "@/api/cachecloud"
 import {
+  deleteBenchmarkApi,
   getBenchmarkCommandsApi,
   getBenchmarkListApi,
   getBenchmarkProgressApi,
@@ -34,7 +35,8 @@ const form = reactive({
   valueSize: 128,
   ttlSeconds: 300,
   stopBy: "duration" as "duration" | "requests",
-  durationSeconds: 60,
+  /** 界面按分钟填，提交时换算成秒；最低 1 分钟——几十秒的压测受连接建立与预热影响太大 */
+  durationMinutes: 1,
   totalRequests: 1000000,
   pipeline: 1,
   hotspot: false,
@@ -56,7 +58,7 @@ const hasReadCommand = computed(() =>
 
 // 超出常规范围时给出提示，但不阻止提交
 const concurrencyWarn = computed(() => form.concurrency > 200)
-const durationWarn = computed(() => form.stopBy === "duration" && form.durationSeconds > 600)
+const durationWarn = computed(() => form.stopBy === "duration" && form.durationMinutes > 10)
 const keySpaceWarn = computed(() => form.keySpace > 1000000)
 
 async function loadCatalog() {
@@ -107,7 +109,7 @@ async function handleStart() {
       keySpace: form.keySpace,
       valueSize: form.valueSize,
       ttlSeconds: form.ttlSeconds,
-      durationSeconds: form.stopBy === "duration" ? form.durationSeconds : 0,
+      durationSeconds: form.stopBy === "duration" ? form.durationMinutes * 60 : 0,
       totalRequests: form.stopBy === "requests" ? form.totalRequests : 0,
       pipeline: form.pipeline,
       hotspot: form.hotspot,
@@ -156,6 +158,65 @@ async function pollProgress() {
 }
 
 const maxQps = computed(() => Math.max(1, ...qpsSeries.value.map(p => p.qps)))
+
+const detailVisible = ref(false)
+const detailRow = ref<BenchmarkResult | null>(null)
+
+function openDetail(row: BenchmarkResult) {
+  detailRow.value = row
+  detailVisible.value = true
+}
+
+async function handleDelete(row: BenchmarkResult) {
+  await ElMessageBox.confirm(
+    `确认删除 ${row.appName} 在 ${row.startTime} 的这条压测记录？`,
+    "删除压测记录",
+    { type: "warning" }
+  )
+  await deleteBenchmarkApi(row.id)
+  ElMessage.success("已删除")
+  loadHistory()
+}
+
+/** 参数快照按人话展开；未知字段直接原样列出，免得新增参数在详情里凭空消失 */
+const detailOptions = computed(() => {
+  const o = detailRow.value?.options
+  if (!o) return []
+  const labels: Record<string, string> = {
+    concurrency: "并发数",
+    keySpace: "键空间",
+    valueSize: "value 大小(字节)",
+    ttlSeconds: "TTL(秒)",
+    durationSeconds: "压测时长(秒)",
+    totalRequests: "总请求数上限",
+    pipeline: "Pipeline 深度",
+    hotspot: "key 分布",
+    readWeight: "读权重",
+    writeWeight: "写权重",
+    cleanup: "结束后清理",
+    commands: "压测命令",
+    targetNodes: "定向节点"
+  }
+  const format = (key: string, value: any) => {
+    if (key === "hotspot") return value ? "热点(约两成 key 承担八成访问)" : "均匀随机"
+    if (key === "cleanup") return value ? "是" : "否"
+    if (key === "durationSeconds") return value > 0 ? `${value} 秒（${(value / 60).toFixed(1)} 分钟）` : "未按时长终止"
+    if (key === "totalRequests") return value > 0 ? Number(value).toLocaleString() : "未按请求数终止"
+    if (Array.isArray(value)) return value.length ? value.join(", ") : "整集群"
+    return String(value)
+  }
+  return Object.keys(labels)
+    .filter(k => o[k] !== undefined && o[k] !== null)
+    .map(k => ({ label: labels[k], value: format(k, o[k]) }))
+})
+
+const detailCommandRows = computed(() => {
+  const counts = detailRow.value?.commandStats?.counts ?? {}
+  const avg = detailRow.value?.commandStats?.avgMs ?? {}
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count, avgMs: (avg[name] ?? 0) / 1000 }))
+    .sort((a, b) => b.count - a.count)
+})
 
 function statusTag(status?: string) {
   if (status === "FINISHED") return "success"
@@ -277,10 +338,12 @@ onBeforeUnmount(stopPolling)
             <el-form-item :label="form.stopBy === 'duration' ? '压测时长' : '总请求数'">
               <el-input-number
                 v-if="form.stopBy === 'duration'"
-                v-model="form.durationSeconds" :min="1" controls-position="right" style="width: 100%"
+                v-model="form.durationMinutes" :min="1" controls-position="right" style="width: 100%"
               />
               <el-input-number v-else v-model="form.totalRequests" :min="1" :step="100000" controls-position="right" style="width: 100%" />
-              <span v-if="durationWarn" class="benchmark-tab__warn">⚠ 时长较长</span>
+              <span v-if="form.stopBy === 'duration'" class="benchmark-tab__hint">分钟，最低 1 分钟</span>
+              <span v-else class="benchmark-tab__hint">次</span>
+              <span v-if="durationWarn" class="benchmark-tab__warn">⚠ 超过 10 分钟</span>
             </el-form-item>
           </el-col>
           <el-col :span="6">
@@ -403,8 +466,11 @@ onBeforeUnmount(stopPolling)
         <el-table-column label="QPS" width="100" align="right">
           <template #default="{ row }">{{ row.qps.toLocaleString() }}</template>
         </el-table-column>
-        <el-table-column label="P99" width="90" align="right">
+        <el-table-column label="P99" width="88" align="right">
           <template #default="{ row }">{{ row.p99Ms.toFixed(2) }}ms</template>
+        </el-table-column>
+        <el-table-column label="P95" width="88" align="right">
+          <template #default="{ row }">{{ row.p95Ms.toFixed(2) }}ms</template>
         </el-table-column>
         <el-table-column label="max" width="90" align="right">
           <template #default="{ row }">{{ row.maxMs.toFixed(2) }}ms</template>
@@ -417,9 +483,79 @@ onBeforeUnmount(stopPolling)
         <el-table-column label="平台CPU" width="92" align="right">
           <template #default="{ row }">{{ row.clientCpuPercent.toFixed(1) }}%</template>
         </el-table-column>
+        <el-table-column label="操作" width="130" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" @click="openDetail(row)">详情</el-button>
+            <el-button type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
         <template #empty>暂无压测记录</template>
       </el-table>
     </el-card>
+
+    <el-drawer v-model="detailVisible" title="压测详情" size="640px" destroy-on-close>
+      <template v-if="detailRow">
+        <h4 class="benchmark-tab__detail-title">基本信息</h4>
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="集群">{{ detailRow.appName }}</el-descriptions-item>
+          <el-descriptions-item label="压测目标">{{ detailRow.targetDesc }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="statusTag(detailRow.status)" size="small">{{ detailRow.status }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="操作人">{{ detailRow.userName || "-" }}</el-descriptions-item>
+          <el-descriptions-item label="开始">{{ detailRow.startTime || "-" }}</el-descriptions-item>
+          <el-descriptions-item label="结束">{{ detailRow.endTime || "-" }}</el-descriptions-item>
+        </el-descriptions>
+
+        <h4 class="benchmark-tab__detail-title">配置参数</h4>
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item v-for="item in detailOptions" :key="item.label" :label="item.label">
+            {{ item.value }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <h4 class="benchmark-tab__detail-title">结果</h4>
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="总请求">{{ detailRow.totalRequests.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="QPS">{{ detailRow.qps.toLocaleString() }}</el-descriptions-item>
+          <el-descriptions-item label="平均延迟">{{ detailRow.avgMs.toFixed(3) }} ms</el-descriptions-item>
+          <el-descriptions-item label="P50">{{ detailRow.p50Ms.toFixed(2) }} ms</el-descriptions-item>
+          <el-descriptions-item label="P95">{{ detailRow.p95Ms.toFixed(2) }} ms</el-descriptions-item>
+          <el-descriptions-item label="P99">{{ detailRow.p99Ms.toFixed(2) }} ms</el-descriptions-item>
+          <el-descriptions-item label="最大延迟">{{ detailRow.maxMs.toFixed(2) }} ms</el-descriptions-item>
+          <el-descriptions-item label="平台 CPU">{{ detailRow.clientCpuPercent.toFixed(1) }} %</el-descriptions-item>
+        </el-descriptions>
+        <div class="benchmark-tab__hint benchmark-tab__detail-note">
+          分位数由延迟直方图给出，是「不超过该值」的上界估计；Pipeline &gt; 1 时单条延迟为整批平摊值。
+        </div>
+
+        <h4 class="benchmark-tab__detail-title">逐命令统计</h4>
+        <el-table :data="detailCommandRows" size="small" border max-height="260">
+          <el-table-column prop="name" label="命令" min-width="120" />
+          <el-table-column label="次数" min-width="120" align="right">
+            <template #default="{ row }">{{ row.count.toLocaleString() }}</template>
+          </el-table-column>
+          <el-table-column label="平均耗时" min-width="120" align="right">
+            <template #default="{ row }">{{ row.avgMs.toFixed(3) }} ms</template>
+          </el-table-column>
+          <template #empty>无命令明细</template>
+        </el-table>
+
+        <template v-if="detailRow.errorStats && Object.keys(detailRow.errorStats).length">
+          <h4 class="benchmark-tab__detail-title">错误分类</h4>
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item v-for="(count, type) in detailRow.errorStats" :key="type" :label="String(type)">
+              {{ count }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </template>
+
+        <template v-if="detailRow.errorMsg">
+          <h4 class="benchmark-tab__detail-title">失败原因</h4>
+          <pre class="benchmark-tab__error">{{ detailRow.errorMsg }}</pre>
+        </template>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
@@ -521,6 +657,26 @@ onBeforeUnmount(stopPolling)
   gap: 1px;
   height: 80px;
   padding: 4px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+}
+
+.benchmark-tab__detail-title {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+
+.benchmark-tab__detail-note {
+  display: block;
+  margin: 8px 0 0;
+}
+
+.benchmark-tab__error {
+  margin: 0;
+  padding: 10px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
   background: var(--el-fill-color-light);
   border-radius: 4px;
 }

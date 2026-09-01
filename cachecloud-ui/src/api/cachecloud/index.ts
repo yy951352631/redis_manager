@@ -912,6 +912,9 @@ export function stopBenchmarkApi(taskId: number) {
 export function getBenchmarkProgressApi(taskId: number) {
   return request<ApiResponseData<BenchmarkProgress>>({ url: `benchmark/${taskId}/progress`, method: "get" })
 }
+export function deleteBenchmarkApi(taskId: number) {
+  return request<ApiResponseData<null>>({ url: `benchmark/${taskId}`, method: "delete" })
+}
 export function getBenchmarkListApi(params?: Record<string, unknown>) {
   return request<ApiResponseData<{ items: BenchmarkResult[], totalCount: number }>>({
     url: "benchmark",

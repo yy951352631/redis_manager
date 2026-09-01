@@ -78,7 +78,8 @@ function resolveSeries(slot: MetricChartSlot) {
     yAxisName: unit?.label ?? slot.yAxisName,
     dualHitRate: slot.dualHitRate,
     dualPersistence: slot.dualPersistence,
-    cpuPercent: slot.cpuPercent
+    cpuPercent: slot.cpuPercent,
+    integerOnly: slot.integerOnly
   }
 }
 

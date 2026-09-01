@@ -64,11 +64,14 @@ function setChartRef(key: string, el: Element | ComponentPublicInstance | null) 
 }
 
 function buildOption(config: MetricSeriesConfig, zoomable: boolean) {
-  const { seriesList, yAxisName, dualHitRate, dualPersistence, cpuPercent } = config
+  const { seriesList, yAxisName, dualHitRate, dualPersistence, cpuPercent, integerOnly } = config
   const hasLegend = seriesList.length > 1
   const dualAxis = Boolean(dualHitRate || dualPersistence)
-  const valueFormatter = (value: number) =>
-    cpuPercent ? `${formatMetricValue(value)}%` : formatMetricValue(value)
+  const valueFormatter = (value: number) => {
+    // 连接数这类天然是整数，图上出现 12.5 个连接只会让人以为读错了
+    if (integerOnly) return Math.round(value).toLocaleString()
+    return cpuPercent ? `${formatMetricValue(value)}%` : formatMetricValue(value)
+  }
 
   const series = seriesList.map((item, index) => ({
     name: item.name,
@@ -122,6 +125,8 @@ function buildOption(config: MetricSeriesConfig, zoomable: boolean) {
         : {
             type: "value",
             scale: true,
+            // 整数指标不要小数刻度，否则轴上会出现 0.5 个连接这种刻度
+            minInterval: integerOnly ? 1 : undefined,
             name: yAxisName,
             nameTextStyle: axisNameStyle,
             axisLabel: valueAxisLabel

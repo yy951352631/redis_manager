@@ -11,6 +11,7 @@ import com.shcj.cache.entity.*;
 import com.shcj.cache.redis.RedisCenter;
 import com.shcj.cache.stats.instance.InstanceStatsCenter;
 import com.shcj.cache.util.ConstUtils;
+import com.shcj.cache.util.RedisCommandKindUtil;
 import com.shcj.cache.util.TypeUtil;
 import com.shcj.cache.web.enums.BooleanEnum;
 import com.shcj.cache.web.util.DateUtil;
@@ -190,6 +191,43 @@ public class InstanceStatsCenterImpl implements InstanceStatsCenter {
     }
 
 
+    /** 合成指标名：读命令总数 */
+    public static final String READ_COMMAND_STAT = "read_command_count";
+
+    /** 合成指标名：写命令总数 */
+    public static final String WRITE_COMMAND_STAT = "write_command_count";
+
+    private static final String COMMAND_STAT_PREFIX = "cmdstat_";
+
+    /**
+     * 把这一分钟的 cmdstat_* 增量按读/写归类求和。
+     *
+     * <p>没有采集面上没有的数据，只是换个角度汇总已有的 commandstats，
+     * 所以历史数据也能立刻出图。</p>
+     */
+    private Long sumCommandStats(Map<String, Object> commandMap, boolean write) {
+        long total = 0L;
+        boolean matched = false;
+        for (Map.Entry<String, Object> entry : commandMap.entrySet()) {
+            String key = entry.getKey();
+            if (key == null || !key.startsWith(COMMAND_STAT_PREFIX)) {
+                continue;
+            }
+            String command = key.substring(COMMAND_STAT_PREFIX.length());
+            boolean hit = write ? RedisCommandKindUtil.isWrite(command) : RedisCommandKindUtil.isRead(command);
+            if (!hit) {
+                continue;
+            }
+            Long value = MapUtils.getLong(commandMap, key, null);
+            if (value != null) {
+                total += value;
+                matched = true;
+            }
+        }
+        // 一条都没命中时返回 null，让上层跳过这个采集点，而不是画出一条恒为 0 的假曲线
+        return matched ? total : null;
+    }
+
     private InstanceCommandStats parseCommand(long instanceId, String command,
                                               Map<String, Object> commandMap, boolean isCommand, int type) {
         Long collectTime = MapUtils.getLong(commandMap, ConstUtils.COLLECT_TIME, null);
@@ -199,6 +237,9 @@ public class InstanceStatsCenterImpl implements InstanceStatsCenter {
         Long count;
         if (isCommand) {
             count = MapUtils.getLong(commandMap, "cmdstat_" + command.toLowerCase(), null);
+        } else if (READ_COMMAND_STAT.equals(command) || WRITE_COMMAND_STAT.equals(command)) {
+            // 合成指标：按 cmdstat_* 现场汇总，不占采集字段，历史数据也能直接出图
+            count = sumCommandStats(commandMap, WRITE_COMMAND_STAT.equals(command));
         } else {
             count = MapUtils.getLong(commandMap, command.toLowerCase(), null);
         }

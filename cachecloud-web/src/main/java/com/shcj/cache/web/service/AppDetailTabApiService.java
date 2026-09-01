@@ -87,7 +87,9 @@ public class AppDetailTabApiService {
     private ExternalRedisCenter externalRedisCenter;
 
     private static final Set<String> APP_OPS_MAX_STATS = new HashSet<String>(Arrays.asList(
-            "latest_fork_usec", "repl_lag_max", "master_repl_offset"));
+            "latest_fork_usec", "repl_lag_max", "master_repl_offset",
+            // 持久化耗时是各节点自身的快照，跨节点取最大值才有意义；求和会得到一个没有物理含义的数
+            "rdb_last_bgsave_time_sec", "aof_last_rewrite_time_sec"));
 
     @Autowired
     private AppRouteIdSupport appRouteIdSupport;

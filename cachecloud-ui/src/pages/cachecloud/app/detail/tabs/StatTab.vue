@@ -245,7 +245,14 @@ function getSeriesData(
     })
   }
 
-  return { seriesList, yAxisName, dualHitRate: slot.dualHitRate, dualPersistence: slot.dualPersistence, cpuPercent: slot.cpuPercent }
+  return {
+    seriesList,
+    yAxisName,
+    dualHitRate: slot.dualHitRate,
+    dualPersistence: slot.dualPersistence,
+    cpuPercent: slot.cpuPercent,
+    integerOnly: slot.integerOnly
+  }
 }
 
 /** 交给 MetricChartGrid 渲染：它按序列配置画图，取数口径仍留在本页 */

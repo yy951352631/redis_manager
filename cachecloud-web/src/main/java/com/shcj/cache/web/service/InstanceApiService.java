@@ -9,6 +9,8 @@ import com.shcj.cache.redis.RedisCenter;
 import com.shcj.cache.stats.app.AppStatsCenter;
 import com.shcj.cache.stats.instance.InstanceDeployCenter;
 import com.shcj.cache.stats.instance.InstanceStatsCenter;
+import com.shcj.cache.stats.instance.impl.InstanceStatsCenterImpl;
+import com.shcj.cache.util.RedisCommandKindUtil;
 import com.shcj.cache.util.ConstUtils;
 import com.shcj.cache.util.RedisOsArchUtil;
 import com.shcj.cache.web.controller.api.dto.*;
@@ -754,6 +756,28 @@ public class InstanceApiService {
                     } catch (NumberFormatException ignored) { }
                 }
             }
+            return found ? total : null;
+        }
+        if (InstanceStatsCenterImpl.READ_COMMAND_STAT.equals(name)
+                || InstanceStatsCenterImpl.WRITE_COMMAND_STAT.equals(name)) {
+            boolean write = InstanceStatsCenterImpl.WRITE_COMMAND_STAT.equals(name);
+            double total = 0D;
+            boolean found = false;
+            for (Map.Entry<String, Object> entry : row.entrySet()) {
+                String key = entry.getKey();
+                if (key == null || !key.startsWith("cmdstat_")) {
+                    continue;
+                }
+                String command = key.substring("cmdstat_".length());
+                if (write ? !RedisCommandKindUtil.isWrite(command) : !RedisCommandKindUtil.isRead(command)) {
+                    continue;
+                }
+                try {
+                    total += Double.parseDouble(String.valueOf(entry.getValue()));
+                    found = true;
+                } catch (NumberFormatException ignored) { }
+            }
+            // 一条都没命中时返回 null，让上层跳过这个点，而不是画出恒为 0 的假曲线
             return found ? total : null;
         }
         if ("hitPercent".equals(name)) {

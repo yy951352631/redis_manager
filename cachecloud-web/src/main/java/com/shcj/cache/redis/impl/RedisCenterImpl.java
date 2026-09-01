@@ -534,6 +534,19 @@ public class RedisCenterImpl implements RedisCenter {
             accMap.put(RedisInfoEnum.latest_fork_usec.getValue(), forkUsec);
         }
 
+        // 上一次 RDB / AOF 重写的写盘耗时，是快照不是增量：-1 表示从未执行过，
+        // 直接落库会在图上画出一条 -1 的横线，这里丢掉不采。
+        Long rdbTime = getCommonCount(infoMap, RedisConstant.Persistence,
+                RedisInfoEnum.rdb_last_bgsave_time_sec.getValue());
+        if (rdbTime != null && rdbTime >= 0) {
+            accMap.put(RedisInfoEnum.rdb_last_bgsave_time_sec.getValue(), rdbTime);
+        }
+        Long aofRewriteTime = getCommonCount(infoMap, RedisConstant.Persistence,
+                RedisInfoEnum.aof_last_rewrite_time_sec.getValue());
+        if (aofRewriteTime != null && aofRewriteTime >= 0) {
+            accMap.put(RedisInfoEnum.aof_last_rewrite_time_sec.getValue(), aofRewriteTime);
+        }
+
         accMap.put("repl_lag_max", resolveReplLagMax(infoMap));
         accMap.put("repl_link_down", resolveReplLinkDown(infoMap));
 

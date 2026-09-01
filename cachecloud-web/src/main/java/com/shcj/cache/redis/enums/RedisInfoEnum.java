@@ -39,6 +39,8 @@ public enum RedisInfoEnum {
     aof_delayed_fsync(RedisConstant.Persistence, "aof_delayed_fsync", "aof阻塞次数", true),
     latest_fork_usec(RedisConstant.Persistence, "latest_fork_usec", "上次fork所用时间(单位：微秒)", false),
     rdb_last_bgsave_status(RedisConstant.Persistence, "rdb_last_bgsave_status", "上一次bgsave状态", false),
+    rdb_last_bgsave_time_sec(RedisConstant.Persistence, "rdb_last_bgsave_time_sec", "上一次RDB写盘耗时(秒)", false),
+    aof_last_rewrite_time_sec(RedisConstant.Persistence, "aof_last_rewrite_time_sec", "上一次AOF重写耗时(秒)", false),
 
     /**
      * CPU

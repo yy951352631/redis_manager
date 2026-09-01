@@ -65,6 +65,30 @@ public class BenchmarkApiController extends AbstractAdminApiController {
         }
     }
 
+    /** 快捷压测：默认参数逐档加并发，直到打满或出现拐点 */
+    @PostMapping("/quick")
+    public ApiResponse<Map<String, Object>> quick(HttpServletRequest request,
+                                                  @RequestBody Map<String, Object> body) {
+        ApiResponse<Map<String, Object>> denied = requireAdmin(request);
+        if (denied != null) return denied;
+        try {
+            Object appIdRaw = body == null ? null : body.get("appId");
+            if (appIdRaw == null) {
+                return ApiResponse.fail(400, "请选择目标集群");
+            }
+            @SuppressWarnings("unchecked")
+            List<String> nodes = body.get("targetNodes") instanceof List
+                    ? (List<String>) body.get("targetNodes") : null;
+            long taskId = benchmarkService.startQuick(Long.parseLong(String.valueOf(appIdRaw)), nodes,
+                    resolveApiUser(request) == null ? "" : resolveApiUser(request).getName());
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("taskId", taskId);
+            return ApiResponse.ok(result);
+        } catch (Exception e) {
+            return ApiResponse.fail(400, e.getMessage());
+        }
+    }
+
     @PostMapping("/{taskId}/stop")
     public ApiResponse<Void> stop(HttpServletRequest request, @PathVariable long taskId) {
         ApiResponse<Void> denied = requireAdmin(request);
@@ -148,6 +172,10 @@ public class BenchmarkApiController extends AbstractAdminApiController {
         item.put("maxMs", task.getMaxMs());
         item.put("avgMs", task.getAvgMs());
         item.put("clientCpuPercent", task.getClientCpuPercent());
+        item.put("rampMessage", task.getRampMessage());
+        item.put("peakConcurrency", task.getPeakConcurrency());
+        item.put("targetCpuPercent", task.getTargetCpuPercent());
+        item.put("rampSteps", parse(task.getRampJson()));
         item.put("userName", task.getUserName());
         item.put("errorMsg", task.getErrorMsg());
         item.put("startTime", task.getStartTime());

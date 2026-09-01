@@ -6,7 +6,8 @@
     <sql id="cols">
         app_id,app_name,target_desc,options_json,status,total_requests,error_count,qps,
         p50_ms,p95_ms,p99_ms,max_ms,avg_ms,client_cpu_percent,
-        command_stats_json,error_stats_json,user_name,error_msg,start_time,end_time
+        command_stats_json,error_stats_json,ramp_json,ramp_message,peak_concurrency,target_cpu_percent,
+        user_name,error_msg,start_time,end_time
     </sql>
 
     <insert id="save" parameterType="com.shcj.cache.benchmark.BenchmarkTask"
@@ -14,7 +15,8 @@
         insert into benchmark_task(<include refid="cols"/>)
         values(#{appId},#{appName},#{targetDesc},#{optionsJson},#{status},#{totalRequests},#{errorCount},#{qps},
                #{p50Ms},#{p95Ms},#{p99Ms},#{maxMs},#{avgMs},#{clientCpuPercent},
-               #{commandStatsJson},#{errorStatsJson},#{userName},#{errorMsg},#{startTime},#{endTime})
+               #{commandStatsJson},#{errorStatsJson},#{rampJson},#{rampMessage},#{peakConcurrency},#{targetCpuPercent},
+               #{userName},#{errorMsg},#{startTime},#{endTime})
     </insert>
 
     <update id="update" parameterType="com.shcj.cache.benchmark.BenchmarkTask">
@@ -23,6 +25,8 @@
             p50_ms = #{p50Ms}, p95_ms = #{p95Ms}, p99_ms = #{p99Ms}, max_ms = #{maxMs}, avg_ms = #{avgMs},
             client_cpu_percent = #{clientCpuPercent},
             command_stats_json = #{commandStatsJson}, error_stats_json = #{errorStatsJson},
+            ramp_json = #{rampJson}, ramp_message = #{rampMessage},
+            peak_concurrency = #{peakConcurrency}, target_cpu_percent = #{targetCpuPercent},
             error_msg = #{errorMsg}, end_time = #{endTime}
         where id = #{id}
     </update>

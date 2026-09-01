@@ -1702,6 +1702,24 @@ export interface BenchmarkProgress {
   /** 压测期间平台自身 CPU，用于判断瓶颈是否在压测机一侧 */
   clientCpuPercent: number
   errorTypes?: Record<string, number>
+  /** 快捷压测：当前档并发 */
+  currentConcurrency?: number
+  /** 快捷压测：各档结果 */
+  rampSteps?: BenchmarkRampStep[]
+  /** 快捷压测：阶段说明或最终结论 */
+  rampMessage?: string | null
+}
+
+/** 快捷压测的单档结果 */
+export interface BenchmarkRampStep {
+  concurrency: number
+  qps: number
+  p95Ms: number
+  p99Ms: number
+  /** 该档下目标节点的 CPU，按单核计 */
+  targetCpuPercent: number
+  errorCount: number
+  totalRequests: number
 }
 
 /** 压测结果（落库的汇总） */
@@ -1727,4 +1745,8 @@ export interface BenchmarkResult {
   options?: Record<string, any> | null
   commandStats?: { counts?: Record<string, number>, avgMs?: Record<string, number> } | null
   errorStats?: Record<string, number> | null
+  rampMessage?: string | null
+  peakConcurrency?: number
+  targetCpuPercent?: number
+  rampSteps?: BenchmarkRampStep[] | null
 }

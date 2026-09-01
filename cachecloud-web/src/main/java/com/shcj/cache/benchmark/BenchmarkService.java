@@ -18,6 +18,7 @@ import redis.clients.jedis.Jedis;
 import javax.annotation.PreDestroy;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -75,7 +76,12 @@ public class BenchmarkService {
 
     private static final class RunningTask {
         private final BenchmarkOptions options;
-        private final BenchmarkStats stats = new BenchmarkStats();
+        /** 快捷压测每一档换一份统计，所以不能是 final */
+        private volatile BenchmarkStats stats = new BenchmarkStats();
+        private volatile int currentConcurrency;
+        private volatile String rampMessage;
+        private final List<Map<String, Object>> rampSteps =
+                java.util.Collections.synchronizedList(new ArrayList<Map<String, Object>>());
         private final AtomicBoolean stopped = new AtomicBoolean(false);
         private final long startMillis = System.currentTimeMillis();
         private volatile long lastSampleMillis = System.currentTimeMillis();
@@ -162,6 +168,25 @@ public class BenchmarkService {
         return task.getId();
     }
 
+    /**
+     * 快捷压测：用默认参数逐档加并发，直到目标节点 CPU 打满或 QPS 出现拐点。
+     *
+     * <p>解决的是「我该填多少并发」这个问题——手工压测得来回试参数，而容量结论恰恰
+     * 取决于把并发加到压不动为止。</p>
+     */
+    public long startQuick(long appId, List<String> targetNodes, String userName) {
+        BenchmarkOptions options = new BenchmarkOptions();
+        options.setAppId(appId);
+        options.setTargetNodes(targetNodes == null ? new ArrayList<>() : targetNodes);
+        options.setCommands(Arrays.asList("GET", "SET"));
+        options.setQuickMode(true);
+        // 并发由爬坡逐档决定，这里给的是首档
+        options.setConcurrency(BenchmarkRampPlan.CONCURRENCY_STEPS[0]);
+        options.setDurationSeconds(BenchmarkRampPlan.STEP_SECONDS * BenchmarkRampPlan.CONCURRENCY_STEPS.length);
+        options.setTotalRequests(0L);
+        return start(options, userName);
+    }
+
     public void stop(long taskId) {
         RunningTask task = running.get(taskId);
         if (task == null) {
@@ -190,6 +215,15 @@ public class BenchmarkService {
             progress.setP99Ms(stored.getP99Ms());
             progress.setMaxMs(stored.getMaxMs());
             progress.setClientCpuPercent(stored.getClientCpuPercent());
+            progress.setRampMessage(stored.getRampMessage());
+            if (StringUtils.isNotBlank(stored.getRampJson())) {
+                try {
+                    progress.setRampSteps(JSON.parseObject(stored.getRampJson(),
+                            new com.alibaba.fastjson.TypeReference<List<Map<String, Object>>>() { }));
+                } catch (Exception ignored) {
+                    // 解析不了就不给爬坡明细，不影响其余字段
+                }
+            }
             return progress;
         }
         long elapsedMs = System.currentTimeMillis() - task.startMillis;
@@ -215,6 +249,9 @@ public class BenchmarkService {
         progress.setMaxMs(task.stats.getMaxLatencyUs() / 1000.0);
         progress.setClientCpuPercent(task.clientCpuPercent);
         progress.setErrorTypes(task.stats.errorTypes());
+        progress.setCurrentConcurrency(task.currentConcurrency);
+        progress.setRampSteps(new ArrayList<>(task.rampSteps));
+        progress.setRampMessage(task.rampMessage);
         return progress;
     }
 
@@ -264,10 +301,14 @@ public class BenchmarkService {
             if (!executor.hasCommands()) {
                 throw new BizException("勾选的命令无法识别");
             }
-            long deadline = options.getDurationSeconds() > 0
-                    ? runningTask.startMillis + options.getDurationSeconds() * 1000L
-                    : Long.MAX_VALUE;
-            executor.run(deadline);
+            if (options.isQuickMode()) {
+                runRamp(appDesc, options, plans, runningTask);
+            } else {
+                long deadline = options.getDurationSeconds() > 0
+                        ? runningTask.startMillis + options.getDurationSeconds() * 1000L
+                        : Long.MAX_VALUE;
+                executor.run(deadline);
+            }
         } catch (Exception e) {
             errorMsg = StringUtils.abbreviate(e.getClass().getSimpleName() + ": " + e.getMessage(), 1000);
             runningTask.status = "FAILED";
@@ -276,6 +317,184 @@ public class BenchmarkService {
             finish(task, options, plans, runningTask, errorMsg, appDesc);
             running.remove(task.getId());
         }
+    }
+
+    /**
+     * 逐档加压。每档跑固定时长，用该档独立的统计判断是否继续。
+     *
+     * <p>每档单独统计而不是累加：累加会把低并发档的数据混进来，把高并发档的真实
+     * QPS 稀释掉，拐点就看不出来了。</p>
+     */
+    private void runRamp(AppDesc appDesc, BenchmarkOptions options, List<NodePlan> plans,
+                         RunningTask runningTask) {
+        long previousQps = 0L;
+        long peakQps = 0L;
+        int peakConcurrency = 0;
+        String stopReason = null;
+
+        for (int concurrency : BenchmarkRampPlan.CONCURRENCY_STEPS) {
+            if (runningTask.stopped.get()) {
+                stopReason = "已手动停止";
+                break;
+            }
+            BenchmarkOptions stepOptions = copyWithConcurrency(options, concurrency);
+            BenchmarkStats stepStats = new BenchmarkStats();
+            runningTask.stats = stepStats;
+            runningTask.currentConcurrency = concurrency;
+            runningTask.rampMessage = "并发 " + concurrency + " 压测中";
+
+            Map<String, Double> cpuBefore = sampleNodeCpuSeconds(appDesc, plans);
+            long stepStart = System.currentTimeMillis();
+            BenchmarkExecutor executor = new BenchmarkExecutor(stepOptions,
+                    index -> plans.get(index % plans.size()).planner,
+                    stepStats, runningTask.stopped,
+                    index -> openJedis(appDesc, plans.get(index % plans.size()).hostPort));
+            executor.run(stepStart + BenchmarkRampPlan.STEP_SECONDS * 1000L);
+            long elapsedMs = Math.max(1, System.currentTimeMillis() - stepStart);
+            Map<String, Double> cpuAfter = sampleNodeCpuSeconds(appDesc, plans);
+
+            long qps = stepStats.getTotalCount() * 1000L / elapsedMs;
+            double cpu = maxCpuPercent(cpuBefore, cpuAfter, elapsedMs);
+
+            Map<String, Object> step = new LinkedHashMap<>();
+            step.put("concurrency", concurrency);
+            step.put("qps", qps);
+            step.put("p99Ms", stepStats.percentileUs(99) / 1000.0);
+            step.put("p95Ms", stepStats.percentileUs(95) / 1000.0);
+            step.put("targetCpuPercent", Math.round(cpu * 10.0) / 10.0);
+            step.put("errorCount", stepStats.getErrorCount());
+            step.put("totalRequests", stepStats.getTotalCount());
+            runningTask.rampSteps.add(step);
+
+            if (qps > peakQps) {
+                peakQps = qps;
+                peakConcurrency = concurrency;
+            }
+            stopReason = BenchmarkRampPlan.stopReason(cpu, qps, previousQps,
+                    stepStats.getErrorCount(), stepStats.getTotalCount());
+            if (stopReason != null) {
+                break;
+            }
+            previousQps = qps;
+        }
+        if (stopReason == null) {
+            stopReason = "已加压到最高档 " + BenchmarkRampPlan.CONCURRENCY_STEPS[
+                    BenchmarkRampPlan.CONCURRENCY_STEPS.length - 1] + " 并发仍未见拐点";
+        }
+        runningTask.rampMessage = String.format("峰值 QPS %d（并发 %d）—— %s",
+                peakQps, peakConcurrency, stopReason);
+    }
+
+    /**
+     * 快捷压测的汇总取峰值那一档，而不是最后一档。
+     *
+     * <p>最后一档往往正是压过头的那一档——CPU 打满、延迟劣化、吞吐反而回落。
+     * 拿它当结论会低估集群容量，这里要记录的是「能承载的峰值」。</p>
+     */
+    private void applyPeakStep(BenchmarkTask task, RunningTask runningTask) {
+        Map<String, Object> peak = null;
+        long peakQps = -1;
+        long totalRequests = 0L;
+        long totalErrors = 0L;
+        for (Map<String, Object> step : runningTask.rampSteps) {
+            long qps = ((Number) step.getOrDefault("qps", 0)).longValue();
+            totalRequests += ((Number) step.getOrDefault("totalRequests", 0)).longValue();
+            totalErrors += ((Number) step.getOrDefault("errorCount", 0)).longValue();
+            if (qps > peakQps) {
+                peakQps = qps;
+                peak = step;
+            }
+        }
+        task.setTotalRequests(totalRequests);
+        task.setErrorCount(totalErrors);
+        if (peak == null) {
+            return;
+        }
+        task.setQps(peakQps);
+        task.setP95Ms(((Number) peak.getOrDefault("p95Ms", 0)).doubleValue());
+        task.setP99Ms(((Number) peak.getOrDefault("p99Ms", 0)).doubleValue());
+        task.setTargetCpuPercent(((Number) peak.getOrDefault("targetCpuPercent", 0)).doubleValue());
+        task.setPeakConcurrency(((Number) peak.getOrDefault("concurrency", 0)).intValue());
+    }
+
+    private BenchmarkOptions copyWithConcurrency(BenchmarkOptions source, int concurrency) {
+        BenchmarkOptions copy = new BenchmarkOptions();
+        copy.setAppId(source.getAppId());
+        copy.setTargetNodes(source.getTargetNodes());
+        copy.setCommands(source.getCommands());
+        copy.setConcurrency(concurrency);
+        copy.setKeySpace(source.getKeySpace());
+        copy.setValueSize(source.getValueSize());
+        copy.setTtlSeconds(source.getTtlSeconds());
+        copy.setPipeline(source.getPipeline());
+        copy.setHotspot(source.isHotspot());
+        copy.setReadWeight(source.getReadWeight());
+        copy.setWriteWeight(source.getWriteWeight());
+        // 每档自己控制时长，这里不能带上总时长，否则第一档就会一直跑到底
+        copy.setDurationSeconds(0);
+        copy.setTotalRequests(0L);
+        return copy;
+    }
+
+    /**
+     * 采样各目标节点的累计 CPU 秒数。
+     *
+     * <p>不用平台每分钟的采集：爬坡每档只有 20 秒，分钟级采集根本来不及给出这一档的
+     * CPU。直接向节点要 INFO，按前后差值算。</p>
+     */
+    private Map<String, Double> sampleNodeCpuSeconds(AppDesc appDesc, List<NodePlan> plans) {
+        Map<String, Double> result = new LinkedHashMap<>();
+        for (NodePlan plan : plans) {
+            String hostPort = plan.hostPort;
+            try (Jedis jedis = openJedis(appDesc, hostPort)) {
+                String info = jedis.info("cpu");
+                double sys = parseInfoDouble(info, "used_cpu_sys");
+                double user = parseInfoDouble(info, "used_cpu_user");
+                result.put(hostPort == null ? "self" : hostPort, sys + user);
+            } catch (Exception e) {
+                LOGGER.warn("sample cpu failed node={}: {}", hostPort, e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 取各节点中最高的 CPU 使用率。
+     *
+     * <p>整集群压测时瓶颈由最忙的那个节点决定，取平均会把它藏起来。
+     * 百分比按单核算：Redis 执行命令是单线程的，一个核就是它的天花板。</p>
+     */
+    private double maxCpuPercent(Map<String, Double> before, Map<String, Double> after, long elapsedMs) {
+        double max = 0D;
+        for (Map.Entry<String, Double> entry : after.entrySet()) {
+            Double start = before.get(entry.getKey());
+            if (start == null) {
+                continue;
+            }
+            double delta = entry.getValue() - start;
+            if (delta < 0) {
+                continue;
+            }
+            max = Math.max(max, delta * 100.0D * 1000.0D / elapsedMs);
+        }
+        return max;
+    }
+
+    private double parseInfoDouble(String info, String field) {
+        if (info == null) {
+            return 0D;
+        }
+        for (String line : info.split("\r?\n")) {
+            int idx = line.indexOf(':');
+            if (idx > 0 && line.substring(0, idx).trim().equals(field)) {
+                try {
+                    return Double.parseDouble(line.substring(idx + 1).trim());
+                } catch (NumberFormatException e) {
+                    return 0D;
+                }
+            }
+        }
+        return 0D;
     }
 
     private void finish(BenchmarkTask task, BenchmarkOptions options, List<NodePlan> plans,
@@ -299,6 +518,11 @@ public class BenchmarkService {
         task.setErrorStatsJson(JSON.toJSONString(stats.errorTypes()));
         task.setErrorMsg(errorMsg);
         task.setEndTime(new Date());
+        if (options.isQuickMode()) {
+            task.setRampJson(JSON.toJSONString(runningTask.rampSteps));
+            task.setRampMessage(runningTask.rampMessage);
+            applyPeakStep(task, runningTask);
+        }
         try {
             benchmarkDao.update(task);
         } catch (Exception e) {

@@ -48,6 +48,18 @@ public class BenchmarkTask {
     /** 错误分类 JSON */
     private String errorStatsJson;
 
+    /** 快捷压测：各档结果 JSON */
+    private String rampJson;
+
+    /** 快捷压测：结论文案 */
+    private String rampMessage;
+
+    /** 快捷压测：峰值所在的并发档 */
+    private int peakConcurrency;
+
+    /** 快捷压测：峰值档下目标节点的 CPU（单核百分比） */
+    private double targetCpuPercent;
+
     private String userName;
 
     private String errorMsg;

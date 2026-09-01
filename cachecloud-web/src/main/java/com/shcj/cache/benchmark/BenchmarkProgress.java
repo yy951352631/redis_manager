@@ -36,4 +36,13 @@ public class BenchmarkProgress {
     private double clientCpuPercent;
 
     private Map<String, Long> errorTypes = new LinkedHashMap<>();
+
+    /** 快捷压测：当前档的并发数 */
+    private int currentConcurrency;
+
+    /** 快捷压测：已完成的各档结果 */
+    private java.util.List<Map<String, Object>> rampSteps = new java.util.ArrayList<>();
+
+    /** 快捷压测：当前阶段说明或最终结论 */
+    private String rampMessage;
 }

@@ -903,6 +903,9 @@ export function getBenchmarkTargetsApi(appId: number) {
     params: { appId }
   })
 }
+export function startQuickBenchmarkApi(data: { appId: number, targetNodes?: string[] }) {
+  return request<ApiResponseData<{ taskId: number }>>({ url: "benchmark/quick", method: "post", data })
+}
 export function startBenchmarkApi(data: Record<string, unknown>) {
   return request<ApiResponseData<{ taskId: number }>>({ url: "benchmark/start", method: "post", data })
 }

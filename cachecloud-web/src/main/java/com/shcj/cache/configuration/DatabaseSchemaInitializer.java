@@ -56,6 +56,10 @@ public class DatabaseSchemaInitializer {
                     + "avg_ms DOUBLE NOT NULL DEFAULT 0,"
                     + "client_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '压测期间平台自身CPU',"
                     + "command_stats_json TEXT,"
+                    + "ramp_json TEXT COMMENT '快捷压测各档结果',"
+                    + "ramp_message VARCHAR(512) DEFAULT NULL COMMENT '快捷压测结论',"
+                    + "peak_concurrency INT NOT NULL DEFAULT 0 COMMENT '峰值所在并发档',"
+                    + "target_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '峰值档下目标节点CPU(单核%)',"
                     + "error_stats_json TEXT,"
                     + "user_name VARCHAR(64) NOT NULL DEFAULT '',"
                     + "error_msg VARCHAR(1024) DEFAULT NULL,"
@@ -113,6 +117,11 @@ public class DatabaseSchemaInitializer {
         ensureColumn("instance_risk_metric_minute", "total_system_memory",
                 "ALTER TABLE instance_risk_metric_minute ADD COLUMN total_system_memory BIGINT NOT NULL DEFAULT 0 "
                         + "COMMENT '机器总内存' AFTER max_memory");
+        ensureColumn("benchmark_task", "ramp_json",
+                "ALTER TABLE benchmark_task ADD COLUMN ramp_json TEXT COMMENT '快捷压测各档结果', "
+                        + "ADD COLUMN ramp_message VARCHAR(512) DEFAULT NULL COMMENT '快捷压测结论', "
+                        + "ADD COLUMN peak_concurrency INT NOT NULL DEFAULT 0 COMMENT '峰值所在并发档', "
+                        + "ADD COLUMN target_cpu_percent DOUBLE NOT NULL DEFAULT 0 COMMENT '峰值档下目标节点CPU'");
         ensureColumn("operation_audit", "object_label",
                 "ALTER TABLE operation_audit ADD COLUMN object_label VARCHAR(255) DEFAULT NULL "
                         + "COMMENT '操作对象，写入时固化的快照' AFTER instance_id");

@@ -84,6 +84,7 @@ const AUDIT_HANDLER_TEXT: Record<string, string> = {
 
   // ── 压测工具 ─────────────────────────────────────
   "BenchmarkApiController#start": "启动压测",
+  "BenchmarkApiController#quick": "启动快捷压测",
   "BenchmarkApiController#stop": "停止压测",
   "BenchmarkApiController#delete": "删除压测记录",
 

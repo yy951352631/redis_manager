@@ -7,6 +7,7 @@ import {
   getBenchmarkProgressApi,
   getBenchmarkTargetsApi,
   startBenchmarkApi,
+  startQuickBenchmarkApi,
   stopBenchmarkApi
 } from "@/api/cachecloud"
 
@@ -31,14 +32,14 @@ const form = reactive({
   targetNodes: [] as string[],
   commands: ["GET", "SET"] as string[],
   concurrency: 50,
-  keySpace: 10000,
+  keySpace: 100000,
   valueSize: 128,
-  ttlSeconds: 300,
+  ttlSeconds: 86400,
   stopBy: "duration" as "duration" | "requests",
   /** 界面按分钟填，提交时换算成秒；最低 1 分钟——几十秒的压测受连接建立与预热影响太大 */
   durationMinutes: 1,
   totalRequests: 1000000,
-  pipeline: 1,
+  pipeline: 20,
   hotspot: false,
   readWeight: 5,
   writeWeight: 5,
@@ -123,6 +124,34 @@ async function handleStart() {
     ElMessage.success("压测已启动")
   } finally {
     starting.value = false
+  }
+}
+
+const quickStarting = ref(false)
+
+/**
+ * 快捷压测：用默认参数从并发 1 起倍增，直到目标节点 CPU 打满或 QPS 出现拐点。
+ * 并发与时长由爬坡自行决定，界面上填的这两项不生效。
+ */
+async function handleQuickStart() {
+  if (!form.appId) return ElMessage.warning("请选择目标集群")
+  await ElMessageBox.confirm(
+    "快捷压测会从并发 1 起逐档加压，直到把目标节点 CPU 压满或吞吐出现拐点，最长约 4 分钟。确认开始？",
+    "快捷压测",
+    { type: "warning" }
+  )
+  quickStarting.value = true
+  try {
+    const { data } = await startQuickBenchmarkApi({
+      appId: form.appId,
+      targetNodes: form.targetMode === "node" ? form.targetNodes : []
+    })
+    runningTaskId.value = data?.taskId ?? null
+    qpsSeries.value = []
+    startPolling()
+    ElMessage.success("快捷压测已启动")
+  } finally {
+    quickStarting.value = false
   }
 }
 
@@ -385,6 +414,9 @@ onBeforeUnmount(stopPolling)
               <el-button type="primary" :loading="starting" :disabled="!!runningTaskId" @click="handleStart">
                 开始压测
               </el-button>
+              <el-button type="success" :loading="quickStarting" :disabled="!!runningTaskId" @click="handleQuickStart">
+                快捷压测
+              </el-button>
               <el-button type="danger" plain :disabled="!runningTaskId" @click="handleStop">
                 停止
               </el-button>
@@ -428,6 +460,27 @@ onBeforeUnmount(stopPolling)
           <div class="benchmark-tab__kpi-value">{{ progress.clientCpuPercent.toFixed(1) }}<small>%</small></div>
         </div>
       </div>
+      <div v-if="progress.rampMessage" class="benchmark-tab__ramp-msg">
+        {{ progress.rampMessage }}
+      </div>
+      <el-table v-if="progress.rampSteps && progress.rampSteps.length" :data="progress.rampSteps" size="small" border class="benchmark-tab__ramp">
+        <el-table-column prop="concurrency" label="并发" width="72" align="right" />
+        <el-table-column label="QPS" min-width="110" align="right">
+          <template #default="{ row }">{{ row.qps.toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="P99" width="90" align="right">
+          <template #default="{ row }">{{ row.p99Ms.toFixed(2) }}ms</template>
+        </el-table-column>
+        <el-table-column label="目标节点CPU" width="120" align="right">
+          <template #default="{ row }">
+            <span :class="{ 'is-bad': row.targetCpuPercent >= 90 }">{{ row.targetCpuPercent.toFixed(1) }}%</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="错误" width="80" align="right">
+          <template #default="{ row }">{{ row.errorCount.toLocaleString() }}</template>
+        </el-table-column>
+      </el-table>
+
       <!-- 简易柱状曲线：压测本身已经很吃 CPU，这里不再引入图表库渲染 -->
       <div class="benchmark-tab__spark">
         <div
@@ -456,7 +509,11 @@ onBeforeUnmount(stopPolling)
         </el-table-column>
         <el-table-column label="参数" min-width="190" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.options">
+            <span v-if="row.options?.quickMode">
+              <el-tag type="success" size="small">快捷</el-tag>
+              峰值并发{{ row.peakConcurrency }} · 节点CPU{{ (row.targetCpuPercent ?? 0).toFixed(0) }}%
+            </span>
+            <span v-else-if="row.options">
               并发{{ row.options.concurrency }} · P={{ row.options.pipeline }} ·
               键空间{{ row.options.keySpace }} · {{ row.options.hotspot ? "热点" : "均匀" }}
             </span>
@@ -528,6 +585,30 @@ onBeforeUnmount(stopPolling)
         <div class="benchmark-tab__hint benchmark-tab__detail-note">
           分位数由延迟直方图给出，是「不超过该值」的上界估计；Pipeline &gt; 1 时单条延迟为整批平摊值。
         </div>
+
+        <template v-if="detailRow.rampSteps && detailRow.rampSteps.length">
+          <h4 class="benchmark-tab__detail-title">快捷压测爬坡明细</h4>
+          <div v-if="detailRow.rampMessage" class="benchmark-tab__ramp-msg">
+            {{ detailRow.rampMessage }}
+          </div>
+          <el-table :data="detailRow.rampSteps" size="small" border>
+            <el-table-column prop="concurrency" label="并发" width="70" align="right" />
+            <el-table-column label="QPS" min-width="100" align="right">
+              <template #default="{ row }">{{ row.qps.toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column label="P99" width="86" align="right">
+              <template #default="{ row }">{{ row.p99Ms.toFixed(2) }}ms</template>
+            </el-table-column>
+            <el-table-column label="节点CPU" width="96" align="right">
+              <template #default="{ row }">
+                <span :class="{ 'is-bad': row.targetCpuPercent >= 90 }">{{ row.targetCpuPercent.toFixed(1) }}%</span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="benchmark-tab__hint benchmark-tab__detail-note">
+            节点 CPU 按单核计——Redis 执行命令是单线程的，一个核就是它的天花板。
+          </div>
+        </template>
 
         <h4 class="benchmark-tab__detail-title">逐命令统计</h4>
         <el-table :data="detailCommandRows" size="small" border max-height="260">
@@ -659,6 +740,19 @@ onBeforeUnmount(stopPolling)
   padding: 4px;
   background: var(--el-fill-color-light);
   border-radius: 4px;
+}
+
+.benchmark-tab__ramp {
+  margin-bottom: 12px;
+}
+
+.benchmark-tab__ramp-msg {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--el-fill-color-light);
+  border-left: 3px solid var(--el-color-success);
+  border-radius: 3px;
 }
 
 .benchmark-tab__detail-title {

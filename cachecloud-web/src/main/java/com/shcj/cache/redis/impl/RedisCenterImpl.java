@@ -625,6 +625,18 @@ public class RedisCenterImpl implements RedisCenter {
             accMap.put(RedisInfoEnum.connected_clients.getValue(), connectedClients);
         }
         accMap.put("object_size", getObjectSize(infoMap));
+
+        // 实例角色随分钟 diff 一起落库。副本会把复制过来的写命令计进自己的
+        // commandstats（主从三个节点上 cmdstat_setex 的计数完全相同），读/写命令
+        // 统计按实例求和时，写命令因此被放大成副本数倍。查询侧据此只对 master 计写。
+        Map<String, Object> roleMap = infoMap.get(RedisConstant.Replication);
+        if (roleMap != null) {
+            Object role = roleMap.get(RedisInfoEnum.role.getValue());
+            if (role != null) {
+                accMap.put(ConstUtils.INSTANCE_ROLE_MASTER,
+                        "master".equalsIgnoreCase(String.valueOf(role)) ? 1L : 0L);
+            }
+        }
     }
 
     private long resolveReplLagMax(Map<RedisConstant, Map<String, Object>> infoMap) {

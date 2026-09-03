@@ -202,10 +202,18 @@ public class InstanceStatsCenterImpl implements InstanceStatsCenter {
     /**
      * 把这一分钟的 cmdstat_* 增量按读/写归类求和。
      *
-     * <p>没有采集面上没有的数据，只是换个角度汇总已有的 commandstats，
-     * 所以历史数据也能立刻出图。</p>
+     * <p>集群图表和节点图表原先各写了一份一模一样的循环，改口径时漏掉一处，
+     * 两个页面对同一份数据给出不同的答案。这里收成唯一实现，两边都调它。</p>
      */
-    private Long sumCommandStats(Map<String, Object> commandMap, boolean write) {
+    public static Long sumCommandStats(Map<String, Object> commandMap, boolean write) {
+        // 写命令只在 master 上算。副本会把复制过来的写一并计入自己的 commandstats
+        // ——主从三节点上 cmdstat_setex 的计数完全相同——按实例求和会把写放大成
+        // 副本数倍。读不受影响：副本上的 get 是货真价实的客户端读。
+        // 老数据没有这个字段，按 master 处理，保持历史曲线不变。
+        if (write && commandMap.containsKey(ConstUtils.INSTANCE_ROLE_MASTER)
+                && MapUtils.getLongValue(commandMap, ConstUtils.INSTANCE_ROLE_MASTER, 1L) != 1L) {
+            return 0L;
+        }
         long total = 0L;
         boolean hasCommandStats = false;
         for (Map.Entry<String, Object> entry : commandMap.entrySet()) {

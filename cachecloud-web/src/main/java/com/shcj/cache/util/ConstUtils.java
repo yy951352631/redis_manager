@@ -35,6 +35,15 @@ public class ConstUtils {
     //mysql收集数据的时间字段
     public static final String COLLECT_TIME = "CollectTime";
 
+    /**
+     * 分钟 diff 里记录的实例角色：1=master，0=slave。
+     *
+     * <p>副本会把复制过来的写命令一并计入自己的 commandstats，按实例求和时写命令
+     * 会被放大成副本数倍。角色在采集时顺手落库，查询侧据此只对 master 计写——
+     * 不在查询时现查角色，isMaster() 每次要发一次 INFO all。</p>
+     */
+    public static final String INSTANCE_ROLE_MASTER = "instance_role_master";
+
     // 容量转换
     public static final int _1024 = 1024;
 

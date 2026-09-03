@@ -207,12 +207,14 @@ public class InstanceStatsCenterImpl implements InstanceStatsCenter {
      */
     private Long sumCommandStats(Map<String, Object> commandMap, boolean write) {
         long total = 0L;
-        boolean matched = false;
+        boolean hasCommandStats = false;
         for (Map.Entry<String, Object> entry : commandMap.entrySet()) {
             String key = entry.getKey();
             if (key == null || !key.startsWith(COMMAND_STAT_PREFIX)) {
                 continue;
             }
+            // 这一分钟采到了 commandstats，哪怕没有一条读/写命令
+            hasCommandStats = true;
             String command = key.substring(COMMAND_STAT_PREFIX.length());
             boolean hit = write ? RedisCommandKindUtil.isWrite(command) : RedisCommandKindUtil.isRead(command);
             if (!hit) {
@@ -221,11 +223,13 @@ public class InstanceStatsCenterImpl implements InstanceStatsCenter {
             Long value = MapUtils.getLong(commandMap, key, null);
             if (value != null) {
                 total += value;
-                matched = true;
             }
         }
-        // 一条都没命中时返回 null，让上层跳过这个采集点，而不是画出一条恒为 0 的假曲线
-        return matched ? total : null;
+        // 采到了 commandstats 但没有读/写命令，真实答案就是 0，要照实画出来：
+        // 空闲节点上只有平台自己的 ping/info，早先这里返回 null 跳过采集点，
+        // 整张图全空，看着像功能坏了，分不清"没流量"和"没采到"。
+        // 只有连一个 cmdstat_* 都没有（这一分钟压根没采到命令统计）时才跳过。
+        return hasCommandStats ? total : null;
     }
 
     private InstanceCommandStats parseCommand(long instanceId, String command,

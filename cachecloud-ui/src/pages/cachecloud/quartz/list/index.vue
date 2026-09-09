@@ -57,7 +57,10 @@ onMounted(fetchJobs)
     <el-card shadow="never">
       <el-table v-loading="loading" :data="jobs" stripe border>
         <el-table-column prop="triggerName" label="triggerName" min-width="160" />
-        <el-table-column prop="triggerGroup" label="triggerGroup" width="140" />
+        <!-- 最长的组名 cleanUpMinuteStatisticsGroup 有 28 个字符，14px 下约 186px，
+             加上单元格左右各 12px 的内边距要 210px 才放得下，原来的 140 必然换行。
+             再配 show-overflow-tooltip，将来出现更长的组名也是省略号而不是撑成两行。 -->
+        <el-table-column prop="triggerGroup" label="triggerGroup" width="230" show-overflow-tooltip />
         <el-table-column prop="cron" label="cron" min-width="140" />
         <el-table-column prop="nextFireDate" label="nextFireDate" width="170" />
         <el-table-column prop="prevFireDate" label="prevFireDate" width="170" />

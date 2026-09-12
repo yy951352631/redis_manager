@@ -47,6 +47,9 @@ deploy-production:
   script:
     - cp compose.yaml "$DEPLOY_DIR/compose.yaml"
     - cp deploy/mysql/init.sql "$DEPLOY_DIR/deploy/mysql/init.sql"
+    # compose 还挂了这两个：漏拷会让 binlog 配置和备份 sidecar 静默失效
+    - cp deploy/mysql/backup.sh "$DEPLOY_DIR/deploy/mysql/backup.sh"
+    - cp -r deploy/mysql/conf.d "$DEPLOY_DIR/deploy/mysql/"
     - printf 'CACHECLOUD_IMAGE=%s\nCACHECLOUD_FRONTEND_IMAGE=%s\nCACHECLOUD_FRONTEND_PORT=%s\nCACHECLOUD_BACKEND_PORT=%s\nSERVER_DOMAIN=%s\nMYSQL_ROOT_PASSWORD=%s\nREDIS_PASSWORD=%s\n' "$IMAGE_NAME:$CI_COMMIT_SHA" "$FRONTEND_IMAGE_NAME:$CI_COMMIT_SHA" "28082" "28083" "https://redis-portal.shcj-s.com" "$MYSQL_ROOT_PASSWORD" "$REDIS_PASSWORD" > "$DEPLOY_DIR/.env"
     - chmod 600 "$DEPLOY_DIR/.env"
     - docker compose --project-directory "$DEPLOY_DIR" -f "$DEPLOY_DIR/compose.yaml" up -d --remove-orphans

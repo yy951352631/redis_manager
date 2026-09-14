@@ -51,3 +51,10 @@ scripts/git-filter-repo
 
 # MySQL 备份产物（本地保留，不入库）
 deploy/mysql/backups/
+
+# 部署配置：含数据库与 Redis 口令，只提交 .example 模板
+/.env
+deploy/offline/conf/cachecloud.env
+# 离线介质包里下载的第三方介质
+deploy/offline/deps/*
+!deploy/offline/deps/.gitkeep

@@ -1,0 +1,33 @@
+# 由 install.sh 从模板生成。
+[Unit]
+Description=CacheCloud Redis 运维管理平台（后端）
+Documentation=file:///opt/cachecloud/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=@CC_USER@
+Group=@CC_USER@
+Environment=CATALINA_HOME=@TOMCAT_HOME@
+Environment=CATALINA_BASE=@TOMCAT_HOME@
+Environment=CATALINA_PID=@CC_HOME@/cachecloud-web.pid
+ExecStart=@TOMCAT_HOME@/bin/startup.sh
+ExecStop=@TOMCAT_HOME@/bin/shutdown.sh 30 -force
+PIDFile=@CC_HOME@/cachecloud-web.pid
+# 采集调度 + 压测线程池，默认 1024 不够
+LimitNOFILE=65536
+Restart=on-failure
+RestartSec=10
+# 停机给 Quartz 作业留出收尾时间
+TimeoutStopSec=60
+
+# 加固：平台只需要写自己的目录
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=@CC_HOME@ @TOMCAT_HOME@
+
+[Install]
+WantedBy=multi-user.target

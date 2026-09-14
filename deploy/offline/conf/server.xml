@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CacheCloud 精简版 Tomcat 配置，由 install.sh 从模板生成。
+  相对 Tomcat 自带 server.xml 的改动：
+    - Connector 只绑 127.0.0.1，外部一律走 nginx，后端端口不直接暴露
+    - 关掉 AJP（默认就没开，这里不再添加）与 shutdown 端口（改 -1，用 systemd 停）
+    - maxHttpHeaderSize 调大：Cookie 较多时默认 8K 会 400
+    - 关掉 Host 的 autoDeploy，避免运行期误放 war 被自动部署
+-->
+<Server port="-1" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+  <Service name="Catalina">
+    <Connector port="@BACKEND_PORT@"
+               address="127.0.0.1"
+               protocol="org.apache.coyote.http11.Http11NioProtocol"
+               connectionTimeout="20000"
+               maxThreads="300"
+               acceptCount="200"
+               maxHttpHeaderSize="16384"
+               compression="on"
+               compressibleMimeType="text/html,text/xml,text/plain,text/css,application/json,application/javascript"
+               URIEncoding="UTF-8"
+               relaxedQueryChars="[]{}|" />
+
+    <Engine name="Catalina" defaultHost="localhost">
+      <Host name="localhost" appBase="webapps"
+            unpackWARs="true" autoDeploy="false" deployOnStartup="true">
+        <Valve className="org.apache.catalina.valves.AccessLogValve"
+               directory="logs" prefix="access." suffix=".log"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b %D" />
+      </Host>
+    </Engine>
+  </Service>
+</Server>

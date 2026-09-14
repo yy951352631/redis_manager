@@ -33,6 +33,7 @@ cachecloud-web/.local-setup/
 *.pid
 *.tmp
 *.bak
+.env.local
 
 # Java
 *.class

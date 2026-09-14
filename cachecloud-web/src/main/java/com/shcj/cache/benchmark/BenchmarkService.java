@@ -81,6 +81,8 @@ public class BenchmarkService {
         private final BenchmarkOptions options;
         /** 快捷压测每一档换一份统计，所以不能是 final */
         private volatile BenchmarkStats stats = new BenchmarkStats();
+        /** 快捷压测所有已完成档位的累计统计，供最终结果与错误分类使用 */
+        private final BenchmarkStats aggregateStats = new BenchmarkStats();
         private volatile int currentConcurrency;
         private volatile String rampMessage;
         private final List<Map<String, Object>> rampSteps =
@@ -191,17 +193,25 @@ public class BenchmarkService {
      * <p>解决的是「我该填多少并发」这个问题——手工压测得来回试参数，而容量结论恰恰
      * 取决于把并发加到压不动为止。</p>
      */
-    public long startQuick(long appId, List<String> targetNodes, String userName) {
+    public long startQuick(long appId, List<String> targetNodes, List<String> commands, String userName) {
+        return start(buildQuickOptions(appId, targetNodes, commands), userName);
+    }
+
+    /**
+     * 构造快捷压测参数。commands 为空时保留历史默认值，显式传入时必须尊重界面选择。
+     */
+    BenchmarkOptions buildQuickOptions(long appId, List<String> targetNodes, List<String> commands) {
         BenchmarkOptions options = new BenchmarkOptions();
         options.setAppId(appId);
-        options.setTargetNodes(targetNodes == null ? new ArrayList<>() : targetNodes);
-        options.setCommands(Arrays.asList("GET", "SET"));
+        options.setTargetNodes(targetNodes == null ? new ArrayList<>() : new ArrayList<>(targetNodes));
+        options.setCommands(commands == null || commands.isEmpty()
+                ? Arrays.asList("GET", "SET") : new ArrayList<>(commands));
         options.setQuickMode(true);
         // 并发由爬坡逐档决定，这里给的是首档
         options.setConcurrency(BenchmarkRampPlan.CONCURRENCY_STEPS[0]);
         options.setDurationSeconds(BenchmarkRampPlan.STEP_SECONDS * BenchmarkRampPlan.CONCURRENCY_STEPS.length);
         options.setTotalRequests(0L);
-        return start(options, userName);
+        return options;
     }
 
     public void stop(long taskId) {
@@ -246,14 +256,15 @@ public class BenchmarkService {
             return progress;
         }
         long elapsedMs = System.currentTimeMillis() - task.startMillis;
-        long total = task.stats.getTotalCount();
+        long successCount = task.stats.getTotalCount();
+        long total = task.stats.getAttemptedCount();
         // 最近一秒的瞬时 QPS：全程平均画不出波动，看不出「跑到第 3 分钟开始掉速」
         long now = System.currentTimeMillis();
         long deltaMs = now - task.lastSampleMillis;
         if (deltaMs >= 900) {
-            task.currentQps = (total - task.lastSampleCount) * 1000L / Math.max(1, deltaMs);
+            task.currentQps = (successCount - task.lastSampleCount) * 1000L / Math.max(1, deltaMs);
             task.lastSampleMillis = now;
-            task.lastSampleCount = total;
+            task.lastSampleCount = successCount;
             task.clientCpuPercent = sampleProcessCpu();
         }
         progress.setStatus(task.status);
@@ -261,7 +272,7 @@ public class BenchmarkService {
         progress.setTotalRequests(total);
         progress.setErrorCount(task.stats.getErrorCount());
         progress.setCurrentQps(task.currentQps);
-        progress.setAvgQps(elapsedMs <= 0 ? 0 : total * 1000L / elapsedMs);
+        progress.setAvgQps(elapsedMs <= 0 ? 0 : successCount * 1000L / elapsedMs);
         progress.setP50Ms(task.stats.percentileUs(50) / 1000.0);
         progress.setP95Ms(task.stats.percentileUs(95) / 1000.0);
         progress.setP99Ms(task.stats.percentileUs(99) / 1000.0);
@@ -443,6 +454,9 @@ public class BenchmarkService {
             runningTask.stats = stepStats;
             runningTask.currentConcurrency = concurrency;
             runningTask.rampMessage = "并发 " + concurrency + " 压测中";
+            runningTask.lastSampleMillis = System.currentTimeMillis();
+            runningTask.lastSampleCount = 0L;
+            runningTask.currentQps = 0L;
 
             Map<String, Double> cpuBefore = sampleNodeCpuSeconds(appDesc, plans);
             long stepStart = System.currentTimeMillis();
@@ -451,6 +465,7 @@ public class BenchmarkService {
                     stepStats, runningTask.stopped,
                     index -> openJedis(appDesc, plans.get(index % plans.size()).hostPort));
             executor.run(stepStart + BenchmarkRampPlan.STEP_SECONDS * 1000L);
+            runningTask.aggregateStats.mergeFrom(stepStats);
             long elapsedMs = Math.max(1, System.currentTimeMillis() - stepStart);
             Map<String, Double> cpuAfter = sampleNodeCpuSeconds(appDesc, plans);
 
@@ -464,7 +479,7 @@ public class BenchmarkService {
             step.put("p95Ms", stepStats.percentileUs(95) / 1000.0);
             step.put("targetCpuPercent", Math.round(cpu * 10.0) / 10.0);
             step.put("errorCount", stepStats.getErrorCount());
-            step.put("totalRequests", stepStats.getTotalCount());
+            step.put("totalRequests", stepStats.getAttemptedCount());
             runningTask.rampSteps.add(step);
 
             if (qps > peakQps) {
@@ -472,7 +487,7 @@ public class BenchmarkService {
                 peakConcurrency = concurrency;
             }
             stopReason = BenchmarkRampPlan.stopReason(cpu, qps, previousQps,
-                    stepStats.getErrorCount(), stepStats.getTotalCount());
+                    stepStats.getErrorCount(), stepStats.getAttemptedCount());
             if (stopReason != null) {
                 break;
             }
@@ -601,9 +616,10 @@ public class BenchmarkService {
     private void finish(BenchmarkTask task, BenchmarkOptions options, List<NodePlan> plans,
                         RunningTask runningTask, String errorMsg, AppDesc appDesc) {
         long elapsedMs = Math.max(1, System.currentTimeMillis() - runningTask.startMillis);
-        BenchmarkStats stats = runningTask.stats;
+        BenchmarkStats stats = options.isQuickMode() && runningTask.aggregateStats.getAttemptedCount() > 0
+                ? runningTask.aggregateStats : runningTask.stats;
         task.setStatus(errorMsg != null ? "FAILED" : ("STOPPED".equals(runningTask.status) ? "STOPPED" : "FINISHED"));
-        task.setTotalRequests(stats.getTotalCount());
+        task.setTotalRequests(stats.getAttemptedCount());
         task.setErrorCount(stats.getErrorCount());
         task.setQps(stats.getTotalCount() * 1000L / elapsedMs);
         task.setP50Ms(stats.percentileUs(50) / 1000.0);

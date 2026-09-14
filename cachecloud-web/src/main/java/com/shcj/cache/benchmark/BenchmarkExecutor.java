@@ -153,7 +153,7 @@ public class BenchmarkExecutor {
             stats.record(command.getName(), (System.nanoTime() - start) / 1000L);
         } catch (Exception e) {
             issued.incrementAndGet();
-            stats.recordError(e.getClass().getSimpleName());
+            stats.recordError(errorType(command, e));
         }
     }
 
@@ -184,9 +184,14 @@ public class BenchmarkExecutor {
                 stats.record(command.getName(), perCommandUs);
             }
         } catch (Exception e) {
-            for (int i = 0; i < Math.max(1, batch.size()); i++) {
+            if (batch.isEmpty()) {
                 issued.incrementAndGet();
                 stats.recordError(e.getClass().getSimpleName());
+            } else {
+                for (BenchmarkCommand command : batch) {
+                    issued.incrementAndGet();
+                    stats.recordError(errorType(command, e));
+                }
             }
         }
     }
@@ -214,7 +219,7 @@ public class BenchmarkExecutor {
     }
 
     private void apply(Jedis jedis, BenchmarkCommand command, String key, Random random) {
-        String field = "f" + random.nextInt(16);
+        String field = hashField(command, random.nextInt(16));
         String member = "m" + random.nextInt(64);
         switch (command) {
             case GET: jedis.get(key); break;
@@ -257,7 +262,7 @@ public class BenchmarkExecutor {
     }
 
     private void applyPipelined(Pipeline pipeline, BenchmarkCommand command, String key, Random random) {
-        String field = "f" + random.nextInt(16);
+        String field = hashField(command, random.nextInt(16));
         String member = "m" + random.nextInt(64);
         switch (command) {
             case GET: pipeline.get(key); break;
@@ -302,6 +307,19 @@ public class BenchmarkExecutor {
     /** 写命令一律补 TTL：压测数据必须能自己过期，否则一次压测就在库里留下永久垃圾 */
     private void expire(Jedis jedis, String key) {
         jedis.expire(key, options.getTtlSeconds());
+    }
+
+    /** HINCRBY 只能操作整数字段，不能与写入任意 payload 的 HSET 共用字段。 */
+    static String hashField(BenchmarkCommand command, int bucket) {
+        return (command == BenchmarkCommand.HINCRBY ? "n" : "f") + bucket;
+    }
+
+    private String errorType(BenchmarkCommand command, Exception error) {
+        String type = error.getClass().getSimpleName();
+        String message = StringUtils.normalizeSpace(error.getMessage());
+        String detail = StringUtils.abbreviate(message, 160);
+        return command.getName() + " · " + type
+                + (StringUtils.isBlank(detail) ? "" : ": " + detail);
     }
 
     public long getIssued() {

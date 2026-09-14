@@ -1,8 +1,9 @@
-# 供 CacheCloud 平台纳管测试用的两套 Redis：
+# 供 CacheCloud 平台纳管测试用的三套 Redis：
+#   - Redis Standalone 5.0.14：单实例
 #   - Redis Cluster 6.2.13：3 主 3 从
 #   - Redis Sentinel 5.0.14：1 主 2 从 + 3 哨兵
 #
-# 两套都挂在固定子网 172.30.0.0/16 上并分配静态 IP，纳管时填的节点串才不会因重启而变化。
+# 三套都挂在固定子网 172.30.0.0/16 上并分配静态 IP，纳管时填的节点串才不会因重启而变化。
 # 起完之后需要把 CacheCloud 后端容器接进本网络，否则平台连不上：
 #   docker network connect redis-test cachecloud-web
 #
@@ -25,7 +26,7 @@ x-cluster-node: &cluster-node
     retries: 20
 
 x-standalone-node: &standalone-node
-  image: redis:6.2.13-alpine
+  image: redis:5.0.14-alpine
   restart: unless-stopped
   # 同样用配置文件启动，否则平台改完配置 CONFIG REWRITE 无法落盘。
   entrypoint: ["/usr/local/bin/redis-entrypoint.sh"]
@@ -274,8 +275,8 @@ services:
       redis-test:
         ipv4_address: 172.30.0.33
 
-  # ---------------------------------------------------------------- 独立单节点 6.2.13
-  # 5 个互不相干的 standalone 实例，各自作为一套独立集群纳管。
+  # ---------------------------------------------------------------- 独立单节点 5.0.14
+  # 单个 standalone 实例，作为一套独立集群纳管。
   # 无主从、无哨兵、无 cluster bus——纳管时集群类型选「单机版」，密码留空。
 
   standalone-1:
@@ -291,62 +292,6 @@ services:
     networks:
       redis-test:
         ipv4_address: 172.30.0.41
-
-  standalone-2:
-    <<: *standalone-node
-    container_name: redis-standalone-2
-    environment:
-      TZ: Asia/Shanghai
-      REDIS_ANNOUNCE_IP: 172.30.0.42
-    ports: ["7042:6379"]
-    volumes:
-      - standalone-2-data:/data
-      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
-    networks:
-      redis-test:
-        ipv4_address: 172.30.0.42
-
-  standalone-3:
-    <<: *standalone-node
-    container_name: redis-standalone-3
-    environment:
-      TZ: Asia/Shanghai
-      REDIS_ANNOUNCE_IP: 172.30.0.43
-    ports: ["7043:6379"]
-    volumes:
-      - standalone-3-data:/data
-      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
-    networks:
-      redis-test:
-        ipv4_address: 172.30.0.43
-
-  standalone-4:
-    <<: *standalone-node
-    container_name: redis-standalone-4
-    environment:
-      TZ: Asia/Shanghai
-      REDIS_ANNOUNCE_IP: 172.30.0.44
-    ports: ["7044:6379"]
-    volumes:
-      - standalone-4-data:/data
-      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
-    networks:
-      redis-test:
-        ipv4_address: 172.30.0.44
-
-  standalone-5:
-    <<: *standalone-node
-    container_name: redis-standalone-5
-    environment:
-      TZ: Asia/Shanghai
-      REDIS_ANNOUNCE_IP: 172.30.0.45
-    ports: ["7045:6379"]
-    volumes:
-      - standalone-5-data:/data
-      - ./redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
-    networks:
-      redis-test:
-        ipv4_address: 172.30.0.45
 
   # ---------------------------------------------------------------- 流量发生器
   # 默认不启动（profile），需要时：
@@ -397,7 +342,3 @@ volumes:
   sentinel-replica-1-data:
   sentinel-replica-2-data:
   standalone-1-data:
-  standalone-2-data:
-  standalone-3-data:
-  standalone-4-data:
-  standalone-5-data:

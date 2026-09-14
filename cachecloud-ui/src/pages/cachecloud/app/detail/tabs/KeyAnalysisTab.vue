@@ -31,7 +31,6 @@ const selectedNodes = ref<string[]>([])
 const reason = ref("")
 const bigKeyStringKb = ref(100)
 const bigKeyCollectionElements = ref(50000)
-const confirmEmpty = ref(false)
 const viewMode = ref<"list" | "result">("list")
 const resultLoading = ref(false)
 const result = ref<KeyAnalysisResult | null>(null)
@@ -163,9 +162,6 @@ const allInstancesZeroKeys = computed(() => {
   return instances.every(i => i.currItems <= 0)
 })
 
-const showEmptyConfirmRow = computed(() => scopeAllZeroKeys.value)
-const startDisabled = computed(() => showEmptyConfirmRow.value && !confirmEmpty.value)
-
 async function handleRefresh() {
   if (refreshing.value) return
   refreshing.value = true
@@ -225,15 +221,10 @@ function selectAll(slavesOnly = false) {
 
 function clearSelection() {
   selectedNodes.value = []
-  confirmEmpty.value = false
 }
 
 async function handleStart() {
   const nodeInfo = selectedNodes.value.join(",")
-  if (scopeAllZeroKeys.value && !confirmEmpty.value) {
-    ElMessage.warning("所选实例 key 数为 0。空库不会产生类型/TTL 分布，请勾选「确认分析空库」，或先写入测试数据。")
-    return
-  }
   const trimmedReason = reason.value.trim() || "管理后台发起"
   const totalCount = page.value?.instances.length ?? 0
   let nodeHint = nodeInfo ? `\n分析节点：${nodeInfo}` : "\n分析节点：全部从实例（slave，默认）"
@@ -243,7 +234,7 @@ async function handleStart() {
       nodeHint += `\n（已选全部 ${totalCount} 个节点，将逐个扫描，耗时较长）`
     }
   }
-  const emptyHint = scopeAllZeroKeys.value ? "\n（空库：仅记录扫描结论，无分布统计）" : ""
+  const emptyHint = scopeAllZeroKeys.value ? "\n（目标节点为空库：将直接返回空分析结果）" : ""
   const ruleHint = `\nBigKey 规则：${bigKeyRuleText(null)}`
   try {
     await ElMessageBox.confirm(
@@ -256,13 +247,19 @@ async function handleStart() {
   }
   starting.value = true
   try {
-    await startKeyAnalysisApi(props.appId, {
+    const { data } = await startKeyAnalysisApi(props.appId, {
       reason: trimmedReason,
       nodeInfo,
-      confirmEmpty: confirmEmpty.value,
       bigKeyStringBytes: Math.round(bigKeyStringKb.value * 1024),
       bigKeyCollectionElements: Math.round(bigKeyCollectionElements.value)
     })
+    if (data.taskId === 0) {
+      ElMessage.info("目标节点暂无数据，已返回空分析结果")
+      await fetchPage()
+      const audit = page.value?.audits.find(item => item.id === data.auditId)
+      if (audit) await openResult(audit)
+      return
+    }
     ElMessage.success("键值分析任务已发起")
     await fetchPage()
   } catch (e: unknown) {
@@ -301,12 +298,6 @@ function progressFor(audit: KeyAnalysisAuditItem) {
   if (!audit.running || !audit.taskId) return null
   return progressMap.value[audit.taskId]
 }
-
-watch([selectedNodes, confirmEmpty], () => {
-  if (!scopeAllZeroKeys.value) {
-    confirmEmpty.value = false
-  }
-})
 
 // 顶部再次点击「键值分析」时退回列表。keep-alive 会把非当前 tab 的实例也留着，
 // 用 onActivated/onDeactivated 标记可见性，避免重复点击别的 tab 时把这里一起重置了。
@@ -396,10 +387,6 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="app-key-analysis-header__row">
-            <label v-if="showEmptyConfirmRow" class="app-key-analysis-empty-confirm">
-              <el-checkbox v-model="confirmEmpty" />
-              确认分析空库（当前 key 数为 0，仅记录扫描结论，无类型/TTL 分布）
-            </label>
             <el-input
               v-model="reason"
               class="app-key-analysis-reason"
@@ -410,7 +397,6 @@ onBeforeUnmount(() => {
               type="primary"
               class="app-key-analysis-start-btn"
               :loading="starting"
-              :disabled="startDisabled"
               @click="handleStart"
             >
               发起分析
@@ -429,7 +415,7 @@ onBeforeUnmount(() => {
 
       <div v-if="allInstancesZeroKeys" class="app-key-analysis-zero-keys-banner">
         <el-icon><Warning /></el-icon>
-        当前所有 Redis 实例 key 数量均为 <strong>0</strong>，分析完成后结果会为空。请先在 Redis 写入数据后再发起分析。
+        当前所有 Redis 实例 key 数量均为 <strong>0</strong>，发起分析将直接返回空结果，不创建扫描任务。
       </div>
 
       <div class="app-key-analysis-section">

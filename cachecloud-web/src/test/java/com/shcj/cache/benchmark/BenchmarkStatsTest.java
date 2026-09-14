@@ -123,4 +123,28 @@ public class BenchmarkStatsTest {
         assertEquals(0D, stats.getAvgLatencyUs(), 1e-9);
         assertEquals(0L, stats.getTotalCount());
     }
+
+    @Test
+    public void 合并升压档位后保留全部命令和错误统计() {
+        BenchmarkStats first = new BenchmarkStats();
+        first.record("HSET", 100);
+        first.recordError("HINCRBY · JedisDataException");
+
+        BenchmarkStats second = new BenchmarkStats();
+        second.record("HINCRBY", 300);
+        second.recordError("JedisConnectionException");
+
+        BenchmarkStats aggregate = new BenchmarkStats();
+        aggregate.mergeFrom(first);
+        aggregate.mergeFrom(second);
+
+        assertEquals(2L, aggregate.getTotalCount());
+        assertEquals(2L, aggregate.getErrorCount());
+        assertEquals(4L, aggregate.getAttemptedCount());
+        assertEquals(1L, aggregate.commandCounts().get("HSET").longValue());
+        assertEquals(1L, aggregate.commandCounts().get("HINCRBY").longValue());
+        assertEquals(1L, aggregate.errorTypes().get("JedisConnectionException").longValue());
+        assertEquals(300L, aggregate.getMaxLatencyUs());
+        assertEquals(200D, aggregate.getAvgLatencyUs(), 1e-9);
+    }
 }

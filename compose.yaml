@@ -50,7 +50,7 @@ services:
       - backend
 
   redis:
-    image: redis:6.2.13-alpine
+    image: ${CACHECLOUD_REDIS_IMAGE:-redis:6.2.13-alpine}
     container_name: cachecloud-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]

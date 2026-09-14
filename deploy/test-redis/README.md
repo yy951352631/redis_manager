@@ -1,13 +1,14 @@
 # 纳管测试用 Redis
 
-供 CacheCloud 平台「节点管理 → 新增纳管」测试用的两套集群。
+供 CacheCloud 平台「节点管理 → 新增纳管」测试用的三套 Redis。
 
 | 拓扑 | 版本 | 规模 | 宿主机端口 |
 |------|------|------|-----------|
+| Standalone | 5.0.14 | 单实例 | 7041 |
 | Cluster | 6.2.13 | 3 主 3 从 | 7001-7006 |
 | Sentinel | 5.0.14 | 1 主 2 从 + 3 哨兵 | 7101-7103 / 27101-27103 |
 
-两套均**无密码**，纳管时密码栏留空。
+三套均**无密码**，纳管时密码栏留空。
 
 ## 启停
 
@@ -27,6 +28,12 @@ docker compose -f deploy/test-redis/compose.yaml down -v
 ## 纳管时填的「节点详情」
 
 固定子网 172.30.0.0/16 + 静态 IP，重启后不变，直接复制粘贴。
+
+**Standalone（集群类型选单机版）**
+
+```
+172.30.0.41:6379
+```
 
 **Cluster（集群类型选 Redis-cluster）**
 
@@ -53,6 +60,7 @@ docker compose -f deploy/test-redis/compose.yaml down -v
 ## 从宿主机连
 
 ```bash
+redis-cli -p 7041            # Redis 5 standalone
 redis-cli -p 7001            # cluster 节点 1（单节点命令可用）
 redis-cli -p 7101            # sentinel master
 redis-cli -p 27101 -h 127.0.0.1 sentinel master mymaster

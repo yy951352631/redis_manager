@@ -58,6 +58,39 @@ public class BenchmarkStats {
         counter(errorByType, type == null ? "unknown" : type).incrementAndGet();
     }
 
+    /** 快捷压测每档使用独立统计器，结束后合并成全程汇总。 */
+    public void mergeFrom(BenchmarkStats source) {
+        if (source == null || source == this) {
+            return;
+        }
+        totalCount.addAndGet(source.totalCount.get());
+        totalLatencyUs.addAndGet(source.totalLatencyUs.get());
+        errorCount.addAndGet(source.errorCount.get());
+        for (int i = 0; i < buckets.length(); i++) {
+            buckets.addAndGet(i, source.buckets.get(i));
+        }
+        updateMax(source.maxLatencyUs.get());
+        mergeCounters(commandCount, source.commandCount);
+        mergeCounters(commandLatencyUs, source.commandLatencyUs);
+        mergeCounters(errorByType, source.errorByType);
+    }
+
+    private void mergeCounters(Map<String, AtomicLong> target, Map<String, AtomicLong> source) {
+        for (Map.Entry<String, AtomicLong> entry : source.entrySet()) {
+            counter(target, entry.getKey()).addAndGet(entry.getValue().get());
+        }
+    }
+
+    private void updateMax(long candidate) {
+        long previous;
+        do {
+            previous = maxLatencyUs.get();
+            if (candidate <= previous) {
+                return;
+            }
+        } while (!maxLatencyUs.compareAndSet(previous, candidate));
+    }
+
     private AtomicLong counter(Map<String, AtomicLong> map, String key) {
         AtomicLong counter = map.get(key);
         if (counter == null) {
@@ -103,6 +136,10 @@ public class BenchmarkStats {
 
     public long getErrorCount() {
         return errorCount.get();
+    }
+
+    public long getAttemptedCount() {
+        return totalCount.get() + errorCount.get();
     }
 
     public long getMaxLatencyUs() {

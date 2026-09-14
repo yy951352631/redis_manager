@@ -747,7 +747,6 @@ export function getKeyAnalysisPageApi(appId: number) {
 export function startKeyAnalysisApi(appId: number, data: {
   reason?: string
   nodeInfo?: string
-  confirmEmpty?: boolean
   bigKeyStringBytes?: number
   bigKeyCollectionElements?: number
 }) {
@@ -903,7 +902,7 @@ export function getBenchmarkTargetsApi(appId: number) {
     params: { appId }
   })
 }
-export function startQuickBenchmarkApi(data: { appId: number, targetNodes?: string[] }) {
+export function startQuickBenchmarkApi(data: { appId: number, targetNodes?: string[], commands: string[] }) {
   return request<ApiResponseData<{ taskId: number }>>({ url: "benchmark/quick", method: "post", data })
 }
 export function startBenchmarkApi(data: Record<string, unknown>) {

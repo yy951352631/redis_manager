@@ -447,10 +447,9 @@ public class AppApiController extends BaseController {
         try {
             String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : null;
             String nodeInfo = body.get("nodeInfo") != null ? String.valueOf(body.get("nodeInfo")) : null;
-            boolean confirmEmpty = Boolean.TRUE.equals(body.get("confirmEmpty"));
             long bigKeyStringBytes = NumberUtils.toLong(String.valueOf(body.get("bigKeyStringBytes")));
             long bigKeyCollectionElements = NumberUtils.toLong(String.valueOf(body.get("bigKeyCollectionElements")));
-            return ApiResponse.ok(keyAnalysisApiService.start(appId, user, reason, nodeInfo, confirmEmpty,
+            return ApiResponse.ok(keyAnalysisApiService.start(appId, user, reason, nodeInfo,
                     bigKeyStringBytes, bigKeyCollectionElements));
         } catch (Exception e) {
             return ApiResponse.fail(400, e.getMessage());

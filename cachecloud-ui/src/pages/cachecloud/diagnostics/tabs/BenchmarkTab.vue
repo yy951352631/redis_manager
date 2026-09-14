@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { BenchmarkProgress, BenchmarkResult, DiagnosticAppOption } from "@/api/cachecloud"
+import { Download } from "@element-plus/icons-vue"
 import {
   deleteBenchmarkApi,
   getBenchmarkCommandsApi,
@@ -49,6 +50,13 @@ const form = reactive({
 const selectedApp = computed(() => props.apps.find(a => a.appId === form.appId))
 /** 只有 Cluster 才谈得上「指定节点」，其余类型直接压主节点 */
 const isCluster = computed(() => selectedApp.value?.type === 2)
+const allCommands = computed(() => Object.values(catalog.value).flat().map(command => command.name))
+const allCommandsSelected = computed(() =>
+  allCommands.value.length > 0 && allCommands.value.every(command => form.commands.includes(command))
+)
+const someCommandsSelected = computed(() =>
+  form.commands.length > 0 && !allCommandsSelected.value
+)
 
 const hasWriteCommand = computed(() =>
   form.commands.some(name => Object.values(catalog.value).flat().find(c => c.name === name)?.kind === "WRITE")
@@ -97,6 +105,10 @@ function toggleCommand(name: string) {
   else form.commands.push(name)
 }
 
+function toggleAllCommands(selected: string | number | boolean) {
+  form.commands.splice(0, form.commands.length, ...(selected === true ? allCommands.value : []))
+}
+
 async function handleStart() {
   if (!form.appId) return ElMessage.warning("请选择目标集群")
   if (!form.commands.length) return ElMessage.warning("请至少勾选一个命令")
@@ -135,6 +147,7 @@ const quickStarting = ref(false)
  */
 async function handleQuickStart() {
   if (!form.appId) return ElMessage.warning("请选择目标集群")
+  if (!form.commands.length) return ElMessage.warning("请至少勾选一个命令")
   await ElMessageBox.confirm(
     "快捷压测会从并发 1 起逐档加压，直到把目标节点 CPU 压满或吞吐出现拐点，最长约 4 分钟。确认开始？",
     "快捷压测",
@@ -144,7 +157,8 @@ async function handleQuickStart() {
   try {
     const { data } = await startQuickBenchmarkApi({
       appId: form.appId,
-      targetNodes: form.targetMode === "node" ? form.targetNodes : []
+      targetNodes: form.targetMode === "node" ? form.targetNodes : [],
+      commands: [...form.commands]
     })
     runningTaskId.value = data?.taskId ?? null
     qpsSeries.value = []
@@ -190,10 +204,66 @@ const maxQps = computed(() => Math.max(1, ...qpsSeries.value.map(p => p.qps)))
 
 const detailVisible = ref(false)
 const detailRow = ref<BenchmarkResult | null>(null)
+const exportingPdf = ref(false)
+const benchmarkReportRef = useTemplateRef<HTMLDivElement>("benchmarkReportRef")
 
 function openDetail(row: BenchmarkResult) {
   detailRow.value = row
   detailVisible.value = true
+}
+
+function reportStamp() {
+  const date = new Date()
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+}
+
+function safeFilePart(value: string) {
+  return value.replace(/[\\/:*?"<>|]/g, "_").trim().slice(0, 60) || "Redis"
+}
+
+function reportStatus(status: string) {
+  if (status === "FINISHED") return "已完成"
+  if (status === "STOPPED") return "已停止"
+  if (status === "FAILED") return "失败"
+  if (status === "RUNNING") return "运行中"
+  return status || "未知"
+}
+
+function reportErrorRate(row: BenchmarkResult) {
+  return row.totalRequests > 0 ? row.errorCount * 100 / row.totalRequests : 0
+}
+
+async function exportBenchmarkPdf() {
+  const row = detailRow.value
+  if (!row || exportingPdf.value) return
+  if (row.status === "RUNNING") {
+    ElMessage.warning("压测完成后才能导出报告")
+    return
+  }
+
+  exportingPdf.value = true
+  const tip = ElMessage({ message: "正在生成 PDF...", type: "info", duration: 0 })
+  try {
+    await nextTick()
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    const report = benchmarkReportRef.value
+    if (!report || report.scrollHeight < 20) throw new Error("报告内容为空，无法生成 PDF")
+    const { exportElementToPdf } = await import("@/common/utils/pdf-export")
+    await exportElementToPdf(report, {
+      fileName: `Redis压测报告_${safeFilePart(row.appName)}_${reportStamp()}`,
+      scale: 2,
+      margin: 8,
+      quality: 0.95,
+      pageSelector: ".benchmark-pdf-report__page"
+    })
+    ElMessage.success("PDF 已下载")
+  } catch (error: unknown) {
+    ElMessage.error(error instanceof Error ? error.message : "PDF 生成失败")
+  } finally {
+    tip.close()
+    exportingPdf.value = false
+  }
 }
 
 async function handleDelete(row: BenchmarkResult) {
@@ -308,6 +378,17 @@ onBeforeUnmount(stopPolling)
 
         <el-form-item label="压测命令">
           <div class="benchmark-tab__commands">
+            <div class="benchmark-tab__commands-toolbar">
+              <el-checkbox
+                :model-value="allCommandsSelected"
+                :indeterminate="someCommandsSelected"
+                :disabled="!allCommands.length"
+                @change="toggleAllCommands"
+              >
+                {{ allCommandsSelected ? "取消全选" : "全选" }}
+              </el-checkbox>
+              <span class="benchmark-tab__hint">已选 {{ form.commands.length }} / {{ allCommands.length }}</span>
+            </div>
             <div v-for="(items, group) in catalog" :key="group" class="benchmark-tab__group">
               <div class="benchmark-tab__group-name">
                 {{ group }}
@@ -566,6 +647,18 @@ onBeforeUnmount(stopPolling)
 
     <el-drawer v-model="detailVisible" title="压测详情" size="640px" destroy-on-close>
       <template v-if="detailRow">
+        <div class="benchmark-tab__detail-actions">
+          <el-button
+            type="primary"
+            plain
+            :icon="Download"
+            :loading="exportingPdf"
+            :disabled="detailRow.status === 'RUNNING'"
+            @click="exportBenchmarkPdf"
+          >
+            导出 PDF
+          </el-button>
+        </div>
         <h4 class="benchmark-tab__detail-title">基本信息</h4>
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="集群">{{ detailRow.appName }}</el-descriptions-item>
@@ -662,6 +755,135 @@ onBeforeUnmount(stopPolling)
         </template>
       </template>
     </el-drawer>
+
+    <div v-if="exportingPdf && detailRow" class="benchmark-pdf-stage">
+      <article ref="benchmarkReportRef" class="benchmark-pdf-report">
+        <div class="benchmark-pdf-report__page benchmark-pdf-report__page--cover">
+        <header class="benchmark-pdf-report__header">
+          <div>
+            <h1>Redis 压测报告</h1>
+            <p>任务 #{{ detailRow.id }} · 生成时间 {{ new Date().toLocaleString() }}</p>
+          </div>
+          <span class="benchmark-pdf-report__status" :class="`is-${detailRow.status.toLowerCase()}`">
+            {{ reportStatus(detailRow.status) }}
+          </span>
+        </header>
+
+        <section class="benchmark-pdf-report__summary">
+          <div><span>QPS</span><strong>{{ detailRow.qps.toLocaleString() }}</strong></div>
+          <div><span>P99 延迟</span><strong>{{ detailRow.p99Ms.toFixed(2) }} ms</strong></div>
+          <div><span>总请求数</span><strong>{{ detailRow.totalRequests.toLocaleString() }}</strong></div>
+          <div :class="{ 'is-alert': detailRow.errorCount > 0 }">
+            <span>错误 / 错误率</span>
+            <strong>{{ detailRow.errorCount.toLocaleString() }} / {{ reportErrorRate(detailRow).toFixed(3) }}%</strong>
+          </div>
+          <div><span>承压节点平均 CPU</span><strong>{{ (detailRow.avgTargetCpuPercent ?? 0).toFixed(1) }}%</strong></div>
+          <div :class="{ 'is-alert': (detailRow.peakTargetCpuPercent ?? 0) >= 90 }">
+            <span>承压节点峰值 CPU</span>
+            <strong>{{ (detailRow.peakTargetCpuPercent ?? 0).toFixed(1) }}%</strong>
+          </div>
+        </section>
+
+        <section>
+          <h2>任务信息</h2>
+          <table>
+            <tbody>
+              <tr><th>集群</th><td>{{ detailRow.appName }}</td><th>压测目标</th><td>{{ detailRow.targetDesc }}</td></tr>
+              <tr><th>操作人</th><td>{{ detailRow.userName || "-" }}</td><th>模式</th><td>{{ detailRow.options?.quickMode ? "快捷压测" : "自定义压测" }}</td></tr>
+              <tr><th>开始时间</th><td>{{ detailRow.startTime || "-" }}</td><th>结束时间</th><td>{{ detailRow.endTime || "-" }}</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>配置参数</h2>
+          <table>
+            <tbody>
+              <tr v-for="item in detailOptions" :key="`pdf-${item.label}`">
+                <th>{{ item.label }}</th><td colspan="3">{{ item.value }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>性能结果</h2>
+          <table>
+            <thead><tr><th>平均延迟</th><th>P50</th><th>P95</th><th>P99</th><th>最大延迟</th><th>平台 CPU</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>{{ detailRow.avgMs.toFixed(3) }} ms</td>
+                <td>{{ detailRow.p50Ms.toFixed(2) }} ms</td>
+                <td>{{ detailRow.p95Ms.toFixed(2) }} ms</td>
+                <td>{{ detailRow.p99Ms.toFixed(2) }} ms</td>
+                <td>{{ detailRow.maxMs.toFixed(2) }} ms</td>
+                <td>{{ detailRow.clientCpuPercent.toFixed(1) }}%</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="benchmark-pdf-report__note">
+            分位数为延迟直方图的上界估计；Pipeline 大于 1 时单条延迟为整批耗时的平摊值。节点 CPU 按单核计。
+          </p>
+        </section>
+        </div>
+
+        <div class="benchmark-pdf-report__page benchmark-pdf-report__page--detail">
+
+        <section v-if="detailRow.rampSteps?.length">
+          <h2>快捷压测爬坡明细</h2>
+          <p v-if="detailRow.rampMessage" class="benchmark-pdf-report__conclusion">{{ detailRow.rampMessage }}</p>
+          <table>
+            <thead><tr><th>并发</th><th>请求数</th><th>QPS</th><th>P95</th><th>P99</th><th>节点 CPU</th><th>错误</th></tr></thead>
+            <tbody>
+              <tr v-for="step in detailRow.rampSteps" :key="`pdf-step-${step.concurrency}`">
+                <td>{{ step.concurrency }}</td>
+                <td>{{ step.totalRequests.toLocaleString() }}</td>
+                <td>{{ step.qps.toLocaleString() }}</td>
+                <td>{{ step.p95Ms.toFixed(2) }} ms</td>
+                <td>{{ step.p99Ms.toFixed(2) }} ms</td>
+                <td>{{ step.targetCpuPercent.toFixed(1) }}%</td>
+                <td>{{ step.errorCount.toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>逐命令统计</h2>
+          <table>
+            <thead><tr><th>命令</th><th>执行次数</th><th>平均耗时</th></tr></thead>
+            <tbody v-if="detailCommandRows.length">
+              <tr v-for="command in detailCommandRows" :key="`pdf-command-${command.name}`">
+                <td>{{ command.name }}</td>
+                <td>{{ command.count.toLocaleString() }}</td>
+                <td>{{ command.avgMs.toFixed(3) }} ms</td>
+              </tr>
+            </tbody>
+            <tbody v-else><tr><td colspan="3">无命令明细</td></tr></tbody>
+          </table>
+        </section>
+
+        <section v-if="detailRow.errorStats && Object.keys(detailRow.errorStats).length">
+          <h2>错误分类</h2>
+          <table>
+            <thead><tr><th>错误类型</th><th>次数</th></tr></thead>
+            <tbody>
+              <tr v-for="(count, type) in detailRow.errorStats" :key="`pdf-error-${type}`">
+                <td>{{ type }}</td><td>{{ count.toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section v-if="detailRow.errorMsg">
+          <h2>失败原因</h2>
+          <pre class="benchmark-pdf-report__error">{{ detailRow.errorMsg }}</pre>
+        </section>
+
+        <footer>Redis 管理平台 · 压测结果仅代表本次目标、命令和参数条件</footer>
+        </div>
+      </article>
+    </div>
   </div>
 </template>
 
@@ -692,6 +914,15 @@ onBeforeUnmount(stopPolling)
   flex-direction: column;
   gap: 6px;
   width: 100%;
+}
+
+.benchmark-tab__commands-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .benchmark-tab__group {
@@ -791,6 +1022,12 @@ onBeforeUnmount(stopPolling)
   font-size: 14px;
 }
 
+.benchmark-tab__detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 32px;
+}
+
 .benchmark-tab__detail-note {
   display: block;
   margin: 8px 0 0;
@@ -811,5 +1048,184 @@ onBeforeUnmount(stopPolling)
   min-width: 2px;
   background: var(--el-color-primary);
   border-radius: 1px 1px 0 0;
+}
+
+.benchmark-pdf-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483646;
+  width: 900px;
+  overflow: visible;
+  pointer-events: none;
+  background: #fff;
+  opacity: 0.011;
+}
+
+.benchmark-pdf-report {
+  box-sizing: border-box;
+  width: 900px;
+  color: #172033;
+  background: #fff;
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+
+  * {
+    box-sizing: border-box;
+  }
+
+  section {
+    margin-top: 24px;
+  }
+
+  h1 {
+    margin: 0 0 5px;
+    font-size: 24px;
+    letter-spacing: 0;
+  }
+
+  h2 {
+    padding-bottom: 7px;
+    margin: 0 0 10px;
+    font-size: 15px;
+    letter-spacing: 0;
+    border-bottom: 2px solid #e5eaf2;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  th,
+  td {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    word-break: break-word;
+    border: 1px solid #dce3ed;
+  }
+
+  th {
+    color: #526176;
+    font-weight: 600;
+    background: #f4f6f9;
+  }
+
+  tbody th {
+    width: 16%;
+  }
+
+  footer {
+    padding-top: 14px;
+    margin-top: 28px;
+    color: #7b8798;
+    text-align: right;
+    border-top: 1px solid #dce3ed;
+  }
+}
+
+.benchmark-pdf-report__page {
+  box-sizing: border-box;
+  width: 900px;
+  padding: 34px 40px 42px;
+  background: #fff;
+}
+
+.benchmark-pdf-report__page--cover {
+  height: 1304px;
+}
+
+.benchmark-pdf-report__page--detail {
+  min-height: 520px;
+
+  section:first-child {
+    margin-top: 0;
+  }
+}
+
+.benchmark-pdf-report__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 18px;
+  border-bottom: 3px solid #2563a9;
+
+  p {
+    margin: 0;
+    color: #718096;
+  }
+}
+
+.benchmark-pdf-report__status {
+  flex: 0 0 auto;
+  min-width: 72px;
+  padding: 6px 12px;
+  color: #334155;
+  font-weight: 700;
+  text-align: center;
+  background: #e8edf3;
+  border-radius: 4px;
+
+  &.is-finished { color: #166534; background: #dcfce7; }
+  &.is-failed { color: #991b1b; background: #fee2e2; }
+  &.is-stopped { color: #854d0e; background: #fef3c7; }
+}
+
+.benchmark-pdf-report__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  div {
+    min-height: 68px;
+    padding: 10px 12px;
+    background: #f4f7fb;
+    border-left: 3px solid #2563a9;
+  }
+
+  span {
+    display: block;
+    color: #67758a;
+    font-size: 11px;
+  }
+
+  strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 17px;
+  }
+
+  .is-alert {
+    border-left-color: #c2413a;
+
+    strong { color: #a92323; }
+  }
+}
+
+.benchmark-pdf-report__note {
+  margin: 8px 0 0;
+  color: #6b778b;
+  font-size: 11px;
+}
+
+.benchmark-pdf-report__conclusion {
+  padding: 9px 11px;
+  margin: 0 0 10px;
+  background: #edf7f1;
+  border-left: 3px solid #24825b;
+}
+
+.benchmark-pdf-report__error {
+  padding: 10px 12px;
+  margin: 0;
+  color: #991b1b;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fff1f1;
+  border: 1px solid #fecaca;
 }
 </style>

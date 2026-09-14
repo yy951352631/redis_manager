@@ -79,7 +79,10 @@ public class BenchmarkApiController extends AbstractAdminApiController {
             @SuppressWarnings("unchecked")
             List<String> nodes = body.get("targetNodes") instanceof List
                     ? (List<String>) body.get("targetNodes") : null;
-            long taskId = benchmarkService.startQuick(Long.parseLong(String.valueOf(appIdRaw)), nodes,
+            @SuppressWarnings("unchecked")
+            List<String> commands = body.get("commands") instanceof List
+                    ? (List<String>) body.get("commands") : null;
+            long taskId = benchmarkService.startQuick(Long.parseLong(String.valueOf(appIdRaw)), nodes, commands,
                     resolveApiUser(request) == null ? "" : resolveApiUser(request).getName());
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("taskId", taskId);

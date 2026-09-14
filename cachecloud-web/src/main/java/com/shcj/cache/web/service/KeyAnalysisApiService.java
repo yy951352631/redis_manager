@@ -127,26 +127,33 @@ public class KeyAnalysisApiService {
         return dto;
     }
 
-    public KeyAnalysisStartResultDto start(long appId, AppUser user, String reason, String nodeInfo, boolean confirmEmpty,
+    public KeyAnalysisStartResultDto start(long appId, AppUser user, String reason, String nodeInfo,
             long bigKeyStringBytes, long bigKeyCollectionElements) {
         appId = resolveRouteAppId(appId);
         if (StringUtils.isBlank(reason)) {
             reason = "管理后台发起";
         }
         long totalKeys = sumDbSizeForNodeInfo(appId, nodeInfo);
-        if (totalKeys == 0 && !confirmEmpty) {
-            throw new BizException("所选 Redis 实例当前 key 数为 0，空库不会产生类型/TTL 分布。请勾选「确认分析空库」后再发起，或先写入测试数据。");
-        }
         AppDesc appDesc = appService.getByAppId(appId);
         AppAudit appAudit = appService.saveAppKeyAnalysis(appDesc, user, reason, nodeInfo);
         appAuditDao.updateAppAuditOperateUser(appAudit.getId(), user.getId());
         long stringThreshold = bigKeyStringBytes > 0 ? bigKeyStringBytes : ConstUtils.DEFAULT_STRING_MAX_LENGTH;
         long collectionThreshold = bigKeyCollectionElements > 0 ? bigKeyCollectionElements : ConstUtils.DEFAULT_HASH_MAX_LENGTH;
+        KeyAnalysisStartResultDto dto = new KeyAnalysisStartResultDto();
+        dto.setAuditId(appAudit.getId());
+        if (totalKeys == 0) {
+            KeyAnalysisStatsSnapshotDto emptySnapshot = new KeyAnalysisStatsSnapshotDto();
+            emptySnapshot.setBigKeyStringBytes(stringThreshold);
+            emptySnapshot.setBigKeyCollectionElements(collectionThreshold);
+            appKeyAnalysisStatsDao.upsertStats(appId, appAudit.getId(), JSON.toJSONString(emptySnapshot));
+            appAuditDao.updateParam2(appAudit.getId(), "0");
+            appAuditDao.updateAppAudit(appAudit.getId(), AppCheckEnum.APP_PASS.value());
+            dto.setTaskId(0);
+            return dto;
+        }
         long taskId = taskService.addAppKeyAnalysisTask(appId, appAudit.getId(), 0,
                 stringThreshold, collectionThreshold);
-        KeyAnalysisStartResultDto dto = new KeyAnalysisStartResultDto();
         dto.setTaskId(taskId);
-        dto.setAuditId(appAudit.getId());
         return dto;
     }
 

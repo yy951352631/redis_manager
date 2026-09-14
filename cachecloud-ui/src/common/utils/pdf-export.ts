@@ -14,6 +14,8 @@ export interface PdfExportOptions {
   margin?: number
   /** JPEG 质量 0~1 */
   quality?: number
+  /** 按匹配到的子元素逐页输出，适用于需要稳定分页的报告 */
+  pageSelector?: string
 }
 
 /**
@@ -21,29 +23,44 @@ export interface PdfExportOptions {
  *   opacity:0 或移出视口会让 html2canvas 截出空白页
  */
 export async function exportElementToPdf(element: HTMLElement, options: PdfExportOptions) {
-  const { fileName, scale = 1.5, margin = 7, quality = 0.94 } = options
+  const { fileName, scale = 1.5, margin = 7, quality = 0.94, pageSelector } = options
 
   const [{ default: html2canvas }, { jsPDF: JsPdf }] = await Promise.all([
     import("html2canvas"),
     import("jspdf")
   ])
 
-  const canvas = await html2canvas(element, {
-    scale,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight
-  })
-
   const pdf = new JsPdf({ orientation: "portrait", unit: "mm", format: "a4" })
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()
   const usableWidth = pageWidth - margin * 2
   const usableHeight = pageHeight - margin * 2
+
+  const capture = (target: HTMLElement) => html2canvas(target, {
+    scale,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+    width: target.scrollWidth,
+    height: target.scrollHeight,
+    windowWidth: target.scrollWidth,
+    windowHeight: target.scrollHeight
+  })
+
+  if (pageSelector) {
+    const pages = Array.from(element.querySelectorAll<HTMLElement>(pageSelector))
+    if (!pages.length) throw new Error("未找到 PDF 分页内容")
+    for (let index = 0; index < pages.length; index++) {
+      const pageCanvas = await capture(pages[index])
+      if (index > 0) pdf.addPage()
+      const renderedHeight = Math.min(usableHeight, (pageCanvas.height * usableWidth) / pageCanvas.width)
+      pdf.addImage(pageCanvas.toDataURL("image/jpeg", quality), "JPEG", margin, margin, usableWidth, renderedHeight)
+    }
+    pdf.save(`${fileName}.pdf`)
+    return
+  }
+
+  const canvas = await capture(element)
   // 按可用宽高比换算出每页能容纳多少源像素，再逐页裁切
   const pagePixelHeight = Math.max(1, Math.floor((canvas.width * usableHeight) / usableWidth))
 

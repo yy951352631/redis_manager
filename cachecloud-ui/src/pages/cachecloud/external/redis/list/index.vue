@@ -154,10 +154,11 @@ onMounted(fetchList)
           <el-input v-model="searchIp" placeholder="IP 模糊 / ip:port" clearable style="width: 200px" />
         </el-form-item>
         <el-form-item>
-          <el-select v-model="searchStatus" style="width: 130px">
+          <el-select v-model="searchStatus" style="width: 130px" @change="handleSearch">
             <el-option label="全部状态" :value="-1" />
             <el-option label="运行中" :value="1" />
             <el-option label="异常" :value="0" />
+            <el-option label="已下线" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>

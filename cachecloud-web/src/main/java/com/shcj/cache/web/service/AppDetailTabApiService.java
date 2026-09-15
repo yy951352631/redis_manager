@@ -102,6 +102,10 @@ public class AppDetailTabApiService {
         return getTopology(appId, false);
     }
 
+    public void evictTopologyCache(long appId) {
+        topologyCache.remove(resolveRouteAppId(appId));
+    }
+
     public AppTopologyDto getTopology(long appId, boolean liveProbe) {
         appId = resolveRouteAppId(appId);
         if (!liveProbe) {
@@ -903,6 +907,11 @@ public class AppDetailTabApiService {
         }
         AppDesc appDesc = appService.getByAppId(appId);
         List<InstanceInfo> instanceList = appService.getAppInstanceInfo(appId);
+        if (instanceList != null) {
+            instanceList = instanceList.stream()
+                    .filter(instance -> !instance.isOffline())
+                    .collect(java.util.stream.Collectors.toList());
+        }
         resolveTopologyMasterLinks(instanceList);
         assignTopologyGroups(instanceList);
 

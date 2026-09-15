@@ -368,7 +368,10 @@ public class KeyAnalysisApiService {
         if (instances == null) {
             return new ArrayList<>();
         }
-        return instances.stream().filter(InstanceInfo::isRedisData).collect(Collectors.toList());
+        return instances.stream()
+                .filter(instance -> !instance.isOffline())
+                .filter(InstanceInfo::isRedisData)
+                .collect(Collectors.toList());
     }
 
     private void syncKeyAnalysisAuditList(List<AppAudit> appAuditList) {

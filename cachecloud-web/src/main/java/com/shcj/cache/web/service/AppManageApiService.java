@@ -497,7 +497,7 @@ public class AppManageApiService {
             if (externalNodes != null) {
                 for (ExternalNodeVO node : externalNodes) {
                     if (node == null || "sentinel".equalsIgnoreCase(node.getNodeTypeDesc())
-                            || node.getStatus() == InstanceStatusEnum.GOOD_STATUS.getStatus()) {
+                            || node.getStatus() != InstanceStatusEnum.ERROR_STATUS.getStatus()) {
                         continue;
                     }
                     byApp.computeIfAbsent(node.getAppId(), key -> new ArrayList<>())

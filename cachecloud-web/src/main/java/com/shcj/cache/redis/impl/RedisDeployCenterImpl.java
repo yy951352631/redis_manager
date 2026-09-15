@@ -1860,6 +1860,11 @@ public class RedisDeployCenterImpl implements RedisDeployCenter {
                 throw new BizException("密码校验失败", e);
             }
         }
+        // 空密码节点在 getJedis 阶段已通过 PING 验证；继续执行 AUTH null 会把
+        // Redis 的“未配置密码”响应误判为密码无效。
+        if (StringUtils.isBlank(password)) {
+            return true;
+        }
         return checkAuthNodes(nodeList, password);
     }
 

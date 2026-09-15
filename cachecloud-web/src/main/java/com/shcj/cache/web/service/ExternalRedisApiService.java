@@ -1,6 +1,7 @@
 package com.shcj.cache.web.service;
 
 import com.shcj.cache.constant.ImportAppResult;
+import com.shcj.cache.constant.InstanceStatusEnum;
 import com.shcj.cache.entity.AppUser;
 import com.shcj.cache.entity.SystemResource;
 import com.shcj.cache.stats.app.ExternalRedisCenter;
@@ -39,6 +40,9 @@ public class ExternalRedisApiService {
     @Resource
     private UserService userService;
 
+    @Resource
+    private AppDetailTabApiService appDetailTabApiService;
+
     public ExternalNodeListPageDto listNodes(String ip, Integer status, boolean includeSentinel, int pageNo, int pageSize) {
         List<ExternalNodeVO> all = externalRedisCenter.listExternalNodes(StringUtils.trimToEmpty(ip));
         if (all == null) {
@@ -51,7 +55,10 @@ public class ExternalRedisApiService {
                 .collect(java.util.stream.Collectors.toList());
         if (status != null && status >= 0) {
             final int wantedStatus = status;
-            all = all.stream().filter(node -> node.getStatus() == wantedStatus).collect(java.util.stream.Collectors.toList());
+            all = all.stream().filter(node -> wantedStatus == InstanceStatusEnum.OFFLINE_STATUS.getStatus()
+                    ? node.getStatus() == InstanceStatusEnum.OFFLINE_STATUS.getStatus()
+                            || node.getStatus() == InstanceStatusEnum.FORGET_STATUS.getStatus()
+                    : node.getStatus() == wantedStatus).collect(java.util.stream.Collectors.toList());
         }
         int safePageNo = Math.max(pageNo, 1);
         int safePageSize = pageSize > 0 ? Math.min(pageSize, 500) : 20;
@@ -160,7 +167,10 @@ public class ExternalRedisApiService {
     public String removeInstance(long appId, int instanceId) {
         appId = resolveRouteAppId(appId);
         ImportAppResult result = externalRedisCenter.removeInstance(appId, instanceId);
-        if (result.getStatus() == 1) return result.getMessage();
+        if (result.getStatus() == 1) {
+            appDetailTabApiService.evictTopologyCache(appId);
+            return result.getMessage();
+        }
         throw new IllegalArgumentException(result.getMessage());
     }
 

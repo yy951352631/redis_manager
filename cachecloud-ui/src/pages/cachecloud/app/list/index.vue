@@ -265,7 +265,7 @@ onMounted(fetchList)
           <el-input v-model="query.appParam" placeholder="集群编码 / 名称" clearable style="width: 160px" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="query.appStatus" style="width: 120px">
+          <el-select v-model="query.appStatus" style="width: 120px" @change="handleSearch">
             <el-option label="全部" :value="-1" />
             <el-option label="运行中" :value="2" />
             <el-option label="已下线" :value="3" />

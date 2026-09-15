@@ -5,7 +5,6 @@ import {
   addExternalRedisInstancesApi,
   addSlaveApi,
   clusterSlaveFailoverApi,
-  forgetInstanceOpsApi,
   formatRedisConfigOptionLabel,
   getAppOpsInstancesApi,
   getAppTopologyApi,
@@ -15,7 +14,6 @@ import {
   scrollRestartApi,
   sentinelFailoverApi,
   shutdownInstanceOpsApi,
-  startInstanceOpsApi,
   updateInstanceConfigApi
 } from "@/api/cachecloud"
 import { useHostCapability } from "@/common/composables/useHostCapability"
@@ -303,7 +301,7 @@ async function handleAddSlave() {
 }
 
 /**
- * 删节点：只把节点从平台移除，不向 Redis 下发任何命令。
+ * 删除节点：只把节点从平台移除，不向 Redis 下发任何命令。
  *
  * 三种集群类型走同一个接口。此前 cluster 类型走的是 CLUSTER FORGET，
  * 会真的把节点踢出 Redis 集群——那是运维动作，不该由「从平台移除」触发。
@@ -337,36 +335,8 @@ async function handleSentinelFailover() {
   await runOpsAction("Sentinel Failover", () => sentinelFailoverApi(props.appId))
 }
 
-async function handleStartInstance(row: AppTopologyInstance) {
-  const label = row.external ? "同步状态" : "启动节点"
-  const msg = row.external
-    ? "纳管节点无法在平台远程启动进程，将使用 redis-cli 探活并同步状态。继续?"
-    : `确认${label}？`
-  try {
-    await ElMessageBox.confirm(msg, "操作确认", { type: "warning" })
-    opsLoading.value = true
-    const { data } = await startInstanceOpsApi(props.appId, row.id)
-    if (!data?.success) {
-      ElMessage.error(data?.message || "操作失败")
-      return
-    }
-    ElMessage.success(data?.message || "操作成功")
-    await refreshInstances()
-  } catch (e: unknown) {
-    if (e !== "cancel") {
-      ElMessage.error(e instanceof Error ? e.message : "操作失败")
-    }
-  } finally {
-    opsLoading.value = false
-  }
-}
-
 async function handleShutdownInstance(row: AppTopologyInstance) {
   await runInstanceAction("关闭节点", () => shutdownInstanceOpsApi(props.appId, row.id))
-}
-
-async function handleForgetInstance(row: AppTopologyInstance) {
-  await runInstanceAction("永久下线", () => forgetInstanceOpsApi(props.appId, row.id))
 }
 
 async function openBatchConfigDialog() {
@@ -644,24 +614,8 @@ defineExpose({ refresh: fetchData })
         <template #default="{ row }">
           <div class="app-ops-ops-cell">
             <template v-if="row.status === 2 || row.status === 0 || row.status === -1">
-              <el-button v-if="row.external || hostOpsEnabled" size="small" type="success" @click="handleStartInstance(row)">
-                {{ row.external ? "同步状态" : "启动节点" }}
-              </el-button>
-              <el-button
-                v-if="hostOpsEnabled && row.status !== 2"
-                size="small"
-                type="warning"
-                @click="handleShutdownInstance(row)"
-              >
-                关闭节点
-              </el-button>
-              <el-button
-                v-if="row.status === 2 && (row.instanceType !== 2 || row.roleDesc !== 'slave')"
-                size="small"
-                type="danger"
-                @click="handleForgetInstance(row)"
-              >
-                永久下线
+              <el-button size="small" type="danger" title="仅从平台移除，不改动真实 Redis 集群" @click="handleDelNode(row)">
+                删除节点
               </el-button>
             </template>
             <template v-else-if="row.status === 1">
@@ -683,7 +637,7 @@ defineExpose({ refresh: fetchData })
                 添加Slave
               </el-button>
               <el-button size="small" type="danger" title="仅从平台移除，不改动真实 Redis 集群" @click="handleDelNode(row)">
-                删节点
+                删除节点
               </el-button>
             </template>
           </div>

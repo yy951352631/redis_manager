@@ -350,9 +350,6 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
                 continue;
             }
             for (InstanceInfo inst : instances) {
-                if (inst.isOffline()) {
-                    continue;
-                }
                 if (!matchesNodeIpFilter(inst.getIp(), inst.getPort(), ipQuery)) {
                     continue;
                 }
@@ -467,13 +464,19 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         vo.setInstanceId(inst.getId() != null ? inst.getId() : 0);
         vo.setIp(inst.getIp());
         vo.setPort(inst.getPort());
-        boolean reachable = probeNodeAlive(inst.getAppId(), inst.getIp(), inst.getPort(),
-                inst.getType() == InstanceInfoEnum.InstanceTypeEnum.REDIS_SENTINEL.getType());
-        // 探活失败即为异常，与集群运行状态口径保持一致
-        vo.setStatus(reachable ? InstanceStatusEnum.GOOD_STATUS.getStatus()
-                : InstanceStatusEnum.ERROR_STATUS.getStatus());
-        vo.setStatusDesc(reachable ? InstanceStatusEnum.GOOD_STATUS.getInfo()
-                : InstanceStatusEnum.ERROR_STATUS.getInfo());
+        if (inst.isOffline()) {
+            // 节点管理页保留软删除记录供筛选；已下线节点不再探活，避免把状态覆盖为“异常”。
+            vo.setStatus(inst.getStatus());
+            vo.setStatusDesc(InstanceStatusEnum.OFFLINE_STATUS.getInfo());
+        } else {
+            boolean reachable = probeNodeAlive(inst.getAppId(), inst.getIp(), inst.getPort(),
+                    inst.getType() == InstanceInfoEnum.InstanceTypeEnum.REDIS_SENTINEL.getType());
+            // 探活失败即为异常，与集群运行状态口径保持一致
+            vo.setStatus(reachable ? InstanceStatusEnum.GOOD_STATUS.getStatus()
+                    : InstanceStatusEnum.ERROR_STATUS.getStatus());
+            vo.setStatusDesc(reachable ? InstanceStatusEnum.GOOD_STATUS.getInfo()
+                    : InstanceStatusEnum.ERROR_STATUS.getInfo());
+        }
         vo.setCmd(inst.getCmd());
         vo.setAppId(app.getAppId() != null ? app.getAppId() : inst.getAppId());
         AppDesc appDesc = vo.getAppId() > 0 ? appService.getByAppId(vo.getAppId()) : null;

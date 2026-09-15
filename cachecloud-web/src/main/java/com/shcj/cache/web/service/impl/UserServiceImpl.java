@@ -7,8 +7,7 @@ import com.shcj.cache.dao.AppUserDao;
 import com.shcj.cache.entity.AppDesc;
 import com.shcj.cache.entity.AppToUser;
 import com.shcj.cache.entity.AppUser;
-import com.shcj.cache.util.ConstUtils;
-import com.shcj.cache.util.MD5Util;
+import com.shcj.cache.util.PasswordHashUtil;
 import com.shcj.cache.web.enums.SuccessEnum;
 import com.shcj.cache.web.service.UserService;
 import org.apache.commons.collections.CollectionUtils;
@@ -131,7 +130,7 @@ public class UserServiceImpl implements UserService {
     public SuccessEnum save(AppUser appUser) {
         try {
             if (appUser != null && StringUtils.isNotBlank(appUser.getPassword())) {
-                appUser.setPassword(MD5Util.toStorePassword(appUser.getPassword()));
+                appUser.setPassword(PasswordHashUtil.encode(appUser.getPassword()));
             }
             appUserDao.save(appUser);
             return SuccessEnum.SUCCESS;
@@ -164,9 +163,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public SuccessEnum resetPwd(Long userId) {
+    public SuccessEnum updatePwd(Long userId, String password) {
         try {
-            appUserDao.updatePwd(userId, MD5Util.toStorePassword(ConstUtils.DEFAULT_USER_PASSWORD));
+            appUserDao.updatePwd(userId, PasswordHashUtil.encode(password));
             return SuccessEnum.SUCCESS;
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -175,9 +174,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public SuccessEnum updatePwd(Long userId, String password) {
+    public SuccessEnum updateEncodedPwd(Long userId, String encodedPassword) {
         try {
-            appUserDao.updatePwd(userId, MD5Util.toStorePassword(password));
+            appUserDao.updatePwd(userId, encodedPassword);
             return SuccessEnum.SUCCESS;
         } catch (Exception e) {
             logger.error(e.getMessage(), e);

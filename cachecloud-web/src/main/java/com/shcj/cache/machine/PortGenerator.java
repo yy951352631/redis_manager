@@ -71,13 +71,6 @@ public class PortGenerator {
         return availablePort;
     }
 
-    @Deprecated
-    public static String getMaxPortStrOld(String ip, int sshPort) throws SSHException {
-        String redisPidCmd = "ps -ef | grep redis | grep -v 'grep' |  awk -F '*:' '{print $2}' " +
-                " | awk -F ' ' '{print $1}' | sort -r | head -1";
-        return SSHUtil.execute(ip, sshPort, redisPidCmd);
-    }
-
     /**
      * 直接解析ps -ef | grep redis | grep -v 'grep'
      *

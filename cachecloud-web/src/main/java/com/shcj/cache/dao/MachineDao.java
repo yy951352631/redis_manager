@@ -158,7 +158,5 @@ public interface MachineDao {
 
     int updateMachineInfoById(MachineInfo machineInfo);
 
-    int updateBrevityScheduleHost(@Param("oldHost") String oldHost, @Param("newHost") String newHost);
-
     void clearMachineSshByIp(@Param("ip") String ip);
 }

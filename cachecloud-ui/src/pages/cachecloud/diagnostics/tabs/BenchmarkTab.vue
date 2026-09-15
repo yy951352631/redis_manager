@@ -357,8 +357,12 @@ onBeforeUnmount(stopPolling)
           <el-col :span="16">
             <el-form-item v-if="isCluster" label="压测范围">
               <el-radio-group v-model="form.targetMode">
-                <el-radio label="cluster">整集群</el-radio>
-                <el-radio label="node">指定节点</el-radio>
+                <el-radio label="cluster">
+                  整集群
+                </el-radio>
+                <el-radio label="node">
+                  指定节点
+                </el-radio>
               </el-radio-group>
               <span class="benchmark-tab__hint">
                 指定节点用 hashtag 定向，key 会集中在该节点的少数 slot 上——测的是单节点上限，不是集群吞吐
@@ -465,8 +469,12 @@ onBeforeUnmount(stopPolling)
           <el-col :span="6">
             <el-form-item label="key 分布">
               <el-radio-group v-model="form.hotspot">
-                <el-radio :label="false">均匀</el-radio>
-                <el-radio :label="true">热点</el-radio>
+                <el-radio :label="false">
+                  均匀
+                </el-radio>
+                <el-radio :label="true">
+                  热点
+                </el-radio>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -510,42 +518,70 @@ onBeforeUnmount(stopPolling)
     <el-card v-if="progress" shadow="never" class="benchmark-tab__live">
       <template #header>
         <span>运行中</span>
-        <el-tag :type="statusTag(progress.status)" size="small" class="benchmark-tab__status">{{ progress.status }}</el-tag>
+        <el-tag :type="statusTag(progress.status)" size="small" class="benchmark-tab__status">
+          {{ progress.status }}
+        </el-tag>
         <span class="benchmark-tab__hint">已运行 {{ progress.elapsedSeconds }}s</span>
       </template>
       <div class="benchmark-tab__kpis">
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">瞬时 QPS</div>
-          <div class="benchmark-tab__kpi-value">{{ progress.currentQps.toLocaleString() }}</div>
+          <div class="benchmark-tab__kpi-label">
+            瞬时 QPS
+          </div>
+          <div class="benchmark-tab__kpi-value">
+            {{ progress.currentQps.toLocaleString() }}
+          </div>
         </div>
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">平均 QPS</div>
-          <div class="benchmark-tab__kpi-value">{{ progress.avgQps.toLocaleString() }}</div>
+          <div class="benchmark-tab__kpi-label">
+            平均 QPS
+          </div>
+          <div class="benchmark-tab__kpi-value">
+            {{ progress.avgQps.toLocaleString() }}
+          </div>
         </div>
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">总请求</div>
-          <div class="benchmark-tab__kpi-value">{{ progress.totalRequests.toLocaleString() }}</div>
+          <div class="benchmark-tab__kpi-label">
+            总请求
+          </div>
+          <div class="benchmark-tab__kpi-value">
+            {{ progress.totalRequests.toLocaleString() }}
+          </div>
         </div>
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">P99</div>
-          <div class="benchmark-tab__kpi-value">{{ progress.p99Ms.toFixed(2) }}<small>ms</small></div>
+          <div class="benchmark-tab__kpi-label">
+            P99
+          </div>
+          <div class="benchmark-tab__kpi-value">
+            {{ progress.p99Ms.toFixed(2) }}<small>ms</small>
+          </div>
         </div>
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">错误</div>
+          <div class="benchmark-tab__kpi-label">
+            错误
+          </div>
           <div class="benchmark-tab__kpi-value" :class="{ 'is-bad': progress.errorCount > 0 }">
             {{ progress.errorCount.toLocaleString() }}
           </div>
         </div>
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">平台 CPU</div>
-          <div class="benchmark-tab__kpi-value">{{ progress.clientCpuPercent.toFixed(1) }}<small>%</small></div>
+          <div class="benchmark-tab__kpi-label">
+            平台 CPU
+          </div>
+          <div class="benchmark-tab__kpi-value">
+            {{ progress.clientCpuPercent.toFixed(1) }}<small>%</small>
+          </div>
         </div>
         <div class="benchmark-tab__kpi">
-          <div class="benchmark-tab__kpi-label">承压节点 CPU</div>
+          <div class="benchmark-tab__kpi-label">
+            承压节点 CPU
+          </div>
           <div class="benchmark-tab__kpi-value" :class="{ 'is-bad': (progress.targetCpuPercent ?? 0) >= 90 }">
             {{ (progress.targetCpuPercent ?? 0).toFixed(1) }}<small>%</small>
           </div>
-          <div class="benchmark-tab__kpi-sub">均值 {{ (progress.avgTargetCpuPercent ?? 0).toFixed(1) }}%</div>
+          <div class="benchmark-tab__kpi-sub">
+            均值 {{ (progress.avgTargetCpuPercent ?? 0).toFixed(1) }}%
+          </div>
         </div>
       </div>
       <div v-if="progress.rampMessage" class="benchmark-tab__ramp-msg">
@@ -554,10 +590,14 @@ onBeforeUnmount(stopPolling)
       <el-table v-if="progress.rampSteps && progress.rampSteps.length" :data="progress.rampSteps" size="small" border class="benchmark-tab__ramp">
         <el-table-column prop="concurrency" label="并发" width="72" align="right" />
         <el-table-column label="QPS" min-width="110" align="right">
-          <template #default="{ row }">{{ row.qps.toLocaleString() }}</template>
+          <template #default="{ row }">
+            {{ row.qps.toLocaleString() }}
+          </template>
         </el-table-column>
         <el-table-column label="P99" width="90" align="right">
-          <template #default="{ row }">{{ row.p99Ms.toFixed(2) }}ms</template>
+          <template #default="{ row }">
+            {{ row.p99Ms.toFixed(2) }}ms
+          </template>
         </el-table-column>
         <el-table-column label="目标节点CPU" width="120" align="right">
           <template #default="{ row }">
@@ -565,7 +605,9 @@ onBeforeUnmount(stopPolling)
           </template>
         </el-table-column>
         <el-table-column label="错误" width="80" align="right">
-          <template #default="{ row }">{{ row.errorCount.toLocaleString() }}</template>
+          <template #default="{ row }">
+            {{ row.errorCount.toLocaleString() }}
+          </template>
         </el-table-column>
       </el-table>
 
@@ -592,7 +634,9 @@ onBeforeUnmount(stopPolling)
         <el-table-column prop="targetDesc" label="目标" min-width="150" show-overflow-tooltip />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)" size="small">{{ row.status }}</el-tag>
+            <el-tag :type="statusTag(row.status)" size="small">
+              {{ row.status }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="参数" min-width="190" show-overflow-tooltip>
@@ -609,16 +653,24 @@ onBeforeUnmount(stopPolling)
           </template>
         </el-table-column>
         <el-table-column label="QPS" width="100" align="right">
-          <template #default="{ row }">{{ row.qps.toLocaleString() }}</template>
+          <template #default="{ row }">
+            {{ row.qps.toLocaleString() }}
+          </template>
         </el-table-column>
         <el-table-column label="P99" width="88" align="right">
-          <template #default="{ row }">{{ row.p99Ms.toFixed(2) }}ms</template>
+          <template #default="{ row }">
+            {{ row.p99Ms.toFixed(2) }}ms
+          </template>
         </el-table-column>
         <el-table-column label="P95" width="88" align="right">
-          <template #default="{ row }">{{ row.p95Ms.toFixed(2) }}ms</template>
+          <template #default="{ row }">
+            {{ row.p95Ms.toFixed(2) }}ms
+          </template>
         </el-table-column>
         <el-table-column label="max" width="90" align="right">
-          <template #default="{ row }">{{ row.maxMs.toFixed(2) }}ms</template>
+          <template #default="{ row }">
+            {{ row.maxMs.toFixed(2) }}ms
+          </template>
         </el-table-column>
         <el-table-column label="错误" width="80" align="right">
           <template #default="{ row }">
@@ -626,7 +678,9 @@ onBeforeUnmount(stopPolling)
           </template>
         </el-table-column>
         <el-table-column label="平台CPU" width="88" align="right">
-          <template #default="{ row }">{{ row.clientCpuPercent.toFixed(1) }}%</template>
+          <template #default="{ row }">
+            {{ row.clientCpuPercent.toFixed(1) }}%
+          </template>
         </el-table-column>
         <el-table-column label="承压节点平均CPU" width="132" align="right">
           <template #default="{ row }">
@@ -637,11 +691,17 @@ onBeforeUnmount(stopPolling)
         </el-table-column>
         <el-table-column label="操作" width="130" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openDetail(row)">详情</el-button>
-            <el-button type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" size="small" @click="openDetail(row)">
+              详情
+            </el-button>
+            <el-button type="danger" plain size="small" @click="handleDelete(row)">
+              删除
+            </el-button>
           </template>
         </el-table-column>
-        <template #empty>暂无压测记录</template>
+        <template #empty>
+          暂无压测记录
+        </template>
       </el-table>
     </el-card>
 
@@ -659,35 +719,69 @@ onBeforeUnmount(stopPolling)
             导出 PDF
           </el-button>
         </div>
-        <h4 class="benchmark-tab__detail-title">基本信息</h4>
+        <h4 class="benchmark-tab__detail-title">
+          基本信息
+        </h4>
         <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="集群">{{ detailRow.appName }}</el-descriptions-item>
-          <el-descriptions-item label="压测目标">{{ detailRow.targetDesc }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTag(detailRow.status)" size="small">{{ detailRow.status }}</el-tag>
+          <el-descriptions-item label="集群">
+            {{ detailRow.appName }}
           </el-descriptions-item>
-          <el-descriptions-item label="操作人">{{ detailRow.userName || "-" }}</el-descriptions-item>
-          <el-descriptions-item label="开始">{{ detailRow.startTime || "-" }}</el-descriptions-item>
-          <el-descriptions-item label="结束">{{ detailRow.endTime || "-" }}</el-descriptions-item>
+          <el-descriptions-item label="压测目标">
+            {{ detailRow.targetDesc }}
+          </el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="statusTag(detailRow.status)" size="small">
+              {{ detailRow.status }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="操作人">
+            {{ detailRow.userName || "-" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="开始">
+            {{ detailRow.startTime || "-" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="结束">
+            {{ detailRow.endTime || "-" }}
+          </el-descriptions-item>
         </el-descriptions>
 
-        <h4 class="benchmark-tab__detail-title">配置参数</h4>
+        <h4 class="benchmark-tab__detail-title">
+          配置参数
+        </h4>
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item v-for="item in detailOptions" :key="item.label" :label="item.label">
             {{ item.value }}
           </el-descriptions-item>
         </el-descriptions>
 
-        <h4 class="benchmark-tab__detail-title">结果</h4>
+        <h4 class="benchmark-tab__detail-title">
+          结果
+        </h4>
         <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="总请求">{{ detailRow.totalRequests.toLocaleString() }}</el-descriptions-item>
-          <el-descriptions-item label="QPS">{{ detailRow.qps.toLocaleString() }}</el-descriptions-item>
-          <el-descriptions-item label="平均延迟">{{ detailRow.avgMs.toFixed(3) }} ms</el-descriptions-item>
-          <el-descriptions-item label="P50">{{ detailRow.p50Ms.toFixed(2) }} ms</el-descriptions-item>
-          <el-descriptions-item label="P95">{{ detailRow.p95Ms.toFixed(2) }} ms</el-descriptions-item>
-          <el-descriptions-item label="P99">{{ detailRow.p99Ms.toFixed(2) }} ms</el-descriptions-item>
-          <el-descriptions-item label="最大延迟">{{ detailRow.maxMs.toFixed(2) }} ms</el-descriptions-item>
-          <el-descriptions-item label="平台 CPU">{{ detailRow.clientCpuPercent.toFixed(1) }} %</el-descriptions-item>
+          <el-descriptions-item label="总请求">
+            {{ detailRow.totalRequests.toLocaleString() }}
+          </el-descriptions-item>
+          <el-descriptions-item label="QPS">
+            {{ detailRow.qps.toLocaleString() }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平均延迟">
+            {{ detailRow.avgMs.toFixed(3) }} ms
+          </el-descriptions-item>
+          <el-descriptions-item label="P50">
+            {{ detailRow.p50Ms.toFixed(2) }} ms
+          </el-descriptions-item>
+          <el-descriptions-item label="P95">
+            {{ detailRow.p95Ms.toFixed(2) }} ms
+          </el-descriptions-item>
+          <el-descriptions-item label="P99">
+            {{ detailRow.p99Ms.toFixed(2) }} ms
+          </el-descriptions-item>
+          <el-descriptions-item label="最大延迟">
+            {{ detailRow.maxMs.toFixed(2) }} ms
+          </el-descriptions-item>
+          <el-descriptions-item label="平台 CPU">
+            {{ detailRow.clientCpuPercent.toFixed(1) }} %
+          </el-descriptions-item>
           <el-descriptions-item label="承压节点平均 CPU">
             {{ (detailRow.avgTargetCpuPercent ?? 0).toFixed(1) }} %
           </el-descriptions-item>
@@ -705,17 +799,23 @@ onBeforeUnmount(stopPolling)
         </div>
 
         <template v-if="detailRow.rampSteps && detailRow.rampSteps.length">
-          <h4 class="benchmark-tab__detail-title">快捷压测爬坡明细</h4>
+          <h4 class="benchmark-tab__detail-title">
+            快捷压测爬坡明细
+          </h4>
           <div v-if="detailRow.rampMessage" class="benchmark-tab__ramp-msg">
             {{ detailRow.rampMessage }}
           </div>
           <el-table :data="detailRow.rampSteps" size="small" border>
             <el-table-column prop="concurrency" label="并发" width="70" align="right" />
             <el-table-column label="QPS" min-width="100" align="right">
-              <template #default="{ row }">{{ row.qps.toLocaleString() }}</template>
+              <template #default="{ row }">
+                {{ row.qps.toLocaleString() }}
+              </template>
             </el-table-column>
             <el-table-column label="P99" width="86" align="right">
-              <template #default="{ row }">{{ row.p99Ms.toFixed(2) }}ms</template>
+              <template #default="{ row }">
+                {{ row.p99Ms.toFixed(2) }}ms
+              </template>
             </el-table-column>
             <el-table-column label="节点CPU" width="96" align="right">
               <template #default="{ row }">
@@ -728,20 +828,30 @@ onBeforeUnmount(stopPolling)
           </div>
         </template>
 
-        <h4 class="benchmark-tab__detail-title">逐命令统计</h4>
+        <h4 class="benchmark-tab__detail-title">
+          逐命令统计
+        </h4>
         <el-table :data="detailCommandRows" size="small" border max-height="260">
           <el-table-column prop="name" label="命令" min-width="120" />
           <el-table-column label="次数" min-width="120" align="right">
-            <template #default="{ row }">{{ row.count.toLocaleString() }}</template>
+            <template #default="{ row }">
+              {{ row.count.toLocaleString() }}
+            </template>
           </el-table-column>
           <el-table-column label="平均耗时" min-width="120" align="right">
-            <template #default="{ row }">{{ row.avgMs.toFixed(3) }} ms</template>
+            <template #default="{ row }">
+              {{ row.avgMs.toFixed(3) }} ms
+            </template>
           </el-table-column>
-          <template #empty>无命令明细</template>
+          <template #empty>
+            无命令明细
+          </template>
         </el-table>
 
         <template v-if="detailRow.errorStats && Object.keys(detailRow.errorStats).length">
-          <h4 class="benchmark-tab__detail-title">错误分类</h4>
+          <h4 class="benchmark-tab__detail-title">
+            错误分类
+          </h4>
           <el-descriptions :column="1" border size="small">
             <el-descriptions-item v-for="(count, type) in detailRow.errorStats" :key="type" :label="String(type)">
               {{ count }}
@@ -750,7 +860,9 @@ onBeforeUnmount(stopPolling)
         </template>
 
         <template v-if="detailRow.errorMsg">
-          <h4 class="benchmark-tab__detail-title">失败原因</h4>
+          <h4 class="benchmark-tab__detail-title">
+            失败原因
+          </h4>
           <pre class="benchmark-tab__error">{{ detailRow.errorMsg }}</pre>
         </template>
       </template>
@@ -759,128 +871,137 @@ onBeforeUnmount(stopPolling)
     <div v-if="exportingPdf && detailRow" class="benchmark-pdf-stage">
       <article ref="benchmarkReportRef" class="benchmark-pdf-report">
         <div class="benchmark-pdf-report__page benchmark-pdf-report__page--cover">
-        <header class="benchmark-pdf-report__header">
-          <div>
-            <h1>Redis 压测报告</h1>
-            <p>任务 #{{ detailRow.id }} · 生成时间 {{ new Date().toLocaleString() }}</p>
-          </div>
-          <span class="benchmark-pdf-report__status" :class="`is-${detailRow.status.toLowerCase()}`">
-            {{ reportStatus(detailRow.status) }}
-          </span>
-        </header>
+          <header class="benchmark-pdf-report__header">
+            <div>
+              <h1>Redis 压测报告</h1>
+              <p>任务 #{{ detailRow.id }} · 生成时间 {{ new Date().toLocaleString() }}</p>
+            </div>
+            <span class="benchmark-pdf-report__status" :class="`is-${detailRow.status.toLowerCase()}`">
+              {{ reportStatus(detailRow.status) }}
+            </span>
+          </header>
 
-        <section class="benchmark-pdf-report__summary">
-          <div><span>QPS</span><strong>{{ detailRow.qps.toLocaleString() }}</strong></div>
-          <div><span>P99 延迟</span><strong>{{ detailRow.p99Ms.toFixed(2) }} ms</strong></div>
-          <div><span>总请求数</span><strong>{{ detailRow.totalRequests.toLocaleString() }}</strong></div>
-          <div :class="{ 'is-alert': detailRow.errorCount > 0 }">
-            <span>错误 / 错误率</span>
-            <strong>{{ detailRow.errorCount.toLocaleString() }} / {{ reportErrorRate(detailRow).toFixed(3) }}%</strong>
-          </div>
-          <div><span>承压节点平均 CPU</span><strong>{{ (detailRow.avgTargetCpuPercent ?? 0).toFixed(1) }}%</strong></div>
-          <div :class="{ 'is-alert': (detailRow.peakTargetCpuPercent ?? 0) >= 90 }">
-            <span>承压节点峰值 CPU</span>
-            <strong>{{ (detailRow.peakTargetCpuPercent ?? 0).toFixed(1) }}%</strong>
-          </div>
-        </section>
+          <section class="benchmark-pdf-report__summary">
+            <div><span>QPS</span><strong>{{ detailRow.qps.toLocaleString() }}</strong></div>
+            <div><span>P99 延迟</span><strong>{{ detailRow.p99Ms.toFixed(2) }} ms</strong></div>
+            <div><span>总请求数</span><strong>{{ detailRow.totalRequests.toLocaleString() }}</strong></div>
+            <div :class="{ 'is-alert': detailRow.errorCount > 0 }">
+              <span>错误 / 错误率</span>
+              <strong>{{ detailRow.errorCount.toLocaleString() }} / {{ reportErrorRate(detailRow).toFixed(3) }}%</strong>
+            </div>
+            <div><span>承压节点平均 CPU</span><strong>{{ (detailRow.avgTargetCpuPercent ?? 0).toFixed(1) }}%</strong></div>
+            <div :class="{ 'is-alert': (detailRow.peakTargetCpuPercent ?? 0) >= 90 }">
+              <span>承压节点峰值 CPU</span>
+              <strong>{{ (detailRow.peakTargetCpuPercent ?? 0).toFixed(1) }}%</strong>
+            </div>
+          </section>
 
-        <section>
-          <h2>任务信息</h2>
-          <table>
-            <tbody>
-              <tr><th>集群</th><td>{{ detailRow.appName }}</td><th>压测目标</th><td>{{ detailRow.targetDesc }}</td></tr>
-              <tr><th>操作人</th><td>{{ detailRow.userName || "-" }}</td><th>模式</th><td>{{ detailRow.options?.quickMode ? "快捷压测" : "自定义压测" }}</td></tr>
-              <tr><th>开始时间</th><td>{{ detailRow.startTime || "-" }}</td><th>结束时间</th><td>{{ detailRow.endTime || "-" }}</td></tr>
-            </tbody>
-          </table>
-        </section>
+          <section>
+            <h2>任务信息</h2>
+            <table>
+              <tbody>
+                <tr><th>集群</th><td>{{ detailRow.appName }}</td><th>压测目标</th><td>{{ detailRow.targetDesc }}</td></tr>
+                <tr><th>操作人</th><td>{{ detailRow.userName || "-" }}</td><th>模式</th><td>{{ detailRow.options?.quickMode ? "快捷压测" : "自定义压测" }}</td></tr>
+                <tr><th>开始时间</th><td>{{ detailRow.startTime || "-" }}</td><th>结束时间</th><td>{{ detailRow.endTime || "-" }}</td></tr>
+              </tbody>
+            </table>
+          </section>
 
-        <section>
-          <h2>配置参数</h2>
-          <table>
-            <tbody>
-              <tr v-for="item in detailOptions" :key="`pdf-${item.label}`">
-                <th>{{ item.label }}</th><td colspan="3">{{ item.value }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+          <section>
+            <h2>配置参数</h2>
+            <table>
+              <tbody>
+                <tr v-for="item in detailOptions" :key="`pdf-${item.label}`">
+                  <th>{{ item.label }}</th><td colspan="3">
+                    {{ item.value }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
 
-        <section>
-          <h2>性能结果</h2>
-          <table>
-            <thead><tr><th>平均延迟</th><th>P50</th><th>P95</th><th>P99</th><th>最大延迟</th><th>平台 CPU</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>{{ detailRow.avgMs.toFixed(3) }} ms</td>
-                <td>{{ detailRow.p50Ms.toFixed(2) }} ms</td>
-                <td>{{ detailRow.p95Ms.toFixed(2) }} ms</td>
-                <td>{{ detailRow.p99Ms.toFixed(2) }} ms</td>
-                <td>{{ detailRow.maxMs.toFixed(2) }} ms</td>
-                <td>{{ detailRow.clientCpuPercent.toFixed(1) }}%</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="benchmark-pdf-report__note">
-            分位数为延迟直方图的上界估计；Pipeline 大于 1 时单条延迟为整批耗时的平摊值。节点 CPU 按单核计。
-          </p>
-        </section>
+          <section>
+            <h2>性能结果</h2>
+            <table>
+              <thead><tr><th>平均延迟</th><th>P50</th><th>P95</th><th>P99</th><th>最大延迟</th><th>平台 CPU</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>{{ detailRow.avgMs.toFixed(3) }} ms</td>
+                  <td>{{ detailRow.p50Ms.toFixed(2) }} ms</td>
+                  <td>{{ detailRow.p95Ms.toFixed(2) }} ms</td>
+                  <td>{{ detailRow.p99Ms.toFixed(2) }} ms</td>
+                  <td>{{ detailRow.maxMs.toFixed(2) }} ms</td>
+                  <td>{{ detailRow.clientCpuPercent.toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="benchmark-pdf-report__note">
+              分位数为延迟直方图的上界估计；Pipeline 大于 1 时单条延迟为整批耗时的平摊值。节点 CPU 按单核计。
+            </p>
+          </section>
         </div>
 
         <div class="benchmark-pdf-report__page benchmark-pdf-report__page--detail">
+          <section v-if="detailRow.rampSteps?.length">
+            <h2>快捷压测爬坡明细</h2>
+            <p v-if="detailRow.rampMessage" class="benchmark-pdf-report__conclusion">
+              {{ detailRow.rampMessage }}
+            </p>
+            <table>
+              <thead><tr><th>并发</th><th>请求数</th><th>QPS</th><th>P95</th><th>P99</th><th>节点 CPU</th><th>错误</th></tr></thead>
+              <tbody>
+                <tr v-for="step in detailRow.rampSteps" :key="`pdf-step-${step.concurrency}`">
+                  <td>{{ step.concurrency }}</td>
+                  <td>{{ step.totalRequests.toLocaleString() }}</td>
+                  <td>{{ step.qps.toLocaleString() }}</td>
+                  <td>{{ step.p95Ms.toFixed(2) }} ms</td>
+                  <td>{{ step.p99Ms.toFixed(2) }} ms</td>
+                  <td>{{ step.targetCpuPercent.toFixed(1) }}%</td>
+                  <td>{{ step.errorCount.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
 
-        <section v-if="detailRow.rampSteps?.length">
-          <h2>快捷压测爬坡明细</h2>
-          <p v-if="detailRow.rampMessage" class="benchmark-pdf-report__conclusion">{{ detailRow.rampMessage }}</p>
-          <table>
-            <thead><tr><th>并发</th><th>请求数</th><th>QPS</th><th>P95</th><th>P99</th><th>节点 CPU</th><th>错误</th></tr></thead>
-            <tbody>
-              <tr v-for="step in detailRow.rampSteps" :key="`pdf-step-${step.concurrency}`">
-                <td>{{ step.concurrency }}</td>
-                <td>{{ step.totalRequests.toLocaleString() }}</td>
-                <td>{{ step.qps.toLocaleString() }}</td>
-                <td>{{ step.p95Ms.toFixed(2) }} ms</td>
-                <td>{{ step.p99Ms.toFixed(2) }} ms</td>
-                <td>{{ step.targetCpuPercent.toFixed(1) }}%</td>
-                <td>{{ step.errorCount.toLocaleString() }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+          <section>
+            <h2>逐命令统计</h2>
+            <table>
+              <thead><tr><th>命令</th><th>执行次数</th><th>平均耗时</th></tr></thead>
+              <tbody v-if="detailCommandRows.length">
+                <tr v-for="command in detailCommandRows" :key="`pdf-command-${command.name}`">
+                  <td>{{ command.name }}</td>
+                  <td>{{ command.count.toLocaleString() }}</td>
+                  <td>{{ command.avgMs.toFixed(3) }} ms</td>
+                </tr>
+              </tbody>
+              <tbody v-else>
+                <tr>
+                  <td colspan="3">
+                    无命令明细
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
 
-        <section>
-          <h2>逐命令统计</h2>
-          <table>
-            <thead><tr><th>命令</th><th>执行次数</th><th>平均耗时</th></tr></thead>
-            <tbody v-if="detailCommandRows.length">
-              <tr v-for="command in detailCommandRows" :key="`pdf-command-${command.name}`">
-                <td>{{ command.name }}</td>
-                <td>{{ command.count.toLocaleString() }}</td>
-                <td>{{ command.avgMs.toFixed(3) }} ms</td>
-              </tr>
-            </tbody>
-            <tbody v-else><tr><td colspan="3">无命令明细</td></tr></tbody>
-          </table>
-        </section>
+          <section v-if="detailRow.errorStats && Object.keys(detailRow.errorStats).length">
+            <h2>错误分类</h2>
+            <table>
+              <thead><tr><th>错误类型</th><th>次数</th></tr></thead>
+              <tbody>
+                <tr v-for="(count, type) in detailRow.errorStats" :key="`pdf-error-${type}`">
+                  <td>{{ type }}</td><td>{{ count.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
 
-        <section v-if="detailRow.errorStats && Object.keys(detailRow.errorStats).length">
-          <h2>错误分类</h2>
-          <table>
-            <thead><tr><th>错误类型</th><th>次数</th></tr></thead>
-            <tbody>
-              <tr v-for="(count, type) in detailRow.errorStats" :key="`pdf-error-${type}`">
-                <td>{{ type }}</td><td>{{ count.toLocaleString() }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+          <section v-if="detailRow.errorMsg">
+            <h2>失败原因</h2>
+            <pre class="benchmark-pdf-report__error">{{ detailRow.errorMsg }}</pre>
+          </section>
 
-        <section v-if="detailRow.errorMsg">
-          <h2>失败原因</h2>
-          <pre class="benchmark-pdf-report__error">{{ detailRow.errorMsg }}</pre>
-        </section>
-
-        <footer>Redis 管理平台 · 压测结果仅代表本次目标、命令和参数条件</footer>
+          <footer>Redis 管理平台 · 压测结果仅代表本次目标、命令和参数条件</footer>
         </div>
       </article>
     </div>
@@ -1170,9 +1291,18 @@ onBeforeUnmount(stopPolling)
   background: #e8edf3;
   border-radius: 4px;
 
-  &.is-finished { color: #166534; background: #dcfce7; }
-  &.is-failed { color: #991b1b; background: #fee2e2; }
-  &.is-stopped { color: #854d0e; background: #fef3c7; }
+  &.is-finished {
+    color: #166534;
+    background: #dcfce7;
+  }
+  &.is-failed {
+    color: #991b1b;
+    background: #fee2e2;
+  }
+  &.is-stopped {
+    color: #854d0e;
+    background: #fef3c7;
+  }
 }
 
 .benchmark-pdf-report__summary {
@@ -1202,7 +1332,9 @@ onBeforeUnmount(stopPolling)
   .is-alert {
     border-left-color: #c2413a;
 
-    strong { color: #a92323; }
+    strong {
+      color: #a92323;
+    }
   }
 }
 

@@ -1,5 +1,4 @@
 import type { AxiosRequestConfig } from "axios"
-import { getToken } from "@@/utils/local-storage"
 import axios from "axios"
 
 /** 旧版 JSP/AJAX 接口统一响应（status === 1 表示成功） */
@@ -11,15 +10,11 @@ export interface AjaxResult<T = unknown> {
 
 /** 请求 /manage/* 等旧接口（不走 /api/v1 的 code 约定） */
 export async function manageRequest<T>(config: AxiosRequestConfig): Promise<T> {
-  const token = getToken()
   let res
   try {
     res = await axios<AjaxResult<T>>({
       withCredentials: true,
       timeout: 60000,
-      headers: {
-        Authorization: token ? `Bearer ${token}` : undefined
-      },
       ...config
     })
   } catch (e) {

@@ -59,6 +59,7 @@ declare module "jspdf" {
       w: number,
       h: number
     ) => void
+
     addPage: () => void
     save: (filename: string) => void
   }

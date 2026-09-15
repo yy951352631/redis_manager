@@ -1,15 +1,15 @@
 <script lang="ts" setup>
+import type { OnlineHealthCheckItem, OnlineHealthCheckResult, OnlineHealthTarget } from "@/api/cachecloud/type"
 import {
-  Connection,
-  EditPen,
   CircleCheck,
   CircleClose,
+  Connection,
+  EditPen,
+  FolderOpened,
   Warning,
-  WarningFilled,
-  FolderOpened
+  WarningFilled
 } from "@element-plus/icons-vue"
 import { runOnlineVerifyApi } from "@/api/cachecloud"
-import type { OnlineHealthCheckItem, OnlineHealthCheckResult, OnlineHealthTarget } from "@/api/cachecloud/type"
 import "@/common/assets/styles/diagnostics.scss"
 import "@/common/assets/styles/fault-diagnostic.scss"
 
@@ -196,7 +196,7 @@ function buildPdfTargetHtml(target: OnlineHealthTarget): string {
   if (target.connectError) {
     body = `<div class="error-box">${escapeHtml(target.connectError)}</div>`
   } else {
-    body = groupedChecks(target).map(group => {
+    body = groupedChecks(target).map((group) => {
       const rows = group.items.map(item => `<tr class="${item.level === "FAIL" ? "row-fail" : "row-pass"}">
   <td><span class="badge ${item.level === "FAIL" ? "badge-fail" : "badge-pass"}">${item.level}</span></td>
   <td class="name">${escapeHtml(item.name)}</td>
@@ -292,7 +292,7 @@ async function downloadPdf() {
 </style>
 <div class="health-pdf-report">
   <h1 class="report-title">Redis 健康检查报告</h1>
-  <p class="report-meta">生成时间：${escapeHtml(stamp)}　｜　输入：${escapeHtml(servers.value.trim() || "-")}</p>
+  <p class="report-meta">生成时间：${escapeHtml(stamp)} | 输入：${escapeHtml(servers.value.trim() || "-")}</p>
   <div class="overview">
     <div class="overview-item"><span>汇总</span><b>${escapeHtml(overview)}</b></div>
     <div class="overview-item pass"><span>PASS</span><b>${totalPass}</b></div>
@@ -331,7 +331,7 @@ async function downloadPdf() {
       throw new Error("报告内容为空，无法生成 PDF")
     }
 
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    const [{ default: html2canvas }, { jsPDF: JsPDF }] = await Promise.all([
       import("html2canvas"),
       import("jspdf")
     ])
@@ -353,7 +353,7 @@ async function downloadPdf() {
       throw new Error("截图失败，请稍后重试")
     }
 
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+    const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
     const margin = 8
@@ -422,8 +422,12 @@ onMounted(() => {
         <el-button type="primary" :loading="running" @click="runHealthCheck">
           健康检查
         </el-button>
-        <el-button @click="clearResult">清除信息</el-button>
-        <el-button type="primary" plain :disabled="!resultText" @click="downloadPdf">下载PDF</el-button>
+        <el-button @click="clearResult">
+          清除信息
+        </el-button>
+        <el-button type="primary" plain :disabled="!resultText" @click="downloadPdf">
+          下载PDF
+        </el-button>
       </div>
     </div>
 
@@ -433,12 +437,18 @@ onMounted(() => {
         验证结果
       </h4>
 
-      <div v-if="running" class="health-check-empty">检查中...</div>
+      <div v-if="running" class="health-check-empty">
+        检查中...
+      </div>
       <div v-else-if="!healthResult" class="health-check-empty">
-        <template v-if="showInput">暂无结果，请先执行健康检查</template>
+        <template v-if="showInput">
+          暂无结果，请先执行健康检查
+        </template>
         <template v-else>
           <span>暂无结果</span>
-          <el-button type="primary" size="small" :loading="running" @click="runHealthCheck">开始检查</el-button>
+          <el-button type="primary" size="small" :loading="running" @click="runHealthCheck">
+            开始检查
+          </el-button>
         </template>
       </div>
       <div v-else-if="!healthResult.targets?.length" class="health-check-empty health-check-empty--error">
@@ -486,7 +496,9 @@ onMounted(() => {
                     <span>{{ errorCount(target) }} 项异常</span>
                   </span>
                 </el-tag>
-                <el-tag type="success" effect="plain">{{ infoCount(target) }} 项正常</el-tag>
+                <el-tag type="success" effect="plain">
+                  {{ infoCount(target) }} 项正常
+                </el-tag>
               </template>
               <el-button
                 v-if="idx === 0 && !showInput"
@@ -554,8 +566,12 @@ onMounted(() => {
                         </span>
                         <strong class="app-fault-diagnostic-check__name">{{ check.name }}</strong>
                       </div>
-                      <div class="app-fault-diagnostic-check__summary">{{ check.summary }}</div>
-                      <div v-if="check.detail" class="app-fault-diagnostic-check__detail">{{ check.detail }}</div>
+                      <div class="app-fault-diagnostic-check__summary">
+                        {{ check.summary }}
+                      </div>
+                      <div v-if="check.detail" class="app-fault-diagnostic-check__detail">
+                        {{ check.detail }}
+                      </div>
                       <button
                         type="button"
                         class="app-fault-diagnostic-check__raw-toggle"

@@ -1,18 +1,18 @@
 <script lang="ts" setup>
 import type { AppDetail, AppStatOverview, ChartPoint } from "@/api/cachecloud"
+import type { MetricChartSlot } from "@/pages/cachecloud/components/metric-chart-slots"
+import { useAutoQuery } from "@@/composables/useAutoQuery"
+import { RefreshLeft, Search } from "@element-plus/icons-vue"
 import {
   getAppOpsStatChartsApi,
   getAppStatChartsBatchApi,
   getAppStatClimaxApi,
   getAppStatOverviewApi
 } from "@/api/cachecloud"
-import { RefreshLeft, Search } from "@element-plus/icons-vue"
 import { formatRedisVersion } from "@/common/utils/redis-version"
-import { useAutoQuery } from "@@/composables/useAutoQuery"
+import { METRIC_CHART_SLOTS } from "@/pages/cachecloud/components/metric-chart-slots"
 import MetricChartGrid from "@/pages/cachecloud/components/MetricChartGrid.vue"
 import MetricPiePanel from "@/pages/cachecloud/components/MetricPiePanel.vue"
-import type { MetricChartSlot } from "@/pages/cachecloud/components/metric-chart-slots"
-import { METRIC_CHART_SLOTS } from "@/pages/cachecloud/components/metric-chart-slots"
 import "@/common/assets/styles/app-stat.scss"
 
 const props = defineProps<{
@@ -189,9 +189,13 @@ function mergeBatch(target: Record<string, ChartPoint[]>, incoming: Record<strin
 
 function deferTask(task: () => void | Promise<void>) {
   if (typeof requestIdleCallback !== "undefined") {
-    requestIdleCallback(() => { void task() }, { timeout: 1200 })
+    requestIdleCallback(() => {
+      void task()
+    }, { timeout: 1200 })
   } else {
-    setTimeout(() => { void task() }, 0)
+    setTimeout(() => {
+      void task()
+    }, 0)
   }
 }
 
@@ -240,7 +244,7 @@ function getSeriesData(
   }
 
   if (slot.cpuPercent) {
-    seriesList.forEach(series => {
+    seriesList.forEach((series) => {
       series.data = series.data.map(([x, y]) => [x, Number(y.toFixed(2))])
     })
   }
@@ -387,7 +391,9 @@ onBeforeUnmount(() => {
         end-placeholder="结束时间"
         class="filter-bar__range"
       />
-      <el-button type="primary" :icon="Search" @click="fetchData">查询</el-button>
+      <el-button type="primary" :icon="Search" @click="fetchData">
+        查询
+      </el-button>
       <el-button :icon="RefreshLeft" title="把图表顺序恢复为默认排列" @click="handleResetOrder">
         恢复默认顺序
       </el-button>
@@ -400,7 +406,9 @@ onBeforeUnmount(() => {
     <template v-if="overview">
       <div class="panels-row">
         <div class="panel-col">
-          <h4 class="app-stat-section-title">全局信息</h4>
+          <h4 class="app-stat-section-title">
+            全局信息
+          </h4>
           <table class="app-stat-info-table">
             <tbody>
               <tr>
@@ -447,28 +455,38 @@ onBeforeUnmount(() => {
             </tbody>
           </table>
 
-          <h4 class="app-stat-section-title">各命令峰值信息</h4>
+          <h4 class="app-stat-section-title">
+            各命令峰值信息
+          </h4>
           <table v-loading="climaxLoading" class="app-stat-info-table">
             <tbody>
               <tr>
                 <td>命令</td>
                 <td>峰值QPM</td>
-                <td colspan="2">峰值产生时间</td>
+                <td colspan="2">
+                  峰值产生时间
+                </td>
               </tr>
               <tr v-for="row in climaxList" :key="row.commandName">
                 <td>{{ row.commandName }}</td>
                 <td>{{ formatNumber(row.commandCount) }}</td>
-                <td colspan="2">{{ row.createTime || "—" }}</td>
+                <td colspan="2">
+                  {{ row.createTime || "—" }}
+                </td>
               </tr>
               <tr v-if="!climaxList.length">
-                <td colspan="4" class="empty-cell">暂无数据</td>
+                <td colspan="4" class="empty-cell">
+                  暂无数据
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div class="panel-col">
-          <h4 class="app-stat-section-title">命令统计</h4>
+          <h4 class="app-stat-section-title">
+            命令统计
+          </h4>
           <MetricPiePanel ref="pieRef" :points="piePoints" />
         </div>
       </div>

@@ -7,7 +7,7 @@ interface Props {
 
 const { collapse = true } = defineProps<Props>()
 
-const { isLeft, isTop } = useLayoutMode()
+const { isTop } = useLayoutMode()
 </script>
 
 <template>

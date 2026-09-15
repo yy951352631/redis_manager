@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { MigrateInit } from "@/api/cachecloud"
-import { checkMigrateApi, getMigrateAppInstancesApi, getMigrateInitApi, startMigrateApi } from "@/api/cachecloud"
 import { ArrowLeft } from "@element-plus/icons-vue"
+import { checkMigrateApi, getMigrateAppInstancesApi, getMigrateInitApi, startMigrateApi } from "@/api/cachecloud"
 import "@/common/assets/styles/migrate.scss"
 
 const router = useRouter()
@@ -98,8 +98,9 @@ async function handleCheck() {
       const message = data?.message || "检查通过"
       if (message.includes("SCAN + UNLINK")) ElMessage.warning({ message, duration: 8000 })
       else ElMessage.success(message)
+    } else {
+      ElMessage.error(data?.message || "检查失败")
     }
-    else ElMessage.error(data?.message || "检查失败")
   } catch (error: unknown) {
     checkPassed.value = false
     ElMessage.error(error instanceof Error ? error.message : "检查失败")
@@ -132,13 +133,19 @@ onMounted(fetchInit)
 <template>
   <div v-loading="loading" class="migrate-form-page">
     <div class="page-header">
-      <el-button :icon="ArrowLeft" link @click="router.push('/migrate')">返回列表</el-button>
-      <h2 class="page-title">添加迁移任务</h2>
+      <el-button :icon="ArrowLeft" link @click="router.push('/migrate')">
+        返回列表
+      </el-button>
+      <h2 class="page-title">
+        添加迁移任务
+      </h2>
     </div>
 
     <el-card shadow="never" class="migrate-form-card">
       <section class="migrate-form-section">
-        <h3 class="migrate-form-section__title">迁移配置</h3>
+        <h3 class="migrate-form-section__title">
+          迁移配置
+        </h3>
         <div class="migrate-form-grid">
           <el-form label-width="120px">
             <el-form-item label="清空目标库">
@@ -162,7 +169,9 @@ onMounted(fetchInit)
       </section>
 
       <section class="migrate-form-section">
-        <h3 class="migrate-form-section__title">源和目标配置</h3>
+        <h3 class="migrate-form-section__title">
+          源和目标配置
+        </h3>
         <div class="migrate-form-grid">
           <el-form label-width="120px">
             <el-form-item label="数据源">
@@ -221,24 +230,42 @@ onMounted(fetchInit)
       </section>
 
       <section class="migrate-form-section">
-        <h3 class="migrate-form-section__title">Key 过滤（可选）</h3>
+        <h3 class="migrate-form-section__title">
+          Key 过滤（可选）
+        </h3>
         <div class="migrate-form-grid">
           <el-form label-width="120px">
-            <el-form-item label="允许前缀"><el-input v-model="form.allowKeyPrefix" type="textarea" :rows="3" placeholder="每行一个前缀" @input="resetCheckState" /></el-form-item>
-            <el-form-item label="允许后缀"><el-input v-model="form.allowKeySuffix" type="textarea" :rows="3" placeholder="每行一个后缀" @input="resetCheckState" /></el-form-item>
-            <el-form-item label="允许正则"><el-input v-model="form.allowKeyRegex" type="textarea" :rows="3" placeholder="每行一个正则表达式" @input="resetCheckState" /></el-form-item>
+            <el-form-item label="允许前缀">
+              <el-input v-model="form.allowKeyPrefix" type="textarea" :rows="3" placeholder="每行一个前缀" @input="resetCheckState" />
+            </el-form-item>
+            <el-form-item label="允许后缀">
+              <el-input v-model="form.allowKeySuffix" type="textarea" :rows="3" placeholder="每行一个后缀" @input="resetCheckState" />
+            </el-form-item>
+            <el-form-item label="允许正则">
+              <el-input v-model="form.allowKeyRegex" type="textarea" :rows="3" placeholder="每行一个正则表达式" @input="resetCheckState" />
+            </el-form-item>
           </el-form>
           <el-form label-width="120px">
-            <el-form-item label="排除前缀"><el-input v-model="form.blockKeyPrefix" type="textarea" :rows="3" placeholder="每行一个前缀" @input="resetCheckState" /></el-form-item>
-            <el-form-item label="排除后缀"><el-input v-model="form.blockKeySuffix" type="textarea" :rows="3" placeholder="每行一个后缀" @input="resetCheckState" /></el-form-item>
-            <el-form-item label="排除正则"><el-input v-model="form.blockKeyRegex" type="textarea" :rows="3" placeholder="每行一个正则表达式" @input="resetCheckState" /></el-form-item>
+            <el-form-item label="排除前缀">
+              <el-input v-model="form.blockKeyPrefix" type="textarea" :rows="3" placeholder="每行一个前缀" @input="resetCheckState" />
+            </el-form-item>
+            <el-form-item label="排除后缀">
+              <el-input v-model="form.blockKeySuffix" type="textarea" :rows="3" placeholder="每行一个后缀" @input="resetCheckState" />
+            </el-form-item>
+            <el-form-item label="排除正则">
+              <el-input v-model="form.blockKeyRegex" type="textarea" :rows="3" placeholder="每行一个正则表达式" @input="resetCheckState" />
+            </el-form-item>
           </el-form>
         </div>
       </section>
 
       <div class="migrate-form-actions">
-        <el-button type="primary" plain :loading="submitting" @click="handleCheck">检查配置</el-button>
-        <el-button type="primary" :loading="submitting" :disabled="!checkPassed" @click="handleStart">开始迁移</el-button>
+        <el-button type="primary" plain :loading="submitting" @click="handleCheck">
+          检查配置
+        </el-button>
+        <el-button type="primary" :loading="submitting" :disabled="!checkPassed" @click="handleStart">
+          开始迁移
+        </el-button>
       </div>
     </el-card>
   </div>

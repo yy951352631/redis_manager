@@ -1,4 +1,5 @@
 import type { AppOpsInstancePage, FaultDiagnosticReport } from "@/api/cachecloud"
+import type { HostCapability, HostFeature } from "@/common/utils/host-capability"
 import { getAppOpsInstancesApi } from "@/api/cachecloud"
 import {
   buildHostCapabilityFromDiagnosticReport,
@@ -7,14 +8,14 @@ import {
   defaultHostCapability,
   diagnosticScopeHint,
   filterDiagnosticChecksForDisplay,
+
   hostCapabilityUnavailableHint,
+
   isHostDependentDiagnosticCheck,
-  mergeHostCapability,
-  type HostCapability,
-  type HostFeature
+  mergeHostCapability
 } from "@/common/utils/host-capability"
 
-type HostCapabilitySource = {
+interface HostCapabilitySource {
   opsPage?: AppOpsInstancePage | null
   diagnosticReport?: FaultDiagnosticReport | null
 }

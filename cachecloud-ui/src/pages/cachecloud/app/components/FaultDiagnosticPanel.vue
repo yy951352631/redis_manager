@@ -1,10 +1,6 @@
 <script lang="ts" setup>
 import type { FaultDiagnosticCheck, FaultDiagnosticReport } from "@/api/cachecloud"
-import { aiDiagnoseReportApi, getFaultDiagnosticReportApi } from "@/api/cachecloud/ai"
-import { getFaultDiagnosticHistoryApi, runFaultDiagnosticApi } from "@/api/cachecloud"
 import { useAiAssistant } from "@@/composables/useAiAssistant"
-import { useHostCapability } from "@/common/composables/useHostCapability"
-import { formatClusterNo } from "@/common/utils/cluster-no"
 import { renderMarkdown } from "@@/utils/markdown"
 import {
   Box,
@@ -23,6 +19,10 @@ import {
   PriceTag,
   Warning
 } from "@element-plus/icons-vue"
+import { getFaultDiagnosticHistoryApi, runFaultDiagnosticApi } from "@/api/cachecloud"
+import { aiDiagnoseReportApi, getFaultDiagnosticReportApi } from "@/api/cachecloud/ai"
+import { useHostCapability } from "@/common/composables/useHostCapability"
+import { formatClusterNo } from "@/common/utils/cluster-no"
 import "@/common/assets/styles/fault-diagnostic.scss"
 
 const props = defineProps<{
@@ -280,15 +280,27 @@ defineExpose({ runDiagnostic })
     <!-- Hero -->
     <div class="app-fault-diagnostic-hero" :class="`app-fault-diagnostic-hero--${heroState}`">
       <div class="app-fault-diagnostic-hero__icon-wrap">
-        <el-icon v-if="heroState === 'running'" class="is-loading"><Loading /></el-icon>
-        <el-icon v-else-if="heroState === 'ok'"><CircleCheck /></el-icon>
-        <el-icon v-else-if="heroState === 'warn'"><Warning /></el-icon>
-        <el-icon v-else-if="heroState === 'fail'"><CircleClose /></el-icon>
-        <el-icon v-else><FirstAidKit /></el-icon>
+        <el-icon v-if="heroState === 'running'" class="is-loading">
+          <Loading />
+        </el-icon>
+        <el-icon v-else-if="heroState === 'ok'">
+          <CircleCheck />
+        </el-icon>
+        <el-icon v-else-if="heroState === 'warn'">
+          <Warning />
+        </el-icon>
+        <el-icon v-else-if="heroState === 'fail'">
+          <CircleClose />
+        </el-icon>
+        <el-icon v-else>
+          <FirstAidKit />
+        </el-icon>
       </div>
       <div class="app-fault-diagnostic-hero__body">
         <div class="app-fault-diagnostic-hero__title-row">
-          <h4 class="app-fault-diagnostic-hero__title">{{ HERO_TITLE[heroState] }}</h4>
+          <h4 class="app-fault-diagnostic-hero__title">
+            {{ HERO_TITLE[heroState] }}
+          </h4>
           <span
             v-if="heroBadge"
             class="app-fault-diagnostic-hero__badge"
@@ -337,7 +349,9 @@ defineExpose({ runDiagnostic })
         <button type="button" class="btn btn-primary btn-sm" :disabled="running" @click="runDiagnostic">
           立即诊断
         </button>
-        <button type="button" class="btn btn-default btn-sm" @click="loadHistory">历史记录</button>
+        <button type="button" class="btn btn-default btn-sm" @click="loadHistory">
+          历史记录
+        </button>
       </div>
     </div>
 
@@ -366,11 +380,17 @@ defineExpose({ runDiagnostic })
       </div>
       <div class="app-fault-diagnostic-section__body">
         <div v-if="running" class="app-fault-diagnostic-empty">
-          <div class="app-fault-diagnostic-empty__icon"><el-icon class="is-loading"><Loading /></el-icon></div>
+          <div class="app-fault-diagnostic-empty__icon">
+            <el-icon class="is-loading">
+              <Loading />
+            </el-icon>
+          </div>
           <p>正在执行检查项…</p>
         </div>
         <div v-else-if="!currentReport" class="app-fault-diagnostic-empty">
-          <div class="app-fault-diagnostic-empty__icon"><el-icon><FirstAidKit /></el-icon></div>
+          <div class="app-fault-diagnostic-empty__icon">
+            <el-icon><FirstAidKit /></el-icon>
+          </div>
           <p>尚未开始诊断</p>
           <span class="text-muted">{{ diagnosticHint }}</span>
           <div style="margin-top: 12px">
@@ -410,8 +430,12 @@ defineExpose({ runDiagnostic })
                     <strong class="app-fault-diagnostic-check__name">{{ check.name }}</strong>
                     <code v-if="check.code" class="app-fault-diagnostic-check__code">{{ check.code }}</code>
                   </div>
-                  <div class="app-fault-diagnostic-check__summary">{{ check.summary }}</div>
-                  <div v-if="check.detail" class="app-fault-diagnostic-check__detail">{{ check.detail }}</div>
+                  <div class="app-fault-diagnostic-check__summary">
+                    {{ check.summary }}
+                  </div>
+                  <div v-if="check.detail" class="app-fault-diagnostic-check__detail">
+                    {{ check.detail }}
+                  </div>
                   <div v-if="check.skipped && check.skipReason" class="app-fault-diagnostic-check__skip">
                     {{ check.skipReason }}
                   </div>
@@ -457,7 +481,9 @@ defineExpose({ runDiagnostic })
       </div>
       <div class="app-fault-diagnostic-section__body">
         <div v-if="aiLoading" class="app-fault-diagnostic-empty app-fault-diagnostic-empty--compact">
-          <el-icon class="is-loading"><Loading /></el-icon> AI 分析中，请稍候…
+          <el-icon class="is-loading">
+            <Loading />
+          </el-icon> AI 分析中，请稍候…
         </div>
         <div v-else-if="!currentReport?.aiSummary" class="app-fault-diagnostic-empty app-fault-diagnostic-empty--compact">
           完成 Layer ① 后，AI 将基于结构化检查结果生成根因分析与修复建议（需启用 cachecloud.ai）。
@@ -506,7 +532,9 @@ defineExpose({ runDiagnostic })
     >
       <div class="app-fault-diagnostic-history-panel__head">
         <strong>最近诊断记录</strong>
-        <button type="button" class="close" aria-label="关闭" @click="historyVisible = false">&times;</button>
+        <button type="button" class="close" aria-label="关闭" @click="historyVisible = false">
+          &times;
+        </button>
       </div>
       <ul v-loading="historyLoading" class="app-fault-diagnostic-history-list">
         <li v-if="!historyLoading && !historyList.length" class="app-fault-diagnostic-history-empty">

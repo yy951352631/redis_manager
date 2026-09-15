@@ -142,9 +142,6 @@ public class ConstUtils {
      */
     public static final String DEFAULT_USERNAME = "redis";
     public static final String DEFAULT_PASSWORD = "redis";
-    public static final String DEFAULT_USER_LOGIN_ENCRY_KEY = "97c9d9de0a2dbd64";
-    /** 默认用户密码 MD5（明文：admin%TGB7ygv） */
-    public static final String DEFAULT_USER_PASSWORD = "fae3997daa86ba75a7d81c1b7d8228fd";
     public static final int DEFAULT_SSH_PORT_DEFAULT = 22;
     /**
      * ssh授权方式：参考SshAuthTypeEnum
@@ -210,7 +207,6 @@ public class ConstUtils {
     public static String PUBLIC_KEY_PEM = DEFAULT_PUBLIC_KEY_PEM;
     public static String PUBLIC_USERNAME = DEFAULT_PUBLIC_USERNAME;
     public static String SUPER_ADMINS = DEFAULT_SUPER_ADMINS;
-    public static String USER_LOGIN_ENCRY_KEY = DEFAULT_USER_LOGIN_ENCRY_KEY;
     public static List<String> SUPER_MANAGER;
     /**
      * 联系人
@@ -455,5 +451,4 @@ public class ConstUtils {
         return String.format("%s/%s/", REDIS_INSTALL_BASE_DIR, versionName);
     }
 }
-
 

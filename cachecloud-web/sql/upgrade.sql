@@ -414,3 +414,50 @@ DELETE FROM qrtz_triggers WHERE trigger_name IN
   'externalRedisStatsCollectTrigger','instanceStateTrigger','cleanupMinuteDimensionalityTrigger',
   'cleanupDayDimensionalityTrigger','instanceTopologySyncTrigger','riskCommandLatencyArchiveTrigger',
   'appDailyTrigger','expAppsDailyTrigger');
+
+-- -----------------------------------------------------------------------------
+-- 13) 登录密码升级与关键父子关系约束
+-- -----------------------------------------------------------------------------
+ALTER TABLE app_user MODIFY password VARCHAR(255) DEFAULT NULL
+  COMMENT 'BCrypt密码哈希；历史MD5在登录成功后自动升级';
+
+-- 加外键前仅清理确实已经失去父记录的关系行；风险报告自身是历史快照，不随应用删除。
+DELETE child FROM app_to_user child
+LEFT JOIN app_desc parent ON child.app_id = parent.app_id
+WHERE parent.app_id IS NULL;
+DELETE child FROM external_redis child
+LEFT JOIN app_desc parent ON child.app_id = parent.app_id
+WHERE parent.app_id IS NULL;
+DELETE child FROM risk_assess_dimension child
+LEFT JOIN risk_assess_report parent ON child.report_id = parent.id
+WHERE parent.id IS NULL;
+
+ALTER TABLE risk_assess_report
+  MODIFY app_id BIGINT NOT NULL COMMENT '评估时应用ID快照，应用删除后仍保留历史报告',
+  MODIFY app_name VARCHAR(128) NOT NULL DEFAULT '' COMMENT '评估时应用名称快照';
+ALTER TABLE risk_assess_dimension
+  MODIFY app_id BIGINT NOT NULL COMMENT '评估时应用ID快照';
+
+SET @exist := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'app_to_user'
+    AND CONSTRAINT_NAME = 'fk_app_to_user_app' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@exist = 0,
+  'ALTER TABLE app_to_user ADD CONSTRAINT fk_app_to_user_app FOREIGN KEY (app_id) REFERENCES app_desc(app_id) ON DELETE CASCADE',
+  'SELECT ''skip: fk_app_to_user_app already exists'' AS info');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @exist := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'external_redis'
+    AND CONSTRAINT_NAME = 'fk_external_redis_app' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@exist = 0,
+  'ALTER TABLE external_redis ADD CONSTRAINT fk_external_redis_app FOREIGN KEY (app_id) REFERENCES app_desc(app_id) ON DELETE CASCADE',
+  'SELECT ''skip: fk_external_redis_app already exists'' AS info');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @exist := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'risk_assess_dimension'
+    AND CONSTRAINT_NAME = 'fk_risk_dimension_report' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+SET @sql := IF(@exist = 0,
+  'ALTER TABLE risk_assess_dimension ADD CONSTRAINT fk_risk_dimension_report FOREIGN KEY (report_id) REFERENCES risk_assess_report(id) ON DELETE CASCADE',
+  'SELECT ''skip: fk_risk_dimension_report already exists'' AS info');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

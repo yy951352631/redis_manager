@@ -1,7 +1,7 @@
 import { getCurrentUserApi } from "@@/apis/users"
 import { setToken as _setToken, getToken, removeToken } from "@@/utils/local-storage"
-import { pinia } from "@/pinia"
 import { logoutApi } from "@/pages/login/apis"
+import { pinia } from "@/pinia"
 import { resetRouter } from "@/router"
 import { routerConfig } from "@/router/config"
 import { useSettingsStore } from "./settings"
@@ -18,10 +18,10 @@ export const useUserStore = defineStore("user", () => {
 
   const settingsStore = useSettingsStore()
 
-  // 设置 Token
-  const setToken = (value: string) => {
-    _setToken(value)
-    token.value = value
+  // 浏览器只保存非敏感登录标记，真实会话令牌由 HttpOnly Cookie 承载。
+  const setSessionActive = () => {
+    _setToken("active")
+    token.value = "active"
   }
 
   // 获取用户详情
@@ -30,15 +30,6 @@ export const useUserStore = defineStore("user", () => {
     username.value = data.username
     // 验证返回的 roles 是否为一个非空数组，否则塞入一个没有任何作用的默认角色，防止路由守卫逻辑进入无限循环
     roles.value = data.roles?.length > 0 ? data.roles : routerConfig.defaultRoles
-  }
-
-  // 模拟角色变化
-  const changeRoles = (role: string) => {
-    const newToken = `token-${role}`
-    token.value = newToken
-    _setToken(newToken)
-    // 用刷新页面代替重新登录
-    location.reload()
   }
 
   // 登出
@@ -70,7 +61,7 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  return { token, roles, username, setToken, getInfo, changeRoles, logout, resetToken }
+  return { token, roles, username, setSessionActive, getInfo, logout, resetToken }
 })
 
 /**

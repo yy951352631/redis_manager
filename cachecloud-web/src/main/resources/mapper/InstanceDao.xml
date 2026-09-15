@@ -58,6 +58,14 @@
         WHERE ip = #{ip} AND port = #{port} AND status = 1
     </select>
 
+    <select id="getMonitorInstByAppIdAndIpPort" resultType="InstanceInfo">
+        SELECT
+        <include refid="instance_info_columns"/>
+        FROM instance_info
+        WHERE app_id = #{appId} AND ip = #{ip} AND port = #{port} AND status IN (0, 1)
+        LIMIT 1
+    </select>
+
     <select id="getAllInstByIpAndPort" resultType="InstanceInfo">
         SELECT
         <include refid="instance_info_columns"/>
@@ -215,5 +223,4 @@
     </update>
 
 </mapper>
-
 

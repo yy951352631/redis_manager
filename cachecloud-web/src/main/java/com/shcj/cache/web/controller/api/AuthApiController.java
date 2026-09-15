@@ -67,10 +67,16 @@ public class AuthApiController extends BaseController {
             return ApiResponse.fail(403, "需要管理员权限");
         }
 
-        userLoginStatusService.addLoginStatus(request, response, user.getName());
+        String token;
+        try {
+            token = userLoginStatusService.addLoginStatus(request, response, user.getName());
+        } catch (IllegalStateException e) {
+            logger.error("persist login session failed for user {}", user.getName(), e);
+            return ApiResponse.fail(503, "登录会话服务暂不可用");
+        }
 
         LoginResponseDto data = new LoginResponseDto();
-        data.setToken(user.getName());
+        data.setToken(token);
         data.setUsername(user.getName());
         data.setRoles(resolveRoles(user));
         return ApiResponse.ok(data);
@@ -134,27 +140,8 @@ public class AuthApiController extends BaseController {
         return data;
     }
 
-    /**
-     * Cookie 会话（JSP）或 Authorization Bearer（SPA 前后端分离）
-     */
     private String resolveAuthenticatedUserName(HttpServletRequest request) {
-        String userName = userLoginStatusService.getUserNameFromLoginStatus(request);
-        if (StringUtils.isNotBlank(userName)) {
-            return userName;
-        }
-        String authHeader = request.getHeader("Authorization");
-        if (StringUtils.isBlank(authHeader) || !authHeader.startsWith("Bearer ")) {
-            return null;
-        }
-        userName = authHeader.substring(7).trim();
-        if (StringUtils.isBlank(userName)) {
-            return null;
-        }
-        AppUser user = userService.getByName(userName);
-        if (user == null || AppUserTypeEnum.NO_USER.value().equals(user.getType())) {
-            return null;
-        }
-        return userName;
+        return userLoginStatusService.getUserNameFromLoginStatus(request);
     }
 
     private List<String> resolveRoles(AppUser user) {

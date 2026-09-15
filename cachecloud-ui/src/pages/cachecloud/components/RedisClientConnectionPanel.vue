@@ -71,7 +71,9 @@ watch(() => props.connections, () => {
       <pre v-if="expandedRaw[index]" class="redis-conn-card__raw">{{ conn.detail }}</pre>
     </div>
     <div v-if="hasMore" class="redis-conn-panel__more">
-      <el-button @click="loadMore">加载更多（剩余 {{ connections.length - visibleConnections.length }} 条）</el-button>
+      <el-button @click="loadMore">
+        加载更多（剩余 {{ connections.length - visibleConnections.length }} 条）
+      </el-button>
     </div>
   </div>
   <el-empty v-else description="暂无连接详情" :image-size="64" />

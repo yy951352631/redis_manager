@@ -89,8 +89,6 @@ public interface UserService {
      * @param userId
      * @return
      */
-    SuccessEnum resetPwd(Long userId);
-
     /**
      * 修改密码
      *
@@ -99,6 +97,11 @@ public interface UserService {
      * @return
      */
     SuccessEnum updatePwd(Long userId, String password);
+
+    /**
+     * 写入已经编码的密码，仅供认证成功后的旧哈希迁移使用。
+     */
+    SuccessEnum updateEncodedPwd(Long userId, String encodedPassword);
 
     String getPwdByName(String name);
 

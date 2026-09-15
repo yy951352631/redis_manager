@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { ServerStatAppRow } from "@/api/cachecloud"
+import { useAutoQuery } from "@@/composables/useAutoQuery"
+import { Search } from "@element-plus/icons-vue"
 import {
   getServerStatAppsApi,
   sendServerStatDailyEmailApi,
@@ -7,9 +9,7 @@ import {
 } from "@/api/cachecloud"
 import { usePagination } from "@/common/composables/usePagination"
 import { clusterRouteId, formatClusterNo } from "@/common/utils/cluster-no"
-import { Search } from "@element-plus/icons-vue"
 import { formatRedisVersion } from "@/common/utils/redis-version"
-import { useAutoQuery } from "@@/composables/useAutoQuery"
 
 const route = useRoute()
 const router = useRouter()
@@ -105,7 +105,9 @@ async function fetchData() {
     tableData.value = data.items ?? []
     paginationData.currentPage = 1
     if (data.searchDate) {
-      silentDate(() => { query.searchDate = data.searchDate })
+      silentDate(() => {
+        query.searchDate = data.searchDate
+      })
     }
   } finally {
     loading.value = false
@@ -145,7 +147,9 @@ onMounted(() => {
   }
   const searchDate = route.query.searchDate as string | undefined
   if (searchDate) {
-    silentDate(() => { query.searchDate = searchDate })
+    silentDate(() => {
+      query.searchDate = searchDate
+    })
   }
   fetchData()
 })
@@ -179,7 +183,9 @@ onMounted(() => {
               clearable
               class="tab-toolbar__search"
             />
-            <el-button type="primary" size="small" :icon="Search">查询</el-button>
+            <el-button type="primary" size="small" :icon="Search">
+              查询
+            </el-button>
           </div>
           <el-table v-loading="loading" :data="paginatedData" stripe border>
             <el-table-column label="集群编码" width="90">
@@ -271,7 +277,9 @@ onMounted(() => {
               clearable
               class="tab-toolbar__search"
             />
-            <el-button type="primary" size="small" :icon="Search">查询</el-button>
+            <el-button type="primary" size="small" :icon="Search">
+              查询
+            </el-button>
           </div>
           <el-table v-loading="loading" :data="paginatedData" stripe border>
             <el-table-column label="集群编码" width="90">
@@ -296,13 +304,19 @@ onMounted(() => {
             </el-table-column>
             <el-table-column prop="objectSize" label="key数量" width="100" />
             <el-table-column label="内存使用" width="110">
-              <template #default="{ row }">{{ row.usedMemoryMb.toFixed(2) }}</template>
+              <template #default="{ row }">
+                {{ row.usedMemoryMb.toFixed(2) }}
+              </template>
             </el-table-column>
             <el-table-column label="rss内存使用" width="110">
-              <template #default="{ row }">{{ row.usedMemoryRssMb.toFixed(2) }}</template>
+              <template #default="{ row }">
+                {{ row.usedMemoryRssMb.toFixed(2) }}
+              </template>
             </el-table-column>
             <el-table-column label="平均碎片率(%)" width="120">
-              <template #default="{ row }">{{ row.avgMemFragRatio }}</template>
+              <template #default="{ row }">
+                {{ row.avgMemFragRatio }}
+              </template>
             </el-table-column>
             <el-table-column prop="maxCpuSys" label="max cpuSys(s)" width="120" />
             <el-table-column prop="maxCpuUser" label="max cpuUser(s)" width="120" />
@@ -324,7 +338,9 @@ onMounted(() => {
               clearable
               class="tab-toolbar__search"
             />
-            <el-button type="primary" size="small" :icon="Search">查询</el-button>
+            <el-button type="primary" size="small" :icon="Search">
+              查询
+            </el-button>
             <el-button
               type="success"
               size="small"

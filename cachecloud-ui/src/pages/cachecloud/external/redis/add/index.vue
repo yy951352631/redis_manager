@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import type { ExternalRedisCreateForm } from "@/api/cachecloud"
+import { ArrowLeft } from "@element-plus/icons-vue"
 import {
   checkExternalRedisApi,
   checkExternalRedisNameApi,
   getExternalRedisCreateFormApi,
   saveExternalRedisApi
 } from "@/api/cachecloud"
-import { ArrowLeft } from "@element-plus/icons-vue"
 import { formatRedisVersion } from "@/common/utils/redis-version"
 
 const router = useRouter()
@@ -134,13 +134,17 @@ onMounted(fetchForm)
 <template>
   <div v-loading="loading" class="external-redis-page">
     <div class="page-header">
-      <el-button :icon="ArrowLeft" link @click="goBack">返回列表</el-button>
+      <el-button :icon="ArrowLeft" link @click="goBack">
+        返回列表
+      </el-button>
     </div>
     <el-card shadow="never" class="form-card">
       <el-form label-width="120px" class="detail-form">
         <el-form-item label="集群名称" required>
           <el-input v-model="form.name" placeholder="集群名称" @blur="handleCheckName" />
-          <div class="help-block">不超过 128 个字符，可以包含中文</div>
+          <div class="help-block">
+            不超过 128 个字符，可以包含中文
+          </div>
         </el-form-item>
         <el-form-item label="集群描述">
           <el-input v-model="form.intro" type="textarea" :rows="3" placeholder="选填，便于识别用途" />
@@ -186,8 +190,12 @@ onMounted(fetchForm)
           </div>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :disabled="checked" @click="handleCheck">连接测试</el-button>
-          <el-button type="success" :disabled="!checked" :loading="saving" @click="handleSave">开始导入</el-button>
+          <el-button type="primary" :disabled="checked" @click="handleCheck">
+            连接测试
+          </el-button>
+          <el-button type="success" :disabled="!checked" :loading="saving" @click="handleSave">
+            开始导入
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>

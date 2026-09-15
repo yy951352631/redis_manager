@@ -1,6 +1,5 @@
 package com.shcj.cache.server.data;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -53,13 +52,6 @@ public class Server implements LineParser{
 		connection = new Connection();
 	}
 	
-	public static void main(String[] args) throws ParseException {
-		String s = "18:49:21,31-MAY-2016";
-		SimpleDateFormat sdf = new SimpleDateFormat(
-				"HH:mm:ss,dd-MMM-yyyy", Locale.ENGLISH);
-		System.out.println(sdf.parse(s));
-	}
-
 	/**
 	 * line format:
 	 * ZZZZ,T0001,09:50:01,01-JUL-2016

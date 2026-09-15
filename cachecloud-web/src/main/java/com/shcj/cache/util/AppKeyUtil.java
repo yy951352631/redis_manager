@@ -30,8 +30,4 @@ public class AppKeyUtil {
             return DigestUtils.md5DigestAsHex(s.getBytes(Charset.forName("UTF-8")));
     }
     
-    public static void main(String[] args) {
-        System.out.println(genSecretKey(10010));
-    }
-
 }

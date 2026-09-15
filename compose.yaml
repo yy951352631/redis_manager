@@ -49,23 +49,109 @@ services:
     networks:
       - backend
 
-  redis:
-    image: ${CACHECLOUD_REDIS_IMAGE:-redis:6.2.13-alpine}
-    container_name: cachecloud-redis
+  redis-master:
+    image: ${CACHECLOUD_REDIS_IMAGE:-redis:6.2.24-alpine}
+    container_name: cachecloud-redis-master
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --masterauth
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --replica-announce-ip
+      - redis-master
     environment:
       TZ: Asia/Shanghai
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      backend:
+        aliases:
+          - redis
+          - cachecloud-redis
+
+  redis-replica:
+    image: ${CACHECLOUD_REDIS_IMAGE:-redis:6.2.24-alpine}
+    container_name: cachecloud-redis-replica
+    restart: unless-stopped
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --masterauth
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --replicaof
+      - redis-master
+      - "6379"
+      - --replica-announce-ip
+      - redis-replica
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis-replica-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 20
     networks:
       - backend
+
+  redis-sentinel-1: &redis-sentinel
+    image: ${CACHECLOUD_REDIS_IMAGE:-redis:6.2.24-alpine}
+    container_name: cachecloud-redis-sentinel-1
+    restart: unless-stopped
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    entrypoint: ["sh", "/usr/local/bin/sentinel-entrypoint.sh"]
+    volumes:
+      - ./deploy/redis/sentinel-entrypoint.sh:/usr/local/bin/sentinel-entrypoint.sh:ro
+      - ./deploy/redis/sentinel.conf.template:/etc/redis/sentinel.conf.template:ro
+      - redis-sentinel-1-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p 26379 sentinel get-master-addr-by-name cachecloud-master | grep -q 6379"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - backend
+
+  redis-sentinel-2:
+    <<: *redis-sentinel
+    container_name: cachecloud-redis-sentinel-2
+    volumes:
+      - ./deploy/redis/sentinel-entrypoint.sh:/usr/local/bin/sentinel-entrypoint.sh:ro
+      - ./deploy/redis/sentinel.conf.template:/etc/redis/sentinel.conf.template:ro
+      - redis-sentinel-2-data:/data
+
+  redis-sentinel-3:
+    <<: *redis-sentinel
+    container_name: cachecloud-redis-sentinel-3
+    volumes:
+      - ./deploy/redis/sentinel-entrypoint.sh:/usr/local/bin/sentinel-entrypoint.sh:ro
+      - ./deploy/redis/sentinel.conf.template:/etc/redis/sentinel.conf.template:ro
+      - redis-sentinel-3-data:/data
 
   web:
     image: ${CACHECLOUD_IMAGE:?CACHECLOUD_IMAGE is required}
@@ -74,7 +160,11 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      redis:
+      redis-sentinel-1:
+        condition: service_healthy
+      redis-sentinel-2:
+        condition: service_healthy
+      redis-sentinel-3:
         condition: service_healthy
     environment:
       TZ: Asia/Shanghai
@@ -83,13 +173,17 @@ services:
       CACHECLOUD_PRIMARY_URL: jdbc:mysql://mysql:3306/redis_manager?useUnicode=true&characterEncoding=UTF8&autoReconnect=true&connectTimeout=3000&socketTimeout=10000&serverTimezone=Asia/Shanghai
       CACHECLOUD_PRIMARY_USER: root
       CACHECLOUD_PRIMARY_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
-      CACHECLOUD_REDIS_MAIN_HOST: redis
-      CACHECLOUD_REDIS_MAIN_PORT: 6379
       CACHECLOUD_REDIS_MAIN_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      CACHECLOUD_REDIS_SENTINEL_MASTER: cachecloud-master
+      CACHECLOUD_REDIS_SENTINEL_NODES: redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      CACHECLOUD_REDIS_MANAGED_LOOPBACK_HOST: host.docker.internal
+      CACHECLOUD_AUTH_SESSION_TTL_SECONDS: ${CACHECLOUD_AUTH_SESSION_TTL_SECONDS:-43200}
       CACHECLOUD_AI_ENABLED: "false"
       JAVA_OPTS: -Djava.security.egd=file:/dev/./urandom -Duser.timezone=Asia/Shanghai -Xms512m -Xmx1536m
     ports:
       - "${CACHECLOUD_BACKEND_PORT:-28083}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - backend
 
@@ -103,7 +197,7 @@ services:
     ports:
       - "${CACHECLOUD_FRONTEND_PORT:-28082}:80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/api/v1/health || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 10
@@ -114,6 +208,10 @@ services:
 volumes:
   mysql-data:
   redis-data:
+  redis-replica-data:
+  redis-sentinel-1-data:
+  redis-sentinel-2-data:
+  redis-sentinel-3-data:
 
 networks:
   backend:

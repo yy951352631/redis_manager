@@ -80,10 +80,6 @@ public enum TtlTimeDistriEnum {
         return false;
     }
 
-    public static void main(String[] args) {
-        System.out.println(getRightTtlDistri(-2));
-    }
-
     public String getValue() {
         return value;
     }

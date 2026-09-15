@@ -74,4 +74,35 @@ public class ExternalRedisCenterNodeListTest {
         assertEquals("已下线", result.get(0).getStatusDesc());
         verify(redisCenter, never()).isRun(APP_ID, "192.0.2.10", 6379);
     }
+
+    @Test
+    public void activeInstanceUsesPersistedStatusWithoutLiveProbe() {
+        ExternalRedis app = new ExternalRedis();
+        app.setAppId(APP_ID);
+        app.setName("managed-app");
+        app.setType(ConstUtils.CACHE_REDIS_STANDALONE);
+
+        AppDesc appDesc = new AppDesc();
+        appDesc.setAppId(APP_ID);
+        appDesc.setName("managed-app");
+
+        InstanceInfo failed = new InstanceInfo();
+        failed.setId(4);
+        failed.setAppId(APP_ID);
+        failed.setIp("192.0.2.11");
+        failed.setPort(6379);
+        failed.setType(ConstUtils.CACHE_REDIS_STANDALONE);
+        failed.setStatus(InstanceStatusEnum.ERROR_STATUS.getStatus());
+
+        when(externalRedisDao.listAll()).thenReturn(Collections.singletonList(app));
+        when(instanceDao.getInstListByAppId(APP_ID)).thenReturn(Collections.singletonList(failed));
+        when(appService.getByAppId(APP_ID)).thenReturn(appDesc);
+
+        List<ExternalNodeVO> result = center.listExternalNodes("");
+
+        assertEquals(1, result.size());
+        assertEquals(InstanceStatusEnum.ERROR_STATUS.getStatus(), result.get(0).getStatus());
+        assertEquals("异常", result.get(0).getStatusDesc());
+        verify(redisCenter, never()).isRun(APP_ID, "192.0.2.11", 6379);
+    }
 }

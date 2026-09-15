@@ -9,6 +9,8 @@ server:
   domain: ${SERVER_DOMAIN:http://127.0.0.1:80}
 
 cachecloud:
+  auth:
+    session-ttl-seconds: ${CACHECLOUD_AUTH_SESSION_TTL_SECONDS:43200}
   # 本地环境默认打开报警判定，便于验证报警链路（通知组件仍是空实现，只落库）
   alert:
     enabled: ${CACHECLOUD_ALERT_ENABLED:true}
@@ -19,10 +21,14 @@ cachecloud:
     initialPoolSize: 1
     maxPoolSize: 3
   redis:
+    managed-loopback-host: ${CACHECLOUD_REDIS_MANAGED_LOOPBACK_HOST:127.0.0.1}
     main:
       host: ${CACHECLOUD_REDIS_MAIN_HOST:127.0.0.1}
       port: ${CACHECLOUD_REDIS_MAIN_PORT:6379}
       password: ${CACHECLOUD_REDIS_MAIN_PASSWORD:}
+      sentinel-master: ${CACHECLOUD_REDIS_SENTINEL_MASTER:}
+      sentinel-nodes: ${CACHECLOUD_REDIS_SENTINEL_NODES:}
+      sentinel-password: ${CACHECLOUD_REDIS_SENTINEL_PASSWORD:}
   kafka:
     enabled: false
     bootstrap-servers: 127.0.0.1:9092

@@ -72,8 +72,12 @@
   transition: width 0.2s ease;
 }
 
-.app-ops-mem-bar__inner.is-success { background: #5cb85c; }
-.app-ops-mem-bar__inner.is-danger { background: #d9534f; }
+.app-ops-mem-bar__inner.is-success {
+  background: #5cb85c;
+}
+.app-ops-mem-bar__inner.is-danger {
+  background: #d9534f;
+}
 
 .app-ops-tag-external {
   display: inline-block;
@@ -94,9 +98,15 @@
   color: #fff;
 }
 
-.app-ops-frag.is-success { background: #5cb85c; }
-.app-ops-frag.is-warning { background: #f0ad4e; }
-.app-ops-frag.is-danger { background: #d9534f; }
+.app-ops-frag.is-success {
+  background: #5cb85c;
+}
+.app-ops-frag.is-warning {
+  background: #f0ad4e;
+}
+.app-ops-frag.is-danger {
+  background: #d9534f;
+}
 
 .app-ops-ops-cell {
   display: flex;
@@ -133,8 +143,12 @@
   color: #000;
 }
 
-.app-ops-machine-bar__inner.is-success { background: #5cb85c; }
-.app-ops-machine-bar__inner.is-danger { background: #d9534f; }
+.app-ops-machine-bar__inner.is-success {
+  background: #5cb85c;
+}
+.app-ops-machine-bar__inner.is-danger {
+  background: #d9534f;
+}
 
 .app-password-panel {
   max-width: 640px;

@@ -4,7 +4,7 @@ import { executeDiagnosticCommandApi, getDiagnosticInstancesApi } from "@/api/ca
 import { formatClusterNo } from "@/common/utils/cluster-no"
 import "@/common/assets/styles/diagnostics.scss"
 
-const props = defineProps<{ apps: DiagnosticAppOption[] }>()
+defineProps<{ apps: DiagnosticAppOption[] }>()
 
 interface ConsoleLine {
   type: "prompt" | "value" | "error" | "welcome"
@@ -173,7 +173,9 @@ onActivated(focusInput)
         >
           {{ line.text }}
         </div>
-        <div v-if="loading" class="diag-cli-line is-welcome">执行中...</div>
+        <div v-if="loading" class="diag-cli-line is-welcome">
+          执行中...
+        </div>
       </div>
       <div class="diag-cli-input-row" @click="focusInput">
         <span class="diag-cli-prompt">redis-cli &gt;</span>

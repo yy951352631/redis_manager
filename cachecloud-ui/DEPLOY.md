@@ -1,6 +1,6 @@
 # cachecloud-ui 部署说明（运维）
 
-前端：Vue3 + Vite 静态站点  
+前端：Vue3 + Vite 静态站点
 后端：`cachecloud-web`（Spring Boot / Tomcat，默认 `8080`）
 
 生产推荐：**构建 `dist` → Nginx 托管静态资源，并把 `/api/v1` 反代到后端**。不要在生产用 `npm run dev`。
@@ -9,13 +9,13 @@
 
 ## 1. 依赖
 
-| 组件 | 要求 |
-|------|------|
-| Node.js | 20.19+ 或 22.12+（构建机） |
-| pnpm | 10+（构建机） |
-| Nginx | 托管 `dist` + 反代 API |
-| cachecloud-web | 已部署并可访问（如 `127.0.0.1:8080`） |
-| MySQL | 按 `cachecloud-web/sql/README.md` 完成 `init.sql` / `upgrade.sql` |
+| 组件           | 要求                                                              |
+| -------------- | ----------------------------------------------------------------- |
+| Node.js        | 20.19+ 或 22.12+（构建机）                                        |
+| pnpm           | 10+（构建机）                                                     |
+| Nginx          | 托管 `dist` + 反代 API                                            |
+| cachecloud-web | 已部署并可访问（如 `127.0.0.1:8080`）                             |
+| MySQL          | 按 `cachecloud-web/sql/README.md` 完成 `init.sql` / `upgrade.sql` |
 
 默认登录：`admin` / `admin%TGB7ygv`（`init.sql` 写入对应 MD5）。
 
@@ -35,11 +35,11 @@ pnpm build
 
 环境变量（已写入 `.env.production`，一般不用改）：
 
-| 变量 | 生产值 | 说明 |
-|------|--------|------|
-| `VITE_BASE_URL` | `/api/v1` | 接口前缀（相对路径，走 Nginx 反代） |
-| `VITE_PUBLIC_PATH` | `/` | 静态资源根路径；若挂子目录如 `/ui/`，构建前改成 `/ui/` |
-| `VITE_ROUTER_HISTORY` | `hash`（见 `.env`） | hash 模式，Nginx 对 SPA 更省事 |
+| 变量                  | 生产值              | 说明                                                   |
+| --------------------- | ------------------- | ------------------------------------------------------ |
+| `VITE_BASE_URL`       | `/api/v1`           | 接口前缀（相对路径，走 Nginx 反代）                    |
+| `VITE_PUBLIC_PATH`    | `/`                 | 静态资源根路径；若挂子目录如 `/ui/`，构建前改成 `/ui/` |
+| `VITE_ROUTER_HISTORY` | `hash`（见 `.env`） | hash 模式，Nginx 对 SPA 更省事                         |
 
 子路径部署示例：改 `.env.production` 中 `VITE_PUBLIC_PATH=/ui/` 后重新 `pnpm build`。
 
@@ -145,18 +145,16 @@ cd cachecloud-ui && pnpm install && pnpm dev
 
 访问：`http://localhost:3333`
 
-仓库还有 `scripts/deploy-dev-to-44.sh`（远程起 Vite 开发服），**仅内网联调**，不要当生产方案。
-
 ---
 
 ## 7. 常见问题
 
-| 现象 | 处理 |
-|------|------|
-| 打开页面空白 / JS 404 | `VITE_PUBLIC_PATH` 与实际访问路径不一致，改后重新构建 |
-| 接口 404 / 跨域 | 检查 Nginx 是否反代 `/api/v1/`，生产不要把 `VITE_BASE_URL` 写成跨域绝对地址（除非后端开了 CORS） |
-| 登录失败 | 查后端与库：`app_user` 中 `admin` 的 `password` 是否为 `admin`；后端是否在监听 |
-| 刷新 404 | Nginx `try_files` 未配；或改用 hash 路由（当前默认 hash，一般无此问题） |
+| 现象                  | 处理                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| 打开页面空白 / JS 404 | `VITE_PUBLIC_PATH` 与实际访问路径不一致，改后重新构建                                            |
+| 接口 404 / 跨域       | 检查 Nginx 是否反代 `/api/v1/`，生产不要把 `VITE_BASE_URL` 写成跨域绝对地址（除非后端开了 CORS） |
+| 登录失败              | 查后端与库：`app_user` 中 `admin` 的 `password` 是否为 `admin`；后端是否在监听                   |
+| 刷新 404              | Nginx `try_files` 未配；或改用 hash 路由（当前默认 hash，一般无此问题）                          |
 
 ---
 

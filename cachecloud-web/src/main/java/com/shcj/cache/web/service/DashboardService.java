@@ -4,7 +4,6 @@ import com.shcj.cache.constant.AppStatusEnum;
 import com.shcj.cache.constant.InstanceStatusEnum;
 import com.shcj.cache.dao.AppDao;
 import com.shcj.cache.dao.InstanceDao;
-import com.shcj.cache.dao.ExternalRedisDao;
 import com.shcj.cache.dao.QuartzDao;
 import com.shcj.cache.dao.TaskQueueDao;
 import com.shcj.cache.entity.AppDesc;
@@ -68,9 +67,6 @@ public class DashboardService {
 
     @Resource
     private AppDao appDao;
-
-    @Resource
-    private ExternalRedisDao externalRedisDao;
 
     @Resource(name = "externalRedisCenter")
     private ExternalRedisCenter externalRedisCenter;
@@ -187,16 +183,6 @@ public class DashboardService {
                     overview.getOnlineClusterNames().add(app.getName());
                 }
                 String version = StringUtils.trimToEmpty(app.getVersionName());
-                if (StringUtils.isBlank(version) || "-".equals(version)) {
-                    try {
-                        if (externalRedisDao != null && externalRedisCenter != null) {
-                            version = StringUtils.trimToEmpty(externalRedisCenter.detectRedisVersionName(
-                                    externalRedisDao.getByAppId(app.getAppId())));
-                        }
-                    } catch (Exception e) {
-                        logger.debug("detect Redis version for dashboard failed, appId={}", app.getAppId(), e);
-                    }
-                }
                 if (StringUtils.isBlank(version) || "-".equals(version)) continue;
                 versionCounts.put(version, versionCounts.getOrDefault(version, 0) + 1);
             }
@@ -319,7 +305,7 @@ public class DashboardService {
 
         List<Map<String, Object>> slotAbnormalApps = listClusterSlotAbnormalApps(ctx.onlineApps);
         List<Map<String, Object>> instanceAbnormalApps = listInstanceAbnormalApps(ctx.onlineApps);
-        List<Map<String, Object>> probeAbnormalApps = listExternalProbeAbnormalApps(ctx.onlineApps);
+        List<Map<String, Object>> probeAbnormalApps = listExternalAbnormalApps(ctx.onlineApps);
         List<Map<String, Object>> unknownStatusApps = listUnknownStatusApps(ctx.onlineApps);
         List<Map<String, Object>> abnormalOverviewApps =
                 mergeAbnormalOverviewApps(topologyAppStats, slotAbnormalApps, instanceAbnormalApps,
@@ -635,8 +621,8 @@ public class DashboardService {
         return result;
     }
 
-    /** 外部纳管节点管理页使用实时探活，探活失败时也要进入全局异常总览。 */
-    private List<Map<String, Object>> listExternalProbeAbnormalApps(List<AppDesc> onlineApps) {
+    /** 外部纳管节点使用最近一次持久化心跳状态进入全局异常总览。 */
+    private List<Map<String, Object>> listExternalAbnormalApps(List<AppDesc> onlineApps) {
         if (onlineApps == null || onlineApps.isEmpty() || externalRedisCenter == null) {
             return Collections.emptyList();
         }

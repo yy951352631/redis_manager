@@ -40,7 +40,7 @@ export const cachecloudRoutes: RouteRecordRaw[] = [
       },
       {
         path: "app/ops/:appId",
-        redirect: to => {
+        redirect: (to) => {
           const tabMap: Record<string, string> = {
             topology: "app_ops_topology",
             fault: "app_ops_fault",

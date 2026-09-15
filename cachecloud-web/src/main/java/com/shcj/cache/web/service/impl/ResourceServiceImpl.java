@@ -215,19 +215,6 @@ public class ResourceServiceImpl implements ResourceService {
         }
     }
 
-    @Deprecated
-    @Override
-    public String getRespositoryUrl(int resourceId, int repositoryId) {
-
-        try {
-            SystemResource resource = resourceDao.getResourceById(resourceId);
-            SystemResource repository = resourceDao.getResourceById(repositoryId);
-            return String.format("%s%s/%s", repository.getUrl(), resource.getDir(), resource.getName());
-        } catch (Exception e) {
-            throw new BizException("getRespositoryUrl exception, resourceId={}, repositoryId={}", resourceId, repositoryId);
-        }
-    }
-
     @Override
     public String getRemoteFileContent(int resourceId, int respoitoryId) {
 

@@ -34,6 +34,4 @@ mysql 客户端遇错即停。看到这个报错说明你选错脚本了，改�
 
 ## 其它文件（按需，与建库无关）
 
-- `cleanup_*.sql` — 清理外部纳管测试数据
-- `insert_fake_*.sql` — 插入演示用外部纳管数据
 - `my.cnf` / `os_params.txt` — MySQL / 系统参数参考

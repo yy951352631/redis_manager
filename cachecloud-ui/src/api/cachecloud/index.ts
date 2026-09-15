@@ -1,86 +1,85 @@
 import type {
-  AppDetailResponseData,
-  AppListResponseData,
-  AppOfflineResultResponseData,
-  ConfigCheckDetailResponseData,
-  ConfigCheckListResponseData,
-  DashboardOpsResponseData,
-  CommandCheckDetailResponseData,
-  CommandCheckListResponseData,
-  DashboardDetailsResponseData,
-  DashboardOverviewResponseData,
-  DashboardResponseData,
-  InstanceOpsOptionsResponseData,
-  RestartRecordPageResponseData,
-  ServerStatAppsResponseData,
-  UserListResponseData,
-  QuartzJobListResponseData,
-  ExternalRedisListResponseData,
-  ExternalNodeListPage,
-  ExternalRedisNode,
-  InstanceAlertPageResponseData,
-  OperationAuditPageResponseData,
   AlertRecordPageResponseData,
-  RiskAssessHistoryResponseData,
-  RiskAssessOverviewResponseData,
-  DataModelOptionsResponseData,
-  DataModelResultResponseData,
-  RiskRulesResponseData,
-  RiskAssessReportResponseData,
-  TaskFlowDetailResponseData,
-  MigrateListPageResponseData,
-  MigrateInitResponseData,
-  MigrateActionResultResponseData,
-  MigrateAppInstancesResponseData,
-  MigrateTextResponseData,
+  AppClientListResponseData,
+  AppCommandClimax,
+  AppConfigConsistencyResponseData,
+  AppDailyResponseData,
+  AppDetailPanelResponseData,
+  AppDetailResponseData,
+  AppLatencyResponseData,
+  AppListResponseData,
+  AppMachineTopologyResponseData,
+  AppOfflineResultResponseData,
   AppOpsInstancePageResponseData,
   AppOpsMachineListResponseData,
   AppPasswordResponseData,
-  AppConfigConsistencyResponseData,
-  AppTopologyResponseData,
-  AppClientListResponseData,
-  AppCommandClimax,
-  AppDetailPanelResponseData,
-  AppMachineTopologyResponseData,
-  AppStatOverviewResponseData,
-  ChartPointListResponseData,
-  AppDailyResponseData,
-  WikiContentResponseData,
-  AppLatencyResponseData,
-  KeyAnalysisPageResponseData,
-  KeyAnalysisProgressResponseData,
-  KeyAnalysisStartResultResponseData,
-  KeyAnalysisResultResponseData,
-  OfflineAnalysisPageResponseData,
-  OfflineAnalysisRecordResponseData,
-  ExternalRedisCreateFormResponseData,
-  OpsActionResultResponseData,
   AppScrollRestartRequest,
-  TopologyExamResponseData,
-  FaultDiagnosticReportResponseData,
-  FaultDiagnosticHistoryResponseData,
+  AppStatChartsBatchResponseData,
+  AppStatOverviewResponseData,
+  AppTopologyResponseData,
+  BenchmarkProgress,
+  BenchmarkResult,
+  ChartPointListResponseData,
+  CommandCheckDetailResponseData,
+  CommandCheckListResponseData,
+  ConfigCheckDetailResponseData,
+  ConfigCheckListResponseData,
+  DashboardDetailsResponseData,
+  DashboardOpsResponseData,
+  DashboardOverviewResponseData,
+  DashboardResponseData,
+  DataModelOptionsResponseData,
+  DataModelResultResponseData,
   DiagnosticAppListResponseData,
   DiagnosticInstanceListResponseData,
-  DiagnosticTaskListResponseData,
   DiagnosticResultResponseData,
-  OnlineHealthCheckResponseData,
-  InstanceDetailResponseData,
-  InstanceStatResponseData,
-  InstanceFaultListResponseData,
+  DiagnosticTaskListResponseData,
+  ExternalNodeListPage,
+  ExternalRedisCreateFormResponseData,
+  ExternalRedisListResponseData,
+  ExternalRedisNode,
+  FaultDiagnosticHistoryResponseData,
+  FaultDiagnosticReportResponseData,
+  InstanceAlertPageResponseData,
   InstanceClientListResponseData,
-  InstanceLogResponseData,
-  InstanceConfigResponseData,
-  InstanceConfigUpdateResponseData,
-  InstanceCommandResultResponseData,
   InstanceCommandAnalysisResponseData,
   InstanceCommandChartResponseData,
-  AppStatChartsBatchResponseData,
-  BenchmarkProgress,
-  BenchmarkResult
+  InstanceCommandResultResponseData,
+  InstanceConfigResponseData,
+  InstanceConfigUpdateResponseData,
+  InstanceDetailResponseData,
+  InstanceFaultListResponseData,
+  InstanceLogResponseData,
+  InstanceOpsOptionsResponseData,
+  InstanceStatResponseData,
+  KeyAnalysisPageResponseData,
+  KeyAnalysisProgressResponseData,
+  KeyAnalysisResultResponseData,
+  KeyAnalysisStartResultResponseData,
+  MigrateActionResultResponseData,
+  MigrateAppInstancesResponseData,
+  MigrateInitResponseData,
+  MigrateListPageResponseData,
+  MigrateTextResponseData,
+  OfflineAnalysisPageResponseData,
+  OfflineAnalysisRecordResponseData,
+  OnlineHealthCheckResponseData,
+  OperationAuditPageResponseData,
+  OpsActionResultResponseData,
+  QuartzJobListResponseData,
+  RestartRecordPageResponseData,
+  RiskAssessHistoryResponseData,
+  RiskAssessOverviewResponseData,
+  RiskAssessReportResponseData,
+  RiskRulesResponseData,
+  ServerStatAppsResponseData,
+  TaskFlowDetailResponseData,
+  TopologyExamResponseData,
+  UserListResponseData,
+  WikiContentResponseData
 } from "./type"
-import { getToken } from "@@/utils/local-storage"
-import { request } from "@/http/axios"
 import axios from "axios"
+import { request } from "@/http/axios"
 
 /** 集群管理列表（M3） */
 export function getAppListApi(params: {
@@ -126,7 +125,6 @@ export function getAppDetailApi(appId: number | string) {
     method: "get"
   })
 }
-
 
 /** 节点运维选项（M8） */
 export function getInstanceOpsOptionsApi() {
@@ -258,10 +256,6 @@ export function saveUserApi(data: Record<string, unknown>) {
 
 export function deleteUserApi(userId: number) {
   return request<ApiResponseData<null>>({ url: `users/${userId}`, method: "delete" })
-}
-
-export function resetUserPasswordApi(userId: number) {
-  return request<ApiResponseData<null>>({ url: `users/${userId}/reset-password`, method: "post" })
 }
 
 export function updateUserPasswordApi(userId: number, password: string) {
@@ -971,11 +965,9 @@ function legacyFormPost<T>(url: string, params: Record<string, string | number |
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) body.append(key, String(value))
   })
-  const token = getToken()
   return axios.post<T>(url, body, {
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      "Content-Type": "application/x-www-form-urlencoded"
     },
     withCredentials: true
   })

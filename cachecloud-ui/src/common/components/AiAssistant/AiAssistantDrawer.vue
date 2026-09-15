@@ -2,8 +2,8 @@
 import type { AiChatMessage } from "@@/composables/useAiAssistant"
 import { useAiAssistant } from "@@/composables/useAiAssistant"
 import { renderMarkdown } from "@@/utils/markdown"
-import { aiChatApi, getAiStatusApi } from "@/api/cachecloud/ai"
 import { ChatDotRound, Close } from "@element-plus/icons-vue"
+import { aiChatApi, getAiStatusApi } from "@/api/cachecloud/ai"
 import "@/common/assets/styles/ai-assistant.scss"
 
 const route = useRoute()
@@ -111,7 +111,9 @@ function onKeydown(e: KeyboardEvent) {
     <div v-show="state.visible" class="rp-ai-drawer-mask is-open" @click="closeDrawer" />
     <aside class="rp-ai-drawer" :class="{ 'is-open': state.visible }" aria-label="AI Assistant">
       <div class="rp-ai-drawer__header">
-        <div class="rp-ai-drawer__title">Redis 运维助手</div>
+        <div class="rp-ai-drawer__title">
+          Redis 运维助手
+        </div>
         <button type="button" class="rp-ai-drawer__close" aria-label="关闭" @click="closeDrawer">
           <el-icon><Close /></el-icon>
         </button>
@@ -119,7 +121,7 @@ function onKeydown(e: KeyboardEvent) {
       <div v-if="!state.enabled" class="rp-ai-disabled">
         AI 助手未启用，请在后端配置 cachecloud.ai
       </div>
-      <div ref="msgListRef" class="rp-ai-drawer__messages">
+      <div class="rp-ai-drawer__messages">
         <div v-if="!messages.length" v-html="welcomeHtml" />
         <div
           v-for="(msg, idx) in messages"
@@ -129,7 +131,9 @@ function onKeydown(e: KeyboardEvent) {
         >
           <div class="rp-ai-msg__bubble">
             <div v-if="msg.role === 'assistant' && msg.content !== '思考中...'" v-html="renderMarkdown(msg.content)" />
-            <template v-else>{{ msg.content }}</template>
+            <template v-else>
+              {{ msg.content }}
+            </template>
           </div>
         </div>
       </div>

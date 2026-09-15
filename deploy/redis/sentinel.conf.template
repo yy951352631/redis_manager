@@ -1,0 +1,12 @@
+bind 0.0.0.0
+protected-mode no
+port 26379
+dir /data
+
+sentinel resolve-hostnames yes
+sentinel announce-hostnames yes
+sentinel monitor cachecloud-master redis-master 6379 2
+sentinel auth-pass cachecloud-master "@REDIS_PASSWORD@"
+sentinel down-after-milliseconds cachecloud-master 5000
+sentinel failover-timeout cachecloud-master 30000
+sentinel parallel-syncs cachecloud-master 1

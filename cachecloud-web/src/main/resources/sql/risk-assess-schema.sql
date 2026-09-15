@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS `risk_assess_rule` (
 
 CREATE TABLE IF NOT EXISTS `risk_assess_report` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `app_id` bigint(20) NOT NULL,
-  `app_name` varchar(128) NOT NULL DEFAULT '',
+  `app_id` bigint(20) NOT NULL COMMENT '评估时应用ID快照，应用删除后仍保留历史报告',
+  `app_name` varchar(128) NOT NULL DEFAULT '' COMMENT '评估时应用名称快照',
   `window_hours` int(11) NOT NULL DEFAULT '168',
   `window_start` datetime DEFAULT NULL,
   `window_end` datetime DEFAULT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS `risk_assess_report` (
 CREATE TABLE IF NOT EXISTS `risk_assess_dimension` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `report_id` bigint(20) NOT NULL,
-  `app_id` bigint(20) NOT NULL,
+  `app_id` bigint(20) NOT NULL COMMENT '评估时应用ID快照',
   `dimension` varchar(64) NOT NULL,
   `dimension_name` varchar(64) NOT NULL DEFAULT '',
   `level` varchar(24) NOT NULL DEFAULT 'NORMAL',
@@ -119,7 +119,9 @@ CREATE TABLE IF NOT EXISTS `risk_assess_dimension` (
   `evidence` text,
   PRIMARY KEY (`id`),
   KEY `idx_report` (`report_id`),
-  KEY `idx_app_dim` (`app_id`,`dimension`)
+  KEY `idx_app_dim` (`app_id`,`dimension`),
+  CONSTRAINT `fk_risk_dimension_report` FOREIGN KEY (`report_id`)
+    REFERENCES `risk_assess_report` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='风险评估-维度明细';
 
 CREATE TABLE IF NOT EXISTS `offline_analysis_record` (

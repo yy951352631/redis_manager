@@ -3,12 +3,12 @@ package com.shcj.cache.web.service;
 import com.shcj.cache.constant.AppUserTypeEnum;
 import com.shcj.cache.entity.AppUser;
 import com.shcj.cache.exception.BizException;
-import com.shcj.cache.util.ConstUtils;
 import com.shcj.cache.web.controller.api.dto.UserListItemDto;
 import com.shcj.cache.web.controller.api.dto.UserProfileUpdateDto;
 import com.shcj.cache.web.controller.api.dto.UserSaveRequestDto;
 import com.shcj.cache.web.enums.SuccessEnum;
 import com.shcj.cache.web.util.DateUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -50,8 +50,13 @@ public class UserManageApiService {
             if (userService.getByName(request.getName()) != null) {
                 throw new BizException("输入参数错误，已存在该用户");
             }
-            appUser.setPassword(ConstUtils.DEFAULT_USER_PASSWORD);
-            userService.save(appUser);
+            if (StringUtils.isBlank(request.getPassword())) {
+                throw new BizException("新增用户必须设置初始密码");
+            }
+            appUser.setPassword(request.getPassword());
+            if (!SuccessEnum.SUCCESS.equals(userService.save(appUser))) {
+                throw new BizException("新增用户失败");
+            }
         } else {
             AppUser existing = userService.get(request.getId());
             if (existing == null || !existing.getName().equals(request.getName())) {
@@ -63,13 +68,6 @@ public class UserManageApiService {
 
     public void deleteUser(long userId) {
         userService.delete(userId);
-    }
-
-    public void resetPassword(long userId) {
-        SuccessEnum result = userService.resetPwd(userId);
-        if (!SuccessEnum.SUCCESS.equals(result)) {
-            throw new BizException("重置密码失败");
-        }
     }
 
     public void updatePassword(long userId, String password) {

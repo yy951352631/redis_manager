@@ -36,10 +36,10 @@
                          │  webapps/ROOT ← cachecloud-web.war │
                          └───────┬──────────────┬───────┘
                                  │              │
-                     ┌───────────▼──┐   ┌───────▼────────┐
-                     │ MySQL 5.7    │   │ Redis 6.2      │
-                     │ redis_manager│   │ 平台自用缓存    │
-                     └──────────────┘   └────────────────┘
+                     ┌───────────▼──┐   ┌───────▼──────────────────┐
+                     │ MySQL 5.7    │   │ 3 x Sentinel             │
+                     │ redis_manager│   │ Redis 6.2.24（1 主 1 从）│
+                     └──────────────┘   └──────────────────────────┘
 
            被纳管的 Redis 实例在平台之外，经网络与 SSH 访问
 ```
@@ -78,7 +78,7 @@
 | JDK | 8（Temurin / OpenJDK 均可） | 后端按 JDK 8 编译，高版本 JVM 未验证 |
 | Tomcat | 9.0.x | 介质包可自带，见下 |
 | MySQL | 5.7.44 | 8.0 亦可，注意 `sql_mode` 与排序规则 |
-| Redis | 6.2.13 | 平台自用缓存，**不是**被纳管对象 |
+| Redis | 6.2.24 | 平台自用缓存，1 主 1 从 3 Sentinel，**不是**被纳管对象 |
 | nginx | 1.20+ | 托管前端并反代后端 |
 
 ### 端口
@@ -88,7 +88,8 @@
 | 8080 | nginx，浏览器访问 | 是 |
 | 8081 | Tomcat，仅回环 | 否 |
 | 3306 | MySQL | 否 |
-| 6379 | Redis | 否 |
+| 6379/6380 | Redis 主/从 | 否 |
+| 26379-26381 | Redis Sentinel | 否 |
 
 前两个可在 `conf/cachecloud.env` 里改。
 
@@ -103,7 +104,11 @@ git clone <仓库地址> && cd cachecloud
 bash scripts/build-offline-package.sh
 ```
 
-产物：`dist/cachecloud-offline-<版本>.tar.gz` 与同名 `.sha256`。
+产物：
+
+- `dist/cachecloud-offline-<版本>.tar.gz` 与同名 `.sha256`
+- `dist/install-cachecloud-offline.sh`：校验、解包、自检并调用包内安装器
+- `dist/cachecloud.env.example`：目标机环境配置模板
 
 常用参数：
 
@@ -116,10 +121,11 @@ bash scripts/build-offline-package.sh
 把 tar.gz 拷到目标机后先核对校验和：
 
 ```bash
-shasum -a 256 -c cachecloud-offline-<版本>.tar.gz.sha256
-tar xzf cachecloud-offline-<版本>.tar.gz && cd cachecloud-offline-<版本>
-shasum -a 256 -c MANIFEST.sha256      # 逐文件核对，确认传输没有缺漏
+bash install-cachecloud-offline.sh --verify-only cachecloud-offline-<版本>.tar.gz
 ```
+
+入口脚本会依次校验外层 `.sha256` 和包内 `MANIFEST.sha256`。没有入口脚本时，
+仍可手工执行 `shasum`、`tar` 和包内的 `install.sh`。
 
 ---
 
@@ -174,21 +180,57 @@ GRANT ALL PRIVILEGES ON redis_manager.* TO 'cachecloud'@'127.0.0.1';
 FLUSH PRIVILEGES;
 ```
 
-### 4.3 Redis（平台自用）
+### 4.3 Redis Sentinel（平台自用）
 
 ```bash
-tar xzf redis-6.2.13.tar.gz && cd redis-6.2.13 && make && make install
+tar xzf redis-6.2.24.tar.gz && cd redis-6.2.24 && make && make install
 ```
 
-最小配置：
+部署 1 主 1 从 3 Sentinel，逻辑主节点名固定为 `cachecloud-master`。下面是同机端口
+示例；生产环境建议把主从和 Sentinel 分散到不同主机，否则只能防进程故障，不能防
+宿主机故障。
+
+主节点 `redis-master.conf`：
 
 ```ini
 bind 127.0.0.1
 port 6379
 requirepass <强口令>
+masterauth <强口令>
 appendonly yes
 maxmemory 512mb
 maxmemory-policy allkeys-lru
+```
+
+从节点 `redis-replica.conf`：
+
+```ini
+bind 127.0.0.1
+port 6380
+replicaof 127.0.0.1 6379
+requirepass <强口令>
+masterauth <强口令>
+appendonly yes
+```
+
+分别创建 3 份可写的 Sentinel 配置，端口使用 `26379`、`26380`、`26381`：
+
+```ini
+bind 127.0.0.1
+port 26379
+sentinel monitor cachecloud-master 127.0.0.1 6379 2
+sentinel auth-pass cachecloud-master <强口令>
+sentinel down-after-milliseconds cachecloud-master 5000
+sentinel failover-timeout cachecloud-master 30000
+sentinel parallel-syncs cachecloud-master 1
+```
+
+使用 systemd 分别托管 5 个进程；Redis 进程执行 `redis-server <配置>`，Sentinel
+执行 `redis-sentinel <配置>`。Sentinel 会重写配置文件，不能以只读方式挂载。启动后确认：
+
+```bash
+redis-cli -p 26379 sentinel get-master-addr-by-name cachecloud-master
+redis-cli -p 26379 sentinel ckquorum cachecloud-master
 ```
 
 > 这个 Redis 只给平台自己用（缓存、分布式锁），不要把它当作被纳管的业务实例。
@@ -209,13 +251,13 @@ systemctl enable --now nginx
 ### 5.1 填写配置
 
 ```bash
-cd cachecloud-offline-<版本>
-cp conf/cachecloud.env.example conf/cachecloud.env
-chmod 600 conf/cachecloud.env
-vi conf/cachecloud.env
+cp cachecloud.env.example cachecloud.env
+chmod 600 cachecloud.env
+vi cachecloud.env
 ```
 
-至少要改 `CC_MYSQL_PASSWORD`；如果 Redis 设了口令还要填 `CC_REDIS_PASSWORD`。
+至少要改 `CC_MYSQL_PASSWORD` 和 `CC_REDIS_PASSWORD`，并核对
+`CC_REDIS_SENTINEL_MASTER`、`CC_REDIS_SENTINEL_NODES` 与实际部署一致。
 完整清单见[附录 B](#附录-b配置项清单)。
 
 `CC_SERVER_DOMAIN` **必须**填浏览器实际访问到的地址并带上端口
@@ -224,9 +266,8 @@ vi conf/cachecloud.env
 
 ### 5.2 自检
 
-```bash
-bash scripts/preflight.sh
-```
+使用外层安装入口时，自检会在正式安装前自动执行。手工解包安装时执行
+`bash scripts/preflight.sh`。
 
 只读检查，会一次性列出所有不满足的条件：配置项、JDK 版本、Tomcat、nginx、
 MySQL 连通性与库是否为空、Redis 端口、端口占用、磁盘余量、介质包完整性。
@@ -235,8 +276,10 @@ MySQL 连通性与库是否为空、Redis 端口、端口占用、磁盘余量�
 ### 5.3 安装
 
 ```bash
-sudo bash install.sh
+sudo bash install-cachecloud-offline.sh cachecloud-offline-<版本>.tar.gz cachecloud.env
 ```
+
+若已手工解包并进入介质包目录，也可以继续执行 `sudo bash install.sh`。
 
 脚本会依次：
 
@@ -478,6 +521,9 @@ cachecloud-offline-<版本>/
 | `CC_REDIS_HOST` | 是 | `127.0.0.1` | 平台自用缓存 |
 | `CC_REDIS_PORT` | 是 | `6379` | |
 | `CC_REDIS_PASSWORD` | 否 | 空 | Redis 未设 `requirepass` 时留空 |
+| `CC_REDIS_SENTINEL_MASTER` | 否 | `cachecloud-master` | Sentinel 监控的逻辑主节点名；与节点列表同时留空时使用直连模式 |
+| `CC_REDIS_SENTINEL_NODES` | 否 | `127.0.0.1:26379,...` | Sentinel 地址，逗号分隔；与主节点名必须同时配置 |
+| `CC_REDIS_SENTINEL_PASSWORD` | 否 | 空 | Sentinel 自身启用认证时填写，不是 Redis 数据节点口令 |
 | `CC_JAVA_XMS` | 否 | `512m` | |
 | `CC_JAVA_XMX` | 否 | `1536m` | 不超过物理内存 1/4 |
 | `CC_PROFILE` | 否 | `online` | 对应 `application-<profile>.yml` |

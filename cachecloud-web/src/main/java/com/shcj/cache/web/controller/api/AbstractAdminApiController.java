@@ -13,12 +13,6 @@ abstract class AbstractAdminApiController extends BaseController {
     protected AppUser resolveApiUser(HttpServletRequest request) {
         String userName = userLoginStatusService.getUserNameFromLoginStatus(request);
         if (StringUtils.isBlank(userName)) {
-            String authHeader = request.getHeader("Authorization");
-            if (StringUtils.isNotBlank(authHeader) && authHeader.startsWith("Bearer ")) {
-                userName = authHeader.substring(7).trim();
-            }
-        }
-        if (StringUtils.isBlank(userName)) {
             return null;
         }
         AppUser user = userService.getByName(userName);

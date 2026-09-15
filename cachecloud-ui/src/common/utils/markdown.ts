@@ -21,7 +21,7 @@ function isTableSeparatorRow(cells: string[]) {
 
 function normalizeTableLines(text: string) {
   if (!text || !text.includes("|")) return text
-  return text.replace(/\|\s*\|(?=\s*[-\w\u4e00-\u9fff])/g, "|\n|")
+  return text.replace(/\|\s*\|(?=\s*[-\w\u4E00-\u9FFF])/g, "|\n|")
 }
 
 function buildTableHtml(tableLines: string[]) {
@@ -37,7 +37,7 @@ function buildTableHtml(tableLines: string[]) {
   if (rows.length > 1 && isTableSeparatorRow(rows[1])) bodyStart = 2
   if (bodyStart >= rows.length) return null
 
-  let html = '<div class="rp-ai-table-wrap"><table class="rp-ai-table"><thead><tr>'
+  let html = "<div class=\"rp-ai-table-wrap\"><table class=\"rp-ai-table\"><thead><tr>"
   for (const h of header) html += `<th>${escapeHtml(h)}</th>`
   html += "</tr></thead><tbody>"
   for (let r = bodyStart; r < rows.length; r++) {

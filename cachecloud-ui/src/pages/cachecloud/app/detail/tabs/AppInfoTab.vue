@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { AppDetailPanel, AppDetailPanelAlertConfig, AppDetailPanelUser, UserListItem } from "@/api/cachecloud"
-import { formatClusterNo } from "@/common/utils/cluster-no"
 import {
   addAppDetailUsersApi,
   deleteAppDetailUserApi,
@@ -10,11 +9,12 @@ import {
   updateAppDetailInfoApi,
   updateAppDetailUserApi
 } from "@/api/cachecloud"
+import { formatClusterNo } from "@/common/utils/cluster-no"
 import "@/common/assets/styles/app-tab.scss"
 
 const props = defineProps<{ appId: number }>()
 
-const PHONE_RE = /^((13[0-9])|(14[5,7])|(15[0-3,5-9])|(17[0,3,5-8])|(18[0-9])|166|198|199|(147))\d{8}$/
+const PHONE_RE = /^(13\d|14[57]|15[0-35-9]|17[035-8]|18\d|166|198|199)\d{8}$/
 
 const loading = ref(false)
 const panel = ref<AppDetailPanel | null>(null)
@@ -230,7 +230,9 @@ watch(() => props.appId, fetchData, { immediate: true })
       <div class="app-detail-section">
         <div class="app-detail-section__header app-detail-section__header--info">
           <h4>集群信息</h4>
-          <el-button v-if="panel.hasAuth" type="primary" size="small" @click="openAppInfoDialog">修改集群信息</el-button>
+          <el-button v-if="panel.hasAuth" type="primary" size="small" @click="openAppInfoDialog">
+            修改集群信息
+          </el-button>
         </div>
         <table class="app-detail-kv-table">
           <tbody>
@@ -266,7 +268,9 @@ watch(() => props.appId, fetchData, { immediate: true })
             </tr>
             <tr>
               <td>集群描述</td>
-              <td colspan="3">{{ panel.appInfo.intro || "-" }}</td>
+              <td colspan="3">
+                {{ panel.appInfo.intro || "-" }}
+              </td>
             </tr>
             <tr v-if="panel.appInfo.masterName">
               <td><span class="text-danger">哨兵masterName</span></td>
@@ -281,7 +285,9 @@ watch(() => props.appId, fetchData, { immediate: true })
       <div class="app-detail-section">
         <div class="app-detail-section__header app-detail-section__header--alert">
           <h4>报警通知</h4>
-          <el-button type="danger" size="small" @click="openAlertConfigDialog">通知设置</el-button>
+          <el-button type="danger" size="small" @click="openAlertConfigDialog">
+            通知设置
+          </el-button>
         </div>
         <el-table :data="panel.alertMetrics" border stripe size="small">
           <el-table-column prop="alertKey" label="项" min-width="160" />
@@ -289,14 +295,18 @@ watch(() => props.appId, fetchData, { immediate: true })
         </el-table>
         <p class="app-detail-alert-hint">
           内存使用率、客户端连接数、平均命中率等报警阈值已统一收口到
-          <router-link to="/instance-alert">报警配置</router-link>，可按全局或按集群设置。
+          <router-link to="/instance-alert">
+            报警配置
+          </router-link>，可按全局或按集群设置。
         </p>
       </div>
 
       <div class="app-detail-section">
         <div class="app-detail-section__header app-detail-section__header--user">
           <h4>用户管理</h4>
-          <el-button v-if="panel.hasAuth" type="success" size="small" @click="openAddUserDialog">添加用户</el-button>
+          <el-button v-if="panel.hasAuth" type="success" size="small" @click="openAddUserDialog">
+            添加用户
+          </el-button>
         </div>
         <el-table :data="panel.users" border stripe size="small">
           <el-table-column prop="id" label="id" width="70" />
@@ -306,13 +316,19 @@ watch(() => props.appId, fetchData, { immediate: true })
           <el-table-column prop="mobile" label="手机" width="120" />
           <el-table-column prop="company" label="部门" min-width="120" />
           <el-table-column label="是否报警" width="90">
-            <template #default="{ row }">{{ row.alert ? "是" : "否" }}</template>
+            <template #default="{ row }">
+              {{ row.alert ? "是" : "否" }}
+            </template>
           </el-table-column>
           <el-table-column v-if="panel.hasAuth" label="操作" width="160">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button type="primary" size="small" @click="openEditUserDialog(row)">修改</el-button>
-                <el-button type="danger" size="small" @click="handleDeleteUser(row)">删除</el-button>
+                <el-button type="primary" size="small" @click="openEditUserDialog(row)">
+                  修改
+                </el-button>
+                <el-button type="danger" size="small" @click="handleDeleteUser(row)">
+                  删除
+                </el-button>
               </div>
             </template>
           </el-table-column>
@@ -340,8 +356,12 @@ watch(() => props.appId, fetchData, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="appInfoVisible = false">Close</el-button>
-        <el-button type="primary" :loading="saving" @click="submitAppInfo">Ok</el-button>
+        <el-button @click="appInfoVisible = false">
+          Close
+        </el-button>
+        <el-button type="primary" :loading="saving" @click="submitAppInfo">
+          Ok
+        </el-button>
       </template>
     </el-dialog>
 
@@ -352,12 +372,18 @@ watch(() => props.appId, fetchData, { immediate: true })
             <el-option :value="0" label="否" />
             <el-option :value="1" label="是" />
           </el-select>
-          <div class="form-hint">是: 接收全局报警；否: 不接收</div>
+          <div class="form-hint">
+            是: 接收全局报警；否: 不接收
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="alertConfigVisible = false">Close</el-button>
-        <el-button type="primary" :loading="saving" @click="submitAlertConfig">Ok</el-button>
+        <el-button @click="alertConfigVisible = false">
+          Close
+        </el-button>
+        <el-button type="primary" :loading="saving" @click="submitAlertConfig">
+          Ok
+        </el-button>
       </template>
     </el-dialog>
 
@@ -381,8 +407,12 @@ watch(() => props.appId, fetchData, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addUserVisible = false">Close</el-button>
-        <el-button type="primary" :loading="saving" @click="submitAddUsers">Ok</el-button>
+        <el-button @click="addUserVisible = false">
+          Close
+        </el-button>
+        <el-button type="primary" :loading="saving" @click="submitAddUsers">
+          Ok
+        </el-button>
       </template>
     </el-dialog>
 
@@ -411,20 +441,31 @@ watch(() => props.appId, fetchData, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editUserVisible = false">Close</el-button>
-        <el-button type="primary" :loading="saving" @click="submitEditUser">Ok</el-button>
+        <el-button @click="editUserVisible = false">
+          Close
+        </el-button>
+        <el-button type="primary" :loading="saving" @click="submitEditUser">
+          Ok
+        </el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.text-danger { color: #d9534f; }
+.text-danger {
+  color: #d9534f;
+}
 .app-detail-alert-hint {
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
 
-.form-hint { font-size: 12px; color: var(--el-text-color-secondary); line-height: 1.5; margin-top: 4px; }
+.form-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+  margin-top: 4px;
+}
 </style>

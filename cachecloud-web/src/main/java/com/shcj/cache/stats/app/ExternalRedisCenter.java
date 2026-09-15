@@ -19,6 +19,8 @@ public interface ExternalRedisCenter {
 
     /**
      * 外部纳管节点扁平列表（每个 ip:port 一行）。
+     *
+     * <p>列表只读取最近一次持久化状态和采集指标，不在 HTTP 请求线程中连接 Redis。</p>
      */
     List<ExternalNodeVO> listExternalNodes(String ipQuery);
 

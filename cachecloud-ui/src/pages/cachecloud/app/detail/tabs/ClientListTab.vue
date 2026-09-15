@@ -163,7 +163,9 @@ watch(() => props.appId, fetchData, { immediate: true })
     </div>
 
     <div class="app-client-list-body">
-      <p v-if="loadHint" class="app-client-list-hint">{{ loadHint }}</p>
+      <p v-if="loadHint" class="app-client-list-hint">
+        {{ loadHint }}
+      </p>
       <p v-if="totalConnections >= 1000" class="app-client-list-warn">
         集群当前约有 {{ totalConnections }} 条连接。列表仅展示按 IP 汇总的数据；详情按需加载，单次最多展示 200 条。
       </p>
@@ -180,7 +182,9 @@ watch(() => props.appId, fetchData, { immediate: true })
         </thead>
         <tbody>
           <tr v-if="!clients.length && !loading">
-            <td colspan="5" class="app-instance-slow-empty">暂无数据</td>
+            <td colspan="5" class="app-instance-slow-empty">
+              暂无数据
+            </td>
           </tr>
           <tr v-for="(client, index) in clients" :key="client.addr">
             <td>{{ index + 1 }}</td>
@@ -226,8 +230,12 @@ watch(() => props.appId, fetchData, { immediate: true })
         </section>
 
         <section class="app-client-drawer__section">
-          <h4 class="app-client-drawer__title">各节点连接分布</h4>
-          <p class="app-client-drawer__hint">点击节点行查看该节点上的连接详情</p>
+          <h4 class="app-client-drawer__title">
+            各节点连接分布
+          </h4>
+          <p class="app-client-drawer__hint">
+            点击节点行查看该节点上的连接详情
+          </p>
           <el-table
             :data="drawerClient.instanceStats"
             stripe

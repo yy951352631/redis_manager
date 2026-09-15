@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import type { InstanceDetail } from "@/api/cachecloud"
+import { ArrowLeft } from "@element-plus/icons-vue"
 import { getInstanceDetailApi } from "@/api/cachecloud"
 import { useTabCache } from "@/common/composables/useTabCache"
-import { ArrowLeft } from "@element-plus/icons-vue"
+import InstanceClientTab from "@/pages/cachecloud/instance/detail/tabs/InstanceClientTab.vue"
 import InstanceCommandChartTab from "@/pages/cachecloud/instance/detail/tabs/InstanceCommandChartTab.vue"
 import InstanceCommandTab from "@/pages/cachecloud/instance/detail/tabs/InstanceCommandTab.vue"
 import InstanceConfigTab from "@/pages/cachecloud/instance/detail/tabs/InstanceConfigTab.vue"
-import InstanceClientTab from "@/pages/cachecloud/instance/detail/tabs/InstanceClientTab.vue"
 import InstanceHealthTab from "@/pages/cachecloud/instance/detail/tabs/InstanceHealthTab.vue"
 import InstanceStatTab from "@/pages/cachecloud/instance/detail/tabs/InstanceStatTab.vue"
 import "@/common/assets/styles/app-tab.scss"
@@ -185,10 +185,16 @@ watch(() => resolveQueryTab(), (tab) => {
         class="instance-page-header"
         :data-page-title="`节点详情 ${detail.hostPort} (ID: ${detail.instanceId})`"
       >
-        <el-button :icon="ArrowLeft" link @click="goBack">{{ backLabel }}</el-button>
+        <el-button :icon="ArrowLeft" link @click="goBack">
+          {{ backLabel }}
+        </el-button>
         <div class="instance-page-header__meta">
-          <el-tag size="small" type="info">{{ detail.hostPort }}</el-tag>
-          <el-tag size="small" effect="plain">ID: {{ detail.instanceId }}</el-tag>
+          <el-tag size="small" type="info">
+            {{ detail.hostPort }}
+          </el-tag>
+          <el-tag size="small" effect="plain">
+            ID: {{ detail.instanceId }}
+          </el-tag>
         </div>
       </div>
 

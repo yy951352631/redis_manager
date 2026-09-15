@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { AppMachineTopology } from "@/api/cachecloud"
-import { getAppMachineTopologyApi } from "@/api/cachecloud"
 import { Monitor } from "@element-plus/icons-vue"
+import { getAppMachineTopologyApi } from "@/api/cachecloud"
 import "@/common/assets/styles/app-tab.scss"
 
 const props = defineProps<{ appId: number }>()
@@ -79,13 +79,19 @@ watch(() => props.appId, fetchData, { immediate: true })
       <table class="app-topology-table app-topology-table--matrix">
         <thead>
           <tr>
-            <th class="app-topology-table__machine-col">机器</th>
-            <th v-for="g in data?.groupCount ?? 0" :key="g">{{ data?.groupLabel }} {{ g }}</th>
+            <th class="app-topology-table__machine-col">
+              机器
+            </th>
+            <th v-for="g in data?.groupCount ?? 0" :key="g">
+              {{ data?.groupLabel }} {{ g }}
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!data?.machines?.length">
-            <td :colspan="(data?.groupCount ?? 0) + 1" class="app-topology-table__empty">暂无拓扑数据</td>
+            <td :colspan="(data?.groupCount ?? 0) + 1" class="app-topology-table__empty">
+              暂无拓扑数据
+            </td>
           </tr>
           <tr v-for="row in data?.machines ?? []" :key="row.ip">
             <td class="app-topology-machine">
@@ -119,5 +125,7 @@ watch(() => props.appId, fetchData, { immediate: true })
 </template>
 
 <style scoped>
-.mb-2 { margin-bottom: 12px; }
+.mb-2 {
+  margin-bottom: 12px;
+}
 </style>

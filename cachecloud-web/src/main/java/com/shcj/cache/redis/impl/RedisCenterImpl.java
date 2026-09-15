@@ -41,6 +41,7 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
@@ -88,6 +89,8 @@ public class RedisCenterImpl implements RedisCenter {
     private static List<RedisInfoEnum> otherNeedCalDifRedisInfoEnumList = new ArrayList<>();
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final Lock lock = new ReentrantLock();
+    @Value("${cachecloud.redis.managed-loopback-host:127.0.0.1}")
+    private String managedLoopbackHost;
     @Autowired
     private AppStatsDao appStatsDao;
     @Autowired
@@ -150,7 +153,8 @@ public class RedisCenterImpl implements RedisCenter {
 
 
     private JedisPool maintainJedisPool(String host, int port, String password) {
-        String hostAndPort = ObjectConvert.linkIpAndPort(host, port);
+        String connectionHost = RedisHostResolver.resolve(managedLoopbackHost, host);
+        String hostAndPort = ObjectConvert.linkIpAndPort(connectionHost, port);
         JedisPool jedisPool = jedisPoolMap.get(hostAndPort);
         // 池只按 host:port 缓存，密码仅在建池那一次生效。集群改密之后这里会一直拿着旧密码的池，
         // 拓扑同步的 getMaster/getSlave0 就持续 NOAUTH，直到重启才恢复——密码变了必须重建。
@@ -181,10 +185,10 @@ public class RedisCenterImpl implements RedisCenter {
                 if (jedisPool == null) {
                     try {
                         if (StringUtils.isNotBlank(password)) {
-                            jedisPool = new JedisPool(new GenericObjectPoolConfig(), host, port,
+                            jedisPool = new JedisPool(new GenericObjectPoolConfig(), connectionHost, port,
                                     Protocol.DEFAULT_TIMEOUT, password);
                         } else {
-                            jedisPool = new JedisPool(new GenericObjectPoolConfig(), host, port,
+                            jedisPool = new JedisPool(new GenericObjectPoolConfig(), connectionHost, port,
                                     Protocol.DEFAULT_TIMEOUT);
                         }
                         jedisPoolMap.put(hostAndPort, jedisPool);
@@ -1486,11 +1490,7 @@ public class RedisCenterImpl implements RedisCenter {
         if (!isRun) {
             return true;
         }
-        AppDesc appDesc = appDao.getAppDescById(appId);
-        final Jedis jedis = new Jedis(host, port);
-        if (appDesc.hasSentinelPwdFlag()) {
-            jedis.auth(appDesc.getAppPassword());
-        }
+        final Jedis jedis = getSentinelJedis(appId, host, port);
         try {
             //关闭实例节点
             boolean isShutdown = new IdempotentConfirmer() {
@@ -1719,7 +1719,7 @@ public class RedisCenterImpl implements RedisCenter {
          */
         InstanceStats instanceStats = new InstanceStats();
         instanceStats.setAppId(appId);
-        InstanceInfo curInst = instanceDao.getInstByIpAndPort(ip, port);
+        InstanceInfo curInst = instanceDao.getMonitorInstByAppIdAndIpPort(appId, ip, port);
         if (curInst != null) {
             instanceStats.setHostId(curInst.getHostId());
             instanceStats.setInstId(curInst.getId());
@@ -3549,7 +3549,8 @@ public class RedisCenterImpl implements RedisCenter {
     }
 
     private Jedis getJedis(String host, int port, int connectionTimeout, int soTimeout, String authPassword) {
-        Jedis jedis = new Jedis(host, port);
+        String connectionHost = RedisHostResolver.resolve(managedLoopbackHost, host);
+        Jedis jedis = new Jedis(connectionHost, port);
         jedis.getClient().setConnectionTimeout(connectionTimeout);
         jedis.getClient().setSoTimeout(soTimeout);
         try {

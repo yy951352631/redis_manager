@@ -194,10 +194,6 @@ public class OperationAuditInterceptor implements HandlerInterceptor {
         if (StringUtils.isNotBlank(userName)) {
             return userName;
         }
-        String authHeader = request.getHeader("Authorization");
-        if (StringUtils.isNotBlank(authHeader) && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7).trim();
-        }
         // 登录请求此时还没有登录态（Cookie 写在响应里），退回到请求中的用户名
         return StringUtils.defaultString(resolveUserNameFromParams(params));
     }

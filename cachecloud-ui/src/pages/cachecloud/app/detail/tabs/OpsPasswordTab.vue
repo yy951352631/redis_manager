@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { checkAppPasswordApi, getAppPasswordApi, updateAppPasswordApi } from "@/api/cachecloud"
 import { Hide, View } from "@element-plus/icons-vue"
+import { checkAppPasswordApi, getAppPasswordApi, updateAppPasswordApi } from "@/api/cachecloud"
 import "@/common/assets/styles/app-ops.scss"
 
 const props = defineProps<{
@@ -54,7 +54,9 @@ onMounted(() => {
 <template>
   <div v-loading="loading" class="app-password-panel">
     <div class="app-password-panel__intro">
-      <h4 class="app-password-panel__title">Redis 密码</h4>
+      <h4 class="app-password-panel__title">
+        Redis 密码
+      </h4>
       <p class="app-password-panel__hint">
         平台使用该密码连接 Redis 进行采集与运维。修改后建议点击「校验」确认各节点密码一致。
       </p>
@@ -82,8 +84,12 @@ onMounted(() => {
         </button>
       </div>
       <div class="app-password-panel__actions">
-        <el-button type="primary" @click="handleUpdatePassword">更新</el-button>
-        <el-button @click="handleCheckPassword">校验</el-button>
+        <el-button type="primary" @click="handleUpdatePassword">
+          更新
+        </el-button>
+        <el-button @click="handleCheckPassword">
+          校验
+        </el-button>
       </div>
     </div>
   </div>

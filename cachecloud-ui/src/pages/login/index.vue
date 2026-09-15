@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { FormRules } from "element-plus"
+import type { FormInstance, FormRules } from "element-plus"
 import type { LoginRequestData } from "./apis/type"
 import ThemeSwitch from "@@/components/ThemeSwitch/index.vue"
 import { Lock, User } from "@element-plus/icons-vue"
@@ -12,7 +12,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const settingsStore = useSettingsStore()
 
-const loginFormRef = useTemplateRef("loginFormRef")
+const loginFormRef = useTemplateRef<FormInstance>("loginFormRef")
 const loading = ref(false)
 
 const parallax = reactive({ x: 0, y: 0, targetX: 0, targetY: 0 })
@@ -64,22 +64,25 @@ const loginFormRules: FormRules = {
   password: [{ required: true, message: "请输入密码", trigger: "blur" }]
 }
 
-function handleLogin() {
-  loginFormRef.value?.validate((valid) => {
-    if (!valid) {
-      ElMessage.error("表单校验不通过")
-      return
-    }
-    loading.value = true
-    loginApi(loginFormData).then(({ data }) => {
-      userStore.setToken(data.token)
-      router.push(route.query.redirect ? decodeURIComponent(route.query.redirect as string) : "/total/statlist")
-    }).catch(() => {
-      loginFormData.password = ""
-    }).finally(() => {
-      loading.value = false
-    })
-  })
+async function handleLogin() {
+  if (loading.value || !loginFormRef.value) return
+  try {
+    await loginFormRef.value.validate()
+  } catch {
+    // 字段下方的校验信息已经足够，无需再弹出全局错误提示。
+    return
+  }
+
+  loading.value = true
+  try {
+    await loginApi(loginFormData)
+    userStore.setSessionActive()
+    await router.replace(route.query.redirect ? decodeURIComponent(route.query.redirect as string) : "/total/statlist")
+  } catch {
+    loginFormData.password = ""
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -107,12 +110,18 @@ function handleLogin() {
     <div class="login-shell">
       <div class="login-card">
         <div class="login-brand">
-          <div class="login-brand__icon">R</div>
-          <h1 class="login-brand__title">Redis 管理平台</h1>
-          <p class="login-brand__subtitle">统一运维 · 监控 · 纳管</p>
+          <div class="login-brand__icon">
+            R
+          </div>
+          <h1 class="login-brand__title">
+            Redis 管理平台
+          </h1>
+          <p class="login-brand__subtitle">
+            统一运维 · 监控 · 纳管
+          </p>
         </div>
         <div class="login-form">
-          <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @submit.prevent="handleLogin" @keyup.enter="handleLogin">
+          <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @submit.prevent="handleLogin">
             <el-form-item prop="username">
               <label class="login-field-label" for="login-username">用户名</label>
               <el-input
@@ -138,7 +147,7 @@ function handleLogin() {
                 show-password
               />
             </el-form-item>
-            <el-button :loading="loading" type="primary" size="large" native-type="button" class="login-submit" @click.prevent="handleLogin">
+            <el-button :loading="loading" type="primary" size="large" native-type="submit" class="login-submit">
               登 录
             </el-button>
           </el-form>
@@ -178,11 +187,7 @@ function handleLogin() {
   position: absolute;
   inset: -8%;
   will-change: transform;
-  transform: translate3d(
-    calc(var(--px, 0) * 22px),
-    calc(var(--py, 0) * 16px),
-    0
-  );
+  transform: translate3d(calc(var(--px, 0) * 22px), calc(var(--py, 0) * 16px), 0);
   background:
     radial-gradient(
       ellipse 45% 35% at calc(50% + var(--px, 0) * 6%) calc(50% + var(--py, 0) * 5%),
@@ -199,11 +204,7 @@ function handleLogin() {
   position: absolute;
   inset: -4%;
   will-change: transform;
-  transform: translate3d(
-    calc(var(--px, 0) * -10px),
-    calc(var(--py, 0) * -8px),
-    0
-  );
+  transform: translate3d(calc(var(--px, 0) * -10px), calc(var(--py, 0) * -8px), 0);
   opacity: 0.45;
   background-image:
     linear-gradient(rgba(77, 141, 255, 0.07) 1px, transparent 1px),
@@ -226,11 +227,7 @@ function handleLogin() {
   top: -8%;
   left: -6%;
   background: radial-gradient(circle, rgba(107, 160, 255, 0.55) 0%, rgba(77, 141, 255, 0.08) 70%);
-  transform: translate3d(
-    calc(var(--px, 0) * 36px),
-    calc(var(--py, 0) * 28px),
-    0
-  );
+  transform: translate3d(calc(var(--px, 0) * 36px), calc(var(--py, 0) * 28px), 0);
 }
 
 .login-bg__orb--2 {
@@ -239,11 +236,7 @@ function handleLogin() {
   right: -4%;
   bottom: -6%;
   background: radial-gradient(circle, rgba(45, 107, 232, 0.45) 0%, rgba(45, 107, 232, 0.06) 72%);
-  transform: translate3d(
-    calc(var(--px, 0) * -30px),
-    calc(var(--py, 0) * -24px),
-    0
-  );
+  transform: translate3d(calc(var(--px, 0) * -30px), calc(var(--py, 0) * -24px), 0);
 }
 
 .login-bg__orb--3 {
@@ -252,11 +245,7 @@ function handleLogin() {
   top: 42%;
   left: 58%;
   background: radial-gradient(circle, rgba(130, 175, 255, 0.35) 0%, transparent 70%);
-  transform: translate3d(
-    calc(var(--px, 0) * 20px),
-    calc(var(--py, 0) * -18px),
-    0
-  );
+  transform: translate3d(calc(var(--px, 0) * 20px), calc(var(--py, 0) * -18px), 0);
 }
 
 .login-bg__cluster {
@@ -267,11 +256,7 @@ function handleLogin() {
   height: 320px;
   opacity: 0.55;
   will-change: transform;
-  transform: translate3d(
-    calc(var(--px, 0) * -26px),
-    calc(-50% + var(--py, 0) * -22px),
-    0
-  );
+  transform: translate3d(calc(var(--px, 0) * -26px), calc(-50% + var(--py, 0) * -22px), 0);
 }
 
 .login-bg__node {
@@ -431,7 +416,9 @@ function handleLogin() {
   }
 
   :deep(.el-input__wrapper.is-focus) {
-    box-shadow: 0 0 0 1px var(--rp-primary, #4d8dff) inset, 0 0 0 3px rgba(77, 141, 255, 0.15);
+    box-shadow:
+      0 0 0 1px var(--rp-primary, #4d8dff) inset,
+      0 0 0 3px rgba(77, 141, 255, 0.15);
   }
 
   .login-submit {

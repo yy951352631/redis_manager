@@ -1,8 +1,9 @@
 package com.shcj.cache.login.impl;
 
 import com.shcj.cache.login.LoginComponent;
-import com.shcj.cache.util.MD5Util;
-import com.shcj.cache.utils.EnvCustomUtil;
+import com.shcj.cache.entity.AppUser;
+import com.shcj.cache.util.PasswordHashUtil;
+import com.shcj.cache.web.enums.SuccessEnum;
 import com.shcj.cache.web.service.UserService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -10,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
@@ -25,9 +25,6 @@ import java.net.UnknownHostException;
 public class DefaultLoginComponent implements LoginComponent {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    @Autowired
-    private RestTemplate restTemplate;
 
     @Autowired
     private UserService userService;
@@ -48,8 +45,17 @@ public class DefaultLoginComponent implements LoginComponent {
             return false;
         }
         String pwd = userService.getPwdByName(userName);
-        // 库中存 MD5；校验时对输入做 MD5
-        return MD5Util.matchesStoredPassword(pwd, password);
+        if (!PasswordHashUtil.matches(pwd, password)) {
+            return false;
+        }
+        if (PasswordHashUtil.needsUpgrade(pwd)) {
+            AppUser user = userService.getByName(userName);
+            if (user != null && !SuccessEnum.SUCCESS.equals(
+                    userService.updateEncodedPwd(user.getId(), PasswordHashUtil.encode(password)))) {
+                logger.warn("upgrade legacy password hash failed for user {}", userName);
+            }
+        }
+        return true;
     }
 
     private String getUrl() {

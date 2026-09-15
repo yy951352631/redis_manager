@@ -123,7 +123,9 @@ onMounted(fetchPage)
 <template>
   <div v-loading="loading" class="alert-page">
     <el-card shadow="never" class="section-card">
-      <template #header>全局报警配置</template>
+      <template #header>
+        全局报警配置
+      </template>
       <el-table :data="page?.globalAlerts ?? []" stripe border size="small">
         <el-table-column prop="configInfo" label="配置项" min-width="180" />
         <el-table-column prop="alertConfig" label="key" width="160" />
@@ -156,8 +158,12 @@ onMounted(fetchPage)
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button type="primary" size="small" @click="handleUpdate(row)">保存</el-button>
-              <el-button type="danger" size="small" @click="handleRemove(row.id)">删除</el-button>
+              <el-button type="primary" size="small" @click="handleUpdate(row)">
+                保存
+              </el-button>
+              <el-button type="danger" size="small" @click="handleRemove(row.id)">
+                删除
+              </el-button>
             </div>
           </template>
         </el-table-column>
@@ -176,12 +182,16 @@ onMounted(fetchPage)
         <el-select v-model="globalForm.importantLevel" placeholder="重要度" style="width: 100px">
           <el-option v-for="o in IMPORTANT_LEVEL_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
         </el-select>
-        <el-button type="primary" @click="saveGlobal">添加全局配置</el-button>
+        <el-button type="primary" @click="saveGlobal">
+          添加全局配置
+        </el-button>
       </div>
     </el-card>
 
     <el-card shadow="never" class="section-card">
-      <template #header>节点/集群特殊报警</template>
+      <template #header>
+        节点/集群特殊报警
+      </template>
       <el-table :data="page?.specialAlerts ?? []" stripe border size="small">
         <el-table-column prop="instanceHostPort" label="节点/集群" width="180" />
         <el-table-column prop="configInfo" label="配置项" min-width="180" />
@@ -212,8 +222,12 @@ onMounted(fetchPage)
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
-              <el-button type="primary" size="small" @click="handleUpdate(row)">保存</el-button>
-              <el-button type="danger" size="small" @click="handleRemove(row.id)">删除</el-button>
+              <el-button type="primary" size="small" @click="handleUpdate(row)">
+                保存
+              </el-button>
+              <el-button type="danger" size="small" @click="handleRemove(row.id)">
+                删除
+              </el-button>
             </div>
           </template>
         </el-table-column>
@@ -236,7 +250,9 @@ onMounted(fetchPage)
         <el-select v-model="specialForm.checkCycle" placeholder="周期" style="width: 110px">
           <el-option v-for="o in page?.checkCycles ?? []" :key="o.value" :label="o.label" :value="o.value" />
         </el-select>
-        <el-button type="primary" @click="saveSpecial">添加节点配置</el-button>
+        <el-button type="primary" @click="saveSpecial">
+          添加节点配置
+        </el-button>
         <el-input-number v-model="appForm.appId" placeholder="集群编码" :min="1" controls-position="right" />
         <el-select
           v-model="appForm.alertConfig"
@@ -248,15 +264,31 @@ onMounted(fetchPage)
           <el-option v-for="c in page?.usedGlobalConfigs ?? []" :key="c.value" :label="c.info" :value="c.value" />
         </el-select>
         <el-input v-model="appForm.alertValue" placeholder="阈值" style="width: 100px" />
-        <el-button type="success" @click="saveApp">添加集群配置</el-button>
+        <el-button type="success" @click="saveApp">
+          添加集群配置
+        </el-button>
       </div>
     </el-card>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.alert-page { padding: 16px; }
-.page-title { margin: 0 0 16px; font-size: 20px; font-weight: 600; }
-.section-card { margin-bottom: 16px; }
-.add-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.alert-page {
+  padding: 16px;
+}
+.page-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.section-card {
+  margin-bottom: 16px;
+}
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
 </style>

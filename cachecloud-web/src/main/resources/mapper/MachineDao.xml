@@ -238,8 +238,4 @@
         where id=#{id}
     </update>
 
-    <update id="updateBrevityScheduleHost">
-        update brevity_schedule_resources set host=#{newHost} where host=#{oldHost}
-    </update>
-
 </mapper>

@@ -133,6 +133,22 @@ public class DatabaseSchemaInitializer {
         ensureColumn("operation_audit", "object_label",
                 "ALTER TABLE operation_audit ADD COLUMN object_label VARCHAR(255) DEFAULT NULL "
                         + "COMMENT '操作对象，写入时固化的快照' AFTER instance_id");
+        ensurePasswordColumn();
+        ensureForeignKey("app_to_user", "fk_app_to_user_app",
+                "SELECT COUNT(*) FROM app_to_user child LEFT JOIN app_desc parent "
+                        + "ON child.app_id = parent.app_id WHERE parent.app_id IS NULL",
+                "ALTER TABLE app_to_user ADD CONSTRAINT fk_app_to_user_app "
+                        + "FOREIGN KEY (app_id) REFERENCES app_desc(app_id) ON DELETE CASCADE");
+        ensureForeignKey("external_redis", "fk_external_redis_app",
+                "SELECT COUNT(*) FROM external_redis child LEFT JOIN app_desc parent "
+                        + "ON child.app_id = parent.app_id WHERE parent.app_id IS NULL",
+                "ALTER TABLE external_redis ADD CONSTRAINT fk_external_redis_app "
+                        + "FOREIGN KEY (app_id) REFERENCES app_desc(app_id) ON DELETE CASCADE");
+        ensureForeignKey("risk_assess_dimension", "fk_risk_dimension_report",
+                "SELECT COUNT(*) FROM risk_assess_dimension child LEFT JOIN risk_assess_report parent "
+                        + "ON child.report_id = parent.id WHERE parent.id IS NULL",
+                "ALTER TABLE risk_assess_dimension ADD CONSTRAINT fk_risk_dimension_report "
+                        + "FOREIGN KEY (report_id) REFERENCES risk_assess_report(id) ON DELETE CASCADE");
         ensureRedisVersionColumn();
         ensureInstanceStatsUptimeColumn();
         logger.info("runtime database schema initialized");
@@ -157,6 +173,43 @@ public class DatabaseSchemaInitializer {
         if (count != null && count == 0) {
             jdbcTemplate.execute(ADD_INSTANCE_STATS_UPTIME);
             logger.info("instance_statistics.uptime_in_seconds added");
+        }
+    }
+
+    private void ensurePasswordColumn() {
+        try {
+            Integer length = jdbcTemplate.queryForObject(
+                    "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns "
+                            + "WHERE table_schema = DATABASE() AND table_name = 'app_user' AND column_name = 'password'",
+                    Integer.class);
+            if (length != null && length < 255) {
+                jdbcTemplate.execute("ALTER TABLE app_user MODIFY password VARCHAR(255) DEFAULT NULL "
+                        + "COMMENT 'BCrypt密码哈希；历史MD5在登录成功后自动升级'");
+                logger.info("app_user.password expanded for BCrypt hashes");
+            }
+        } catch (Exception e) {
+            logger.error("ensure app_user.password length failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private void ensureForeignKey(String table, String constraint, String orphanCountSql, String alterSql) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.table_constraints WHERE table_schema = DATABASE() "
+                            + "AND table_name = ? AND constraint_name = ? AND constraint_type = 'FOREIGN KEY'",
+                    Integer.class, table, constraint);
+            if (count != null && count > 0) {
+                return;
+            }
+            Long orphanCount = jdbcTemplate.queryForObject(orphanCountSql, Long.class);
+            if (orphanCount != null && orphanCount > 0) {
+                logger.error("skip foreign key {}: {} orphan rows exist in {}", constraint, orphanCount, table);
+                return;
+            }
+            jdbcTemplate.execute(alterSql);
+            logger.info("foreign key {} added", constraint);
+        } catch (Exception e) {
+            logger.error("ensure foreign key {} failed: {}", constraint, e.getMessage(), e);
         }
     }
 

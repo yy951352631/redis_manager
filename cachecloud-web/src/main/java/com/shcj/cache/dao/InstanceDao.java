@@ -50,6 +50,13 @@ public interface InstanceDao {
     public InstanceInfo getInstByIpAndPort(@Param("ip") String ip, @Param("port") int port);
 
     /**
+     * 查询应用下仍参与监控的实例，包括暂时异常、等待下一轮采集恢复的节点。
+     */
+    InstanceInfo getMonitorInstByAppIdAndIpPort(@Param("appId") long appId,
+                                                @Param("ip") String ip,
+                                                @Param("port") int port);
+
+    /**
      * 通过host和port查询一个实例信息
      *
      * @param ip

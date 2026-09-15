@@ -21,7 +21,7 @@ export function useTabCache(getActiveTab: () => string) {
     visitedTabs.value = new Set()
   }
 
-  watch(getActiveTab, (tab) => visitTab(tab), { immediate: true })
+  watch(getActiveTab, tab => visitTab(tab), { immediate: true })
 
   return { visitedTabs, visitTab, onTabChange, isVisited, resetVisited }
 }

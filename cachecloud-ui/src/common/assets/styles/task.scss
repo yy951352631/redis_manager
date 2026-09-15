@@ -120,7 +120,9 @@
         transparent
       ),
       linear-gradient(90deg, #4d8dff 0%, #2563eb 100%);
-    background-size: 28px 28px, 100% 100%;
+    background-size:
+      28px 28px,
+      100% 100%;
     animation: task-flow-progress-stripe 0.85s linear infinite;
   }
 
@@ -139,11 +141,15 @@
 
 @keyframes task-flow-progress-stripe {
   0% {
-    background-position: 0 0, 0 0;
+    background-position:
+      0 0,
+      0 0;
   }
 
   100% {
-    background-position: 28px 0, 0 0;
+    background-position:
+      28px 0,
+      0 0;
   }
 }
 

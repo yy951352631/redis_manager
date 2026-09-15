@@ -35,7 +35,7 @@ cachecloud-frontend  (nginx:1.27, 容器端口 80 → 宿主 28082)
        ▼
 cachecloud-web  (tomcat:9 + JDK8, 容器端口 8080 → 宿主 28083)
        ├──► cachecloud-mysql  (mysql:5.7.44)   业务库 redis_manager，已开 binlog
-       └──► cachecloud-redis  (redis:6.2.13)   平台自用缓存，非被纳管对象
+       └──► 3 x Sentinel ──► Redis 6.2.24（1 主 1 从） 平台自用，非被纳管对象
 
 cachecloud-mysql-backup  (sidecar)  定时 mysqldump 到 deploy/mysql/backups/
 ```
@@ -132,6 +132,7 @@ docker compose ps
 | `CACHECLOUD_FRONTEND_IMAGE` | 是 | — | 前端镜像 |
 | `MYSQL_ROOT_PASSWORD` | 是 | — | MySQL root 口令，后端也用它连库 |
 | `REDIS_PASSWORD` | 是 | — | 平台自用 Redis 口令 |
+| `CACHECLOUD_REDIS_IMAGE` | 否 | `redis:6.2.24-alpine` | 平台自用 Redis 主从与 Sentinel 镜像，必须保持 6.2.24 |
 | `CACHECLOUD_FRONTEND_PORT` | 否 | 28082 | 前端对外端口 |
 | `CACHECLOUD_BACKEND_PORT` | 否 | 28083 | 后端直连端口（排障用） |
 | `SERVER_DOMAIN` | 否 | `http://127.0.0.1:28082` | 浏览器实际访问地址，含端口 |
@@ -157,8 +158,14 @@ docker compose ps
 ## 验证
 
 ```bash
-# 容器状态，五个都应是 running / healthy
+# 九个容器都应为 running；配置了健康检查的容器应为 healthy
 docker compose ps
+
+# 三个 Sentinel 应返回同一个当前主节点
+for n in 1 2 3; do
+  docker exec "cachecloud-redis-sentinel-$n" redis-cli -p 26379 \
+    sentinel get-master-addr-by-name cachecloud-master
+done
 
 # 后端健康检查
 curl -fsS http://127.0.0.1:28083/api/v1/health && echo OK

@@ -246,11 +246,24 @@
   cursor: text;
 }
 
-.diag-cli-line { white-space: pre-wrap; word-break: break-all; margin-bottom: 4px; }
-.diag-cli-line.is-prompt { color: #9cdcfe; }
-.diag-cli-line.is-value { color: #ce9178; }
-.diag-cli-line.is-error { color: #f48771; }
-.diag-cli-line.is-welcome { color: #6a9955; margin-bottom: 12px; }
+.diag-cli-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 4px;
+}
+.diag-cli-line.is-prompt {
+  color: #9cdcfe;
+}
+.diag-cli-line.is-value {
+  color: #ce9178;
+}
+.diag-cli-line.is-error {
+  color: #f48771;
+}
+.diag-cli-line.is-welcome {
+  color: #6a9955;
+  margin-bottom: 12px;
+}
 
 .diag-cli-input-row {
   display: flex;
@@ -263,7 +276,10 @@
   cursor: text;
 }
 
-.diag-cli-prompt { color: #9cdcfe; flex-shrink: 0; }
+.diag-cli-prompt {
+  color: #9cdcfe;
+  flex-shrink: 0;
+}
 
 .diag-cli-input {
   flex: 1;

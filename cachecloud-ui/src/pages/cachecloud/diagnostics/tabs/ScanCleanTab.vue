@@ -185,7 +185,9 @@ onBeforeUnmount(stopTaskPolling)
 <template>
   <div class="manage-diagnostic-tab-page">
     <div class="manage-diagnostic-panel">
-      <h4 class="manage-diagnostic-panel__title">数据分析清理任务</h4>
+      <h4 class="manage-diagnostic-panel__title">
+        数据分析清理任务
+      </h4>
       <el-form label-position="top">
         <div class="diag-scan-clean-grid">
           <el-form-item label="集群">
@@ -227,7 +229,9 @@ onBeforeUnmount(stopTaskPolling)
             <el-input v-model="perCount" placeholder="50-1000，默认 100" />
           </el-form-item>
         </div>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">执行任务</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">
+          执行任务
+        </el-button>
         <el-button :loading="loading" @click="fetchTasks()">
           <el-icon><Refresh /></el-icon>
           <span>刷新</span>
@@ -235,7 +239,9 @@ onBeforeUnmount(stopTaskPolling)
       </el-form>
     </div>
 
-    <h4 class="manage-diagnostic-panel__title">数据清理任务列表</h4>
+    <h4 class="manage-diagnostic-panel__title">
+      数据清理任务列表
+    </h4>
     <el-form inline class="diag-task-filter">
       <el-form-item label="集群编码">
         <el-input v-model="filterAppId" placeholder="集群编码" style="width: 120px" clearable />
@@ -251,7 +257,9 @@ onBeforeUnmount(stopTaskPolling)
         </el-select>
       </el-form-item>
       <el-form-item>
-        <el-button type="success" @click="fetchTasks()">查询</el-button>
+        <el-button type="success" @click="fetchTasks()">
+          查询
+        </el-button>
       </el-form-item>
     </el-form>
 
@@ -267,12 +275,16 @@ onBeforeUnmount(stopTaskPolling)
       <el-table-column prop="diagnosticCondition" label="诊断条件" min-width="160" show-overflow-tooltip />
       <el-table-column prop="createTime" label="创建时间" width="170" />
       <el-table-column label="状态" width="90">
-        <template #default="{ row }">{{ statusLabel(row.status) }}</template>
+        <template #default="{ row }">
+          {{ statusLabel(row.status) }}
+        </template>
       </el-table-column>
       <el-table-column prop="formatCostTime" label="耗时" width="100" />
       <el-table-column label="结果" width="90" fixed="right">
         <template #default="{ row }">
-          <el-button v-if="row.redisKey" type="primary" size="small" @click="viewResult(row)">查看</el-button>
+          <el-button v-if="row.redisKey" type="primary" size="small" @click="viewResult(row)">
+            查看
+          </el-button>
         </template>
       </el-table-column>
       <el-table-column label="删除查询" width="100" fixed="right">
@@ -283,7 +295,9 @@ onBeforeUnmount(stopTaskPolling)
             size="small"
             :disabled="row.status === 0"
             @click="deleteTask(row)"
-          >删除查询</el-button>
+          >
+            删除查询
+          </el-button>
         </template>
       </el-table-column>
     </el-table>

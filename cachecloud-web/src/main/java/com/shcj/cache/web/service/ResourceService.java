@@ -28,8 +28,6 @@ public interface ResourceService {
 
     SystemResource getResourceByName(String resourceName);
 
-    String getRespositoryUrl(int resourceId, int respoitoryId);
-
     String getRemoteFileContent(int resourceId, int respoitoryId);
 
     //获取远程仓库信息
@@ -38,4 +36,3 @@ public interface ResourceService {
     Map<Integer, Integer> getAppUseRedis();
 
 }
-

@@ -13,14 +13,14 @@ export interface HostCapability {
 }
 
 /** 依赖管控主机 / SSH 的前端功能点 */
-export type HostFeature =
-  | "ops.startStop"
-  | "ops.failover"
-  | "ops.scrollRestart"
-  | "diagnostic.host"
-  | "diagnostic.network"
-  | "machine.tab"
-  | "machine.link"
+export type HostFeature
+  = | "ops.startStop"
+    | "ops.failover"
+    | "ops.scrollRestart"
+    | "diagnostic.host"
+    | "diagnostic.network"
+    | "machine.tab"
+    | "machine.link"
 
 /** 故障诊断中依赖 SSH 的检查分组 */
 export const HOST_DEPENDENT_DIAGNOSTIC_GROUPS = ["主机", "网络层"] as const

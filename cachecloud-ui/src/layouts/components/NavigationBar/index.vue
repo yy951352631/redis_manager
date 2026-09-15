@@ -1,14 +1,14 @@
 <script lang="ts" setup>
-import Notify from "@@/components/Notify/index.vue"
 import AiAssistantToggle from "@@/components/AiAssistant/AiAssistantToggle.vue"
+import Notify from "@@/components/Notify/index.vue"
 import { useDevice } from "@@/composables/useDevice"
 import { useLayoutMode } from "@@/composables/useLayoutMode"
 import { ArrowDown, UserFilled } from "@element-plus/icons-vue"
 import { useAppStore } from "@/pinia/stores/app"
 import { useSettingsStore } from "@/pinia/stores/settings"
 import { useUserStore } from "@/pinia/stores/user"
-import UserProfileDialog from "../UserProfileDialog/index.vue"
 import { Breadcrumb, Hamburger, RightPanel, Settings, Sidebar } from "../index"
+import UserProfileDialog from "../UserProfileDialog/index.vue"
 
 const { isMobile } = useDevice()
 const { isTop } = useLayoutMode()
@@ -23,9 +23,9 @@ function toggleSidebar() {
   appStore.toggleSidebar(false)
 }
 
-function logout() {
-  userStore.logout()
-  router.push("/login")
+async function logout() {
+  await userStore.logout()
+  await router.replace("/login")
 }
 </script>
 
@@ -51,12 +51,18 @@ function logout() {
         <div class="right-menu-item user">
           <el-avatar :icon="UserFilled" :size="30" />
           <span>{{ userStore.username }}</span>
-          <el-icon class="user-arrow"><ArrowDown /></el-icon>
+          <el-icon class="user-arrow">
+            <ArrowDown />
+          </el-icon>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item @click="profileDialogVisible = true">修改资料</el-dropdown-item>
-            <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
+            <el-dropdown-item @click="profileDialogVisible = true">
+              修改资料
+            </el-dropdown-item>
+            <el-dropdown-item divided @click="logout">
+              退出登录
+            </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>

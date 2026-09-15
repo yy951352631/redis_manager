@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { TopologyExam } from "@/api/cachecloud"
-import { formatClusterNo } from "@/common/utils/cluster-no"
 import {
   Box,
   Check,
@@ -17,6 +16,7 @@ import {
   Switch,
   Warning
 } from "@element-plus/icons-vue"
+import { formatClusterNo } from "@/common/utils/cluster-no"
 import "@/common/assets/styles/topology-exam.scss"
 
 const props = defineProps<{ data: TopologyExam }>()
@@ -47,12 +47,18 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
       :class="data.overallOk ? 'app-topology-exam-hero--ok' : 'app-topology-exam-hero--fail'"
     >
       <div class="app-topology-exam-hero__icon-wrap">
-        <el-icon v-if="data.overallOk"><Check /></el-icon>
-        <el-icon v-else><Close /></el-icon>
+        <el-icon v-if="data.overallOk">
+          <Check />
+        </el-icon>
+        <el-icon v-else>
+          <Close />
+        </el-icon>
       </div>
       <div class="app-topology-exam-hero__body">
         <div class="app-topology-exam-hero__title-row">
-          <h4 class="app-topology-exam-hero__title">{{ data.overallOk ? "拓扑健康" : "拓扑异常" }}</h4>
+          <h4 class="app-topology-exam-hero__title">
+            {{ data.overallOk ? "拓扑健康" : "拓扑异常" }}
+          </h4>
           <span
             class="app-topology-exam-hero__badge"
             :class="data.overallOk ? 'app-topology-exam-hero__badge--ok' : 'app-topology-exam-hero__badge--fail'"
@@ -104,11 +110,17 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
             </div>
             <div class="app-topology-exam-result__body">
               <div class="app-topology-exam-result__status">
-                <el-icon v-if="item.ok"><Check /></el-icon>
-                <el-icon v-else><Close /></el-icon>
+                <el-icon v-if="item.ok">
+                  <Check />
+                </el-icon>
+                <el-icon v-else>
+                  <Close />
+                </el-icon>
                 {{ item.statusText }}
               </div>
-              <div class="app-topology-exam-result__conclusion">{{ item.conclusion }}</div>
+              <div class="app-topology-exam-result__conclusion">
+                {{ item.conclusion }}
+              </div>
             </div>
           </li>
         </ul>
@@ -159,23 +171,33 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
         </div>
 
         <div v-if="data.msFlag" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">主从节点分布在同一台物理机</span>
         </div>
         <div v-if="data.appType !== 5 && data.masterCount !== data.slaveNum" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">主从节点数量不匹配</span>
         </div>
         <div v-if="data.appType === 5 && data.masterCount <= 0" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">未识别到主节点</span>
         </div>
         <div v-if="data.appType === 5 && data.slaveNum < data.masterCount" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">从节点数量不足</span>
         </div>
         <div v-if="data.appType === 5 && data.sentinelCount < 3" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">Sentinel 节点数量少于 3 个</span>
         </div>
 
@@ -183,13 +205,17 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
           <table class="table app-topology-exam-table">
             <thead>
               <tr>
-                <th class="app-topology-exam-table__index">序号</th>
+                <th class="app-topology-exam-table__index">
+                  序号
+                </th>
                 <th>Sentinel 节点</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(s, idx) in data.sentinels" :key="s.id">
-                <td class="app-topology-exam-table__index">{{ idx + 1 }}</td>
+                <td class="app-topology-exam-table__index">
+                  {{ idx + 1 }}
+                </td>
                 <td><code class="app-topology-exam-code">{{ s.hostPort }}</code></td>
               </tr>
             </tbody>
@@ -202,7 +228,9 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
               <tr>
                 <th>Master</th>
                 <th>Slave</th>
-                <th class="app-topology-exam-table__narrow">同一物理机</th>
+                <th class="app-topology-exam-table__narrow">
+                  同一物理机
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -249,11 +277,15 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
         </div>
 
         <div v-if="data.machineGroupCount < 3" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">物理机分布数量少于 3 组</span>
         </div>
         <div v-if="data.failoverOk === false" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">主节点分布少于 3 台物理机，单台物理机宕机不满足故障转移条件</span>
         </div>
 
@@ -304,28 +336,38 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
         </div>
 
         <div v-if="!data.slotExam.fetchOk" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">无法获取 CLUSTER SLOTS，请检查集群连通性与节点状态</span>
         </div>
         <div v-if="data.slotExam.fetchOk && data.slotExam.slotComplete" class="app-topology-exam-alert app-topology-exam-alert--ok">
-          <el-icon class="app-topology-exam-alert__icon"><Check /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Check />
+          </el-icon>
           <span class="app-topology-exam-alert__text">16384 槽位完整覆盖，无丢失</span>
         </div>
         <div v-if="data.slotExam.fetchOk && !data.slotExam.slotComplete" class="app-topology-exam-alert app-topology-exam-alert--fail">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">
             槽位未完整覆盖：已覆盖 {{ data.slotExam.coveredSlots }} / {{ data.slotExam.totalSlots }}，缺失 {{ data.slotExam.lostSlotsCount }} 个
           </span>
         </div>
         <div v-if="data.slotExam.imbalance || data.slotExam.zeroSlotMaster" class="app-topology-exam-alert app-topology-exam-alert--warn">
-          <el-icon class="app-topology-exam-alert__icon"><Warning /></el-icon>
+          <el-icon class="app-topology-exam-alert__icon">
+            <Warning />
+          </el-icon>
           <span class="app-topology-exam-alert__text">
             槽位分配不均：最少 {{ data.slotExam.minSlotCount }}、最多 {{ data.slotExam.maxSlotCount }}，比值 {{ data.slotExam.imbalanceRatio }}（阈值 1.5）
           </span>
         </div>
 
         <template v-if="data.slotExam.lossRows?.length">
-          <h6 class="app-topology-exam-subtitle">丢失槽位明细</h6>
+          <h6 class="app-topology-exam-subtitle">
+            丢失槽位明细
+          </h6>
           <div class="app-topology-exam-table-wrap app-topology-exam-table-wrap--sub">
             <table class="table app-topology-exam-table">
               <thead>
@@ -345,22 +387,30 @@ function machineRoomRack(m: TopologyExam["machines"][0]) {
         </template>
 
         <template v-if="data.slotExam.distributionRows?.length">
-          <h6 class="app-topology-exam-subtitle">槽位分配情况</h6>
+          <h6 class="app-topology-exam-subtitle">
+            槽位分配情况
+          </h6>
           <div class="app-topology-exam-table-wrap">
             <table class="table app-topology-exam-table app-topology-exam-table--slots">
               <thead>
                 <tr>
                   <th>Master</th>
                   <th>槽位区间</th>
-                  <th class="app-topology-exam-table__narrow">槽位数</th>
-                  <th class="app-topology-exam-table__narrow">占比</th>
+                  <th class="app-topology-exam-table__narrow">
+                    槽位数
+                  </th>
+                  <th class="app-topology-exam-table__narrow">
+                    占比
+                  </th>
                   <th>分布</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in data.slotExam.distributionRows" :key="row.hostPort">
                   <td><code class="app-topology-exam-code">{{ row.hostPort }}</code></td>
-                  <td class="app-topology-exam-slot-ranges">{{ row.slotRanges }}</td>
+                  <td class="app-topology-exam-slot-ranges">
+                    {{ row.slotRanges }}
+                  </td>
                   <td>{{ row.slotCount }}</td>
                   <td>{{ row.percent }}%</td>
                   <td>

@@ -83,7 +83,9 @@ onActivated(focusInput)
         >
           {{ line.text }}
         </div>
-        <div v-if="running" class="diag-cli-line is-welcome">执行中...</div>
+        <div v-if="running" class="diag-cli-line is-welcome">
+          执行中...
+        </div>
       </div>
       <div class="diag-cli-input-row" @click="focusInput">
         <span class="diag-cli-prompt">{{ instanceId }} &gt;</span>

@@ -62,7 +62,7 @@ public interface UserLoginStatusService {
      * @param response
      * @param userName
      */
-    void addLoginStatus(HttpServletRequest request, HttpServletResponse response, String userName);
+    String addLoginStatus(HttpServletRequest request, HttpServletResponse response, String userName);
 
     /**
      * 移除用户登录状态信息

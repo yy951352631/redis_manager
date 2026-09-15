@@ -55,7 +55,9 @@ function onKeydown(e: KeyboardEvent) {
         :key="i"
         class="app-command-line"
         :class="`is-${line.type}`"
-      >{{ line.text }}</div>
+      >
+        {{ line.text }}
+      </div>
       <div class="app-command-input-row">
         <span class="app-command-prompt">集群编码:{{ appId }}&gt;</span>
         <input
@@ -71,7 +73,9 @@ function onKeydown(e: KeyboardEvent) {
 </template>
 
 <style scoped>
-.app-command-page { width: 100%; }
+.app-command-page {
+  width: 100%;
+}
 .app-command-console {
   background: #1e1e1e;
   color: #d4d4d4;
@@ -84,13 +88,34 @@ function onKeydown(e: KeyboardEvent) {
   overflow: auto;
   border-radius: 4px;
 }
-.app-command-line { white-space: pre-wrap; word-break: break-all; margin-bottom: 4px; }
-.app-command-line.is-prompt { color: #9cdcfe; }
-.app-command-line.is-value { color: #ce9178; }
-.app-command-line.is-error { color: #f48771; }
-.app-command-line.is-welcome { color: #6a9955; margin-bottom: 12px; }
-.app-command-input-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-.app-command-prompt { color: #9cdcfe; flex-shrink: 0; }
+.app-command-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 4px;
+}
+.app-command-line.is-prompt {
+  color: #9cdcfe;
+}
+.app-command-line.is-value {
+  color: #ce9178;
+}
+.app-command-line.is-error {
+  color: #f48771;
+}
+.app-command-line.is-welcome {
+  color: #6a9955;
+  margin-bottom: 12px;
+}
+.app-command-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.app-command-prompt {
+  color: #9cdcfe;
+  flex-shrink: 0;
+}
 .app-command-input {
   flex: 1;
   background: transparent;

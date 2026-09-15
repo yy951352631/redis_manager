@@ -20,7 +20,6 @@ import com.shcj.cache.web.util.Page;
 import com.shcj.cache.web.util.DateUtil;
 import com.shcj.cache.web.vo.AppDetailVO;
 import com.shcj.cache.web.vo.InstanceIpSearchVO;
-import com.shcj.cache.web.vo.ExternalNodeVO;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang.StringUtils;
@@ -148,23 +147,10 @@ public class AppManageApiService {
             }
         }
 
-        // listExternalNodes 会把全平台节点连同运行时指标整套重建一遍。原先每一行都调一次，
-        // 放大成「行数 × 节点数」次取数，集群列表因此要跑好几秒。整页只需要一次。
-        boolean needsExternalProbe = false;
-        for (AppDesc appDesc : apps) {
-            if (appDesc.getStatus() == AppStatusEnum.STATUS_PUBLISHED.getStatus()
-                    && externalByAppId.containsKey(appDesc.getAppId())) {
-                needsExternalProbe = true;
-                break;
-            }
-        }
-        Map<Long, String> unknownExternalNodes = needsExternalProbe
-                ? loadUnknownExternalDataNodes() : Collections.<Long, String>emptyMap();
-
         List<AppListItemDto> items = new ArrayList<>();
         for (AppDesc appDesc : apps) {
             AppListItemDto item = buildListItem(appDesc, externalByAppId.get(appDesc.getAppId()),
-                    ipHitMap.get(appDesc.getAppId()), unknownExternalNodes);
+                    ipHitMap.get(appDesc.getAppId()));
             if (statusFilter < 0
                     || statusFilter == item.getRuntimeStatus()
                     || (statusFilter == AppStatusEnum.STATUS_UNKNOWN.getStatus()
@@ -263,8 +249,7 @@ public class AppManageApiService {
         return dto;
     }
 
-    private AppListItemDto buildListItem(AppDesc appDesc, ExternalRedis externalRedis, InstanceIpSearchVO ipHit,
-                                         Map<Long, String> unknownExternalNodes) {
+    private AppListItemDto buildListItem(AppDesc appDesc, ExternalRedis externalRedis, InstanceIpSearchVO ipHit) {
         AppListItemDto row = new AppListItemDto();
         long appId = appDesc.getAppId();
         row.setAppId(appId);
@@ -300,9 +285,6 @@ public class AppManageApiService {
 
         if (appDesc.getStatus() == AppStatusEnum.STATUS_PUBLISHED.getStatus()) {
             String abnormalDetail = buildAbnormalDataNodeDetail(instances);
-            if (StringUtils.isBlank(abnormalDetail) && externalRedis != null) {
-                abnormalDetail = unknownExternalNodes.get(appId);
-            }
             if (StringUtils.isNotBlank(abnormalDetail)) {
                 row.setRuntimeStatus(AppStatusEnum.STATUS_ABNORMAL.getStatus());
                 row.setRuntimeStatusLabel(AppStatusEnum.STATUS_ABNORMAL.getInfo());
@@ -335,7 +317,7 @@ public class AppManageApiService {
                 row.setRuntimeStatusLabel(AppStatusEnum.STATUS_UNKNOWN.getInfo());
             }
         }
-        applyExternalRedisVersion(row, appDesc, externalRedis);
+        applyPersistedRedisVersion(row, appDesc);
         return row;
     }
 
@@ -398,9 +380,6 @@ public class AppManageApiService {
 
         if (appDesc.getStatus() == AppStatusEnum.STATUS_PUBLISHED.getStatus()) {
             String abnormalDetail = buildAbnormalDataNodeDetail(instances);
-            if (StringUtils.isBlank(abnormalDetail) && externalRedis != null) {
-                abnormalDetail = getUnknownExternalDataNodeDetail(appId);
-            }
             if (StringUtils.isNotBlank(abnormalDetail)) {
                 dto.setRuntimeStatus(AppStatusEnum.STATUS_ABNORMAL.getStatus());
                 dto.setRuntimeStatusLabel(AppStatusEnum.STATUS_ABNORMAL.getInfo());
@@ -422,48 +401,21 @@ public class AppManageApiService {
                 }
             }
         }
-        applyExternalRedisVersion(dto, appDesc, externalRedis);
+        applyPersistedRedisVersion(dto, appDesc);
         return dto;
     }
 
-    private void applyExternalRedisVersion(AppListItemDto row, AppDesc appDesc, ExternalRedis externalRedis) {
-        String versionName = detectExternalRedisVersionName(externalRedis);
-        persistDetectedVersion(appDesc, versionName);
-        if (StringUtils.isBlank(versionName) && appDesc != null) {
-            versionName = appDesc.getVersionName();
-        }
+    private void applyPersistedRedisVersion(AppListItemDto row, AppDesc appDesc) {
+        String versionName = appDesc != null ? appDesc.getVersionName() : "";
         if (StringUtils.isNotBlank(versionName)) {
             row.setVersionName(versionName);
         }
     }
 
-    private void applyExternalRedisVersion(AppDetailDto dto, AppDesc appDesc, ExternalRedis externalRedis) {
-        String versionName = detectExternalRedisVersionName(externalRedis);
-        persistDetectedVersion(appDesc, versionName);
-        if (StringUtils.isBlank(versionName) && appDesc != null) {
-            versionName = appDesc.getVersionName();
-        }
+    private void applyPersistedRedisVersion(AppDetailDto dto, AppDesc appDesc) {
+        String versionName = appDesc != null ? appDesc.getVersionName() : "";
         if (StringUtils.isNotBlank(versionName)) {
             dto.setVersionName(versionName);
-        }
-    }
-
-    private String detectExternalRedisVersionName(ExternalRedis externalRedis) {
-        if (externalRedis == null) {
-            return "";
-        }
-        try {
-            return externalRedisCenter.detectRedisVersionName(externalRedis);
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private void persistDetectedVersion(AppDesc appDesc, String versionName) {
-        if (appDesc != null && StringUtils.isNotBlank(versionName)
-                && !versionName.equals(appDesc.getVersionName())) {
-            appDao.updateVersionName(appDesc.getAppId(), versionName);
-            appDesc.setVersionName(versionName);
         }
     }
 
@@ -477,41 +429,6 @@ public class AppManageApiService {
             }
         }
         return String.join(", ", nodes);
-    }
-
-    /** 单个集群详情用：只关心一个 appId，一次探测足够 */
-    private String getUnknownExternalDataNodeDetail(long appId) {
-        return StringUtils.defaultString(loadUnknownExternalDataNodes().get(appId));
-    }
-
-    /**
-     * 一次性列出所有外部纳管集群里状态未知的数据节点，按 appId 归组。
-     *
-     * <p>节点管理页面对外部纳管节点使用实时探活，未知状态不能只看 instance_info.status，
-     * 否则节点刚失联时集群仍会被错误显示为运行中。</p>
-     */
-    private Map<Long, String> loadUnknownExternalDataNodes() {
-        Map<Long, List<String>> byApp = new LinkedHashMap<>();
-        try {
-            List<ExternalNodeVO> externalNodes = externalRedisCenter.listExternalNodes("");
-            if (externalNodes != null) {
-                for (ExternalNodeVO node : externalNodes) {
-                    if (node == null || "sentinel".equalsIgnoreCase(node.getNodeTypeDesc())
-                            || node.getStatus() != InstanceStatusEnum.ERROR_STATUS.getStatus()) {
-                        continue;
-                    }
-                    byApp.computeIfAbsent(node.getAppId(), key -> new ArrayList<>())
-                            .add(node.getIp() + ":" + node.getPort());
-                }
-            }
-        } catch (Exception ignored) {
-            // Preserve the persisted heartbeat result when the supplementary probe fails.
-        }
-        Map<Long, String> result = new LinkedHashMap<>();
-        for (Map.Entry<Long, List<String>> entry : byApp.entrySet()) {
-            result.put(entry.getKey(), String.join(", ", entry.getValue()));
-        }
-        return result;
     }
 
     private boolean hasRunningDataNode(List<InstanceInfo> instances) {

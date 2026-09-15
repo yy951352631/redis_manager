@@ -1,6 +1,5 @@
 <script lang="ts" setup>
-import type { AppDetail } from "@/api/cachecloud"
-import type { TopologyExam } from "@/api/cachecloud"
+import type { AppDetail, TopologyExam } from "@/api/cachecloud"
 import { getTopologyExamApi } from "@/api/cachecloud"
 import TopologyExamPanel from "@/pages/cachecloud/app/components/TopologyExamPanel.vue"
 import "@/common/assets/styles/app-ops.scss"
@@ -156,14 +155,18 @@ watch(() => props.appId, () => {
           <el-skeleton-item variant="rect" style="width: 100%; height: 120px" />
         </template>
       </el-skeleton>
-      <p class="topology-skeleton__tip">正在连接集群节点并检查拓扑、槽位与物理机分布，请稍候…</p>
+      <p class="topology-skeleton__tip">
+        正在连接集群节点并检查拓扑、槽位与物理机分布，请稍候…
+      </p>
     </div>
 
     <div v-else-if="topologyResult" class="topology-result-wrap" :class="{ 'topology-result-wrap--dimmed': refreshing }">
       <TopologyExamPanel :data="topologyResult" />
     </div>
 
-    <div v-else-if="!loading" class="topology-empty">暂无拓扑诊断结果</div>
+    <div v-else-if="!loading" class="topology-empty">
+      暂无拓扑诊断结果
+    </div>
   </div>
 </template>
 

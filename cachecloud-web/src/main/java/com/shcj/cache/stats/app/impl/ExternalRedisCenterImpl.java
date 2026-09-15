@@ -421,14 +421,10 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
             // 同上：以 app_desc 为准，避免改名后显示旧名字
             vo.setAppName(appDesc != null ? appDesc.getName() : app.getName());
             vo.setAppTypeDesc(app.getTypeDesc());
-            // 纳管信息里有、但尚未同步进 instance_info 的节点，同样实时探活，
-            // 不再用「未知」这个既不是正常也不是异常的第三态
-            boolean lineNodeAlive = probeNodeAlive(appId, ip, port, isSentinelInstanceLine(
-                    parts.length >= 3 ? parts[2].trim() : ""));
-            vo.setStatus(lineNodeAlive ? InstanceStatusEnum.GOOD_STATUS.getStatus()
-                    : InstanceStatusEnum.ERROR_STATUS.getStatus());
-            vo.setStatusDesc(lineNodeAlive ? InstanceStatusEnum.GOOD_STATUS.getInfo()
-                    : InstanceStatusEnum.ERROR_STATUS.getInfo());
+            // 尚未同步进 instance_info 的节点没有可用的持久化心跳结果，按异常展示。
+            // 列表请求不能在这里逐节点探活，否则不可达节点会把整个页面拖到网关超时。
+            vo.setStatus(InstanceStatusEnum.ERROR_STATUS.getStatus());
+            vo.setStatusDesc(InstanceStatusEnum.ERROR_STATUS.getInfo());
             String third = parts.length >= 3 ? parts[2].trim() : "";
             if (isSentinelInstanceLine(third)) {
                 vo.setNodeTypeDesc("sentinel");
@@ -449,7 +445,7 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         }
     }
 
-    /** 节点管理页对纳管节点做实时探活；探测本身异常按不可达处理，不覆盖已持久化的其它信息 */
+    /** Explicit node-add validation may probe Redis; list and detail reads must never call this method. */
     private boolean probeNodeAlive(long appId, String ip, int port, boolean sentinel) {
         try {
             return sentinel ? redisCenter.isSentinelRun(appId, ip, port) : redisCenter.isRun(appId, ip, port);
@@ -464,19 +460,11 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         vo.setInstanceId(inst.getId() != null ? inst.getId() : 0);
         vo.setIp(inst.getIp());
         vo.setPort(inst.getPort());
-        if (inst.isOffline()) {
-            // 节点管理页保留软删除记录供筛选；已下线节点不再探活，避免把状态覆盖为“异常”。
-            vo.setStatus(inst.getStatus());
-            vo.setStatusDesc(InstanceStatusEnum.OFFLINE_STATUS.getInfo());
-        } else {
-            boolean reachable = probeNodeAlive(inst.getAppId(), inst.getIp(), inst.getPort(),
-                    inst.getType() == InstanceInfoEnum.InstanceTypeEnum.REDIS_SENTINEL.getType());
-            // 探活失败即为异常，与集群运行状态口径保持一致
-            vo.setStatus(reachable ? InstanceStatusEnum.GOOD_STATUS.getStatus()
-                    : InstanceStatusEnum.ERROR_STATUS.getStatus());
-            vo.setStatusDesc(reachable ? InstanceStatusEnum.GOOD_STATUS.getInfo()
-                    : InstanceStatusEnum.ERROR_STATUS.getInfo());
-        }
+        vo.setStatus(inst.getStatus());
+        InstanceStatusEnum status = InstanceStatusEnum.getByStatus(inst.getStatus());
+        // 永久下线也归入节点管理页的“已下线”语义，筛选仍保留原始状态值。
+        vo.setStatusDesc(inst.isOffline() ? InstanceStatusEnum.OFFLINE_STATUS.getInfo()
+                : status != null ? status.getInfo() : String.valueOf(inst.getStatus()));
         vo.setCmd(inst.getCmd());
         vo.setAppId(app.getAppId() != null ? app.getAppId() : inst.getAppId());
         AppDesc appDesc = vo.getAppId() > 0 ? appService.getByAppId(vo.getAppId()) : null;
@@ -1558,13 +1546,7 @@ public class ExternalRedisCenterImpl implements ExternalRedisCenter {
         return result;
     }
 
-    /**
-     * 纳管完成后立即采一次，让页面不必等到下一个采集周期才有数据。
-     *
-     * <p>原先这里还会调用 brevityScheduler.maintainTasks() 往 brevity_schedule_resources 注册节点，
-     * 但消费该表的 dispatcherTasks() 已无任何调度调用方，注册纯属空转，随该机制一并移除。
-     * 分钟级采集由 ExternalRedisStatsCollectJob 承担。
-     */
+    /** 纳管完成后立即采一次，让页面不必等到下一个采集周期才有数据。 */
     private void registerScheduleAndCollect(long appId, int type) {
         logger.info("external redis registerScheduleAndCollect appId={} type={}", appId, type);
         triggerInitialCollect(appId, type);

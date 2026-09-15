@@ -551,19 +551,25 @@ defineExpose({ refresh: fetchData })
     >
       <el-table-column prop="id" label="ID" min-width="56">
         <template #default="{ row }">
-          <router-link :to="instanceDetailUrl(row.id)">{{ row.id }}</router-link>
+          <router-link :to="instanceDetailUrl(row.id)">
+            {{ row.id }}
+          </router-link>
           <span v-if="isCurrentInstance(row)" class="app-topology-current-tag">当前节点</span>
         </template>
       </el-table-column>
       <el-table-column label="节点" min-width="130" show-overflow-tooltip>
         <template #default="{ row }">
-          <router-link :to="instanceDetailUrl(row.id)">{{ row.hostPort }}</router-link>
+          <router-link :to="instanceDetailUrl(row.id)">
+            {{ row.hostPort }}
+          </router-link>
         </template>
       </el-table-column>
       <el-table-column label="节点状态" min-width="88">
         <template #default="{ row }">
           {{ row.statusDesc }}
-          <div v-if="row.updateTimeDesc && (row.status === 2 || row.status === 3)" class="subtitle">{{ row.updateTimeDesc }}</div>
+          <div v-if="row.updateTimeDesc && (row.status === 2 || row.status === 3)" class="subtitle">
+            {{ row.updateTimeDesc }}
+          </div>
         </template>
       </el-table-column>
       <el-table-column prop="roleDesc" label="角色" min-width="56" />
@@ -607,7 +613,9 @@ defineExpose({ refresh: fetchData })
       </el-table-column>
       <el-table-column label="日志" min-width="52">
         <template #default="{ row }">
-          <el-link type="primary" :underline="false" @click="openInstanceLog(row)">查看</el-link>
+          <el-link type="primary" :underline="false" @click="openInstanceLog(row)">
+            查看
+          </el-link>
         </template>
       </el-table-column>
       <el-table-column label="节点运维" class-name="app-ops-col-actions" min-width="120">
@@ -619,7 +627,9 @@ defineExpose({ refresh: fetchData })
               </el-button>
             </template>
             <template v-else-if="row.status === 1">
-              <el-button v-if="hostOpsEnabled" size="small" type="warning" @click="handleShutdownInstance(row)">关闭节点</el-button>
+              <el-button v-if="hostOpsEnabled" size="small" type="warning" @click="handleShutdownInstance(row)">
+                关闭节点
+              </el-button>
               <el-button
                 v-if="!isSentinelNode(row)"
                 size="small"
@@ -647,9 +657,15 @@ defineExpose({ refresh: fetchData })
         <template #default="{ row }">
           <div v-if="row.status === 1" class="app-ops-ops-cell app-ops-ops-cell--nowrap">
             <template v-if="isCluster && row.masterInstanceId > 0 && row.instanceType === 2">
-              <el-button size="small" @click="handleClusterFailover(row, '')">Manual</el-button>
-              <el-button size="small" type="primary" @click="handleClusterFailover(row, 'force')">Force</el-button>
-              <el-button size="small" type="danger" @click="handleClusterFailover(row, 'takeover')">TakeOver</el-button>
+              <el-button size="small" @click="handleClusterFailover(row, '')">
+                Manual
+              </el-button>
+              <el-button size="small" type="primary" @click="handleClusterFailover(row, 'force')">
+                Force
+              </el-button>
+              <el-button size="small" type="danger" @click="handleClusterFailover(row, 'takeover')">
+                TakeOver
+              </el-button>
             </template>
             <el-button v-if="isSentinel && isSentinelNode(row)" size="small" type="warning" @click="handleSentinelFailover">
               Sentinel Failover
@@ -678,16 +694,24 @@ defineExpose({ refresh: fetchData })
       <tbody>
         <tr v-for="row in instances" :key="row.id" :class="topologyRowClass(row)">
           <td>
-            <el-link type="primary" :underline="false" @click="openInstance(row.id)">{{ row.id }}</el-link>
-            <el-icon v-if="row.masterStar" class="app-topology-star"><StarFilled /></el-icon>
+            <el-link type="primary" :underline="false" @click="openInstance(row.id)">
+              {{ row.id }}
+            </el-link>
+            <el-icon v-if="row.masterStar" class="app-topology-star">
+              <StarFilled />
+            </el-icon>
             <span v-if="isCurrentInstance(row)" class="app-topology-current-tag">当前节点</span>
           </td>
           <td>
             <template v-if="row.external">
-              <el-link type="primary" :underline="false" @click="handleExternalIpClick(row.id)">{{ row.ip }}</el-link>:{{ row.port }}
+              <el-link type="primary" :underline="false" @click="handleExternalIpClick(row.id)">
+                {{ row.ip }}
+              </el-link>:{{ row.port }}
             </template>
             <template v-else>
-              <el-link type="primary" :underline="false" @click="openInstance(row.id)">{{ row.ip }}</el-link>:{{ row.port }}
+              <el-link type="primary" :underline="false" @click="openInstance(row.id)">
+                {{ row.ip }}
+              </el-link>:{{ row.port }}
             </template>
           </td>
           <td>{{ row.statusDesc }}</td>
@@ -729,7 +753,9 @@ defineExpose({ refresh: fetchData })
               type="primary"
               :underline="false"
               @click="openInstance(row.masterInstanceId)"
-            >{{ row.masterInstanceId }}</el-link>
+            >
+              {{ row.masterInstanceId }}
+            </el-link>
           </td>
         </tr>
       </tbody>
@@ -746,7 +772,9 @@ defineExpose({ refresh: fetchData })
       <template #title>
         <strong>节点连接异常：</strong>{{ err }}
       </template>
-      <div class="text-muted">角色与指标可能来自历史采集缓存，请核对集群密码后等待采集刷新。</div>
+      <div class="text-muted">
+        角色与指标可能来自历史采集缓存，请核对集群密码后等待采集刷新。
+      </div>
     </el-alert>
 
     <el-alert
@@ -773,8 +801,12 @@ defineExpose({ refresh: fetchData })
         登记后会自动读取真实拓扑，回填该节点的主从归属，无需手动指定。
       </div>
       <template #footer>
-        <el-button @click="addNodeVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addNodeSubmitting" @click="handleAddNode">确认</el-button>
+        <el-button @click="addNodeVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="addNodeSubmitting" @click="handleAddNode">
+          确认
+        </el-button>
       </template>
     </el-dialog>
 
@@ -795,8 +827,12 @@ defineExpose({ refresh: fetchData })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addSlaveVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAddSlave">确认</el-button>
+        <el-button @click="addSlaveVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="handleAddSlave">
+          确认
+        </el-button>
       </template>
     </el-dialog>
 
@@ -844,8 +880,12 @@ defineExpose({ refresh: fetchData })
         </el-form>
       </div>
       <template #footer>
-        <el-button @click="instanceConfigVisible = false">取消</el-button>
-        <el-button type="primary" :loading="instanceConfigSaving" @click="submitInstanceConfigChange">确认</el-button>
+        <el-button @click="instanceConfigVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="instanceConfigSaving" @click="submitInstanceConfigChange">
+          确认
+        </el-button>
       </template>
     </el-dialog>
 
@@ -866,8 +906,12 @@ defineExpose({ refresh: fetchData })
       <el-form label-width="120px">
         <el-form-item v-if="!batchConfigOnly" label="操作类型">
           <el-radio-group v-model="restartForm.mode">
-            <el-radio value="restart">滚动重启</el-radio>
-            <el-radio value="config">修改配置并重启</el-radio>
+            <el-radio value="restart">
+              滚动重启
+            </el-radio>
+            <el-radio value="config">
+              修改配置并重启
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="restartForm.mode === 'config' || batchConfigOnly ? '目标节点' : '节点（可选）'">
@@ -911,8 +955,12 @@ defineExpose({ refresh: fetchData })
         </template>
       </el-form>
       <template #footer>
-        <el-button @click="restartVisible = false">取消</el-button>
-        <el-button type="primary" :loading="restartSubmitting" @click="handleScrollRestart">确认</el-button>
+        <el-button @click="restartVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="restartSubmitting" @click="handleScrollRestart">
+          确认
+        </el-button>
       </template>
     </el-dialog>
 
@@ -926,7 +974,9 @@ defineExpose({ refresh: fetchData })
         <el-empty v-else-if="!instanceLogLoading" description="暂无日志" />
       </div>
       <template #footer>
-        <el-button @click="instanceLogVisible = false">关闭</el-button>
+        <el-button @click="instanceLogVisible = false">
+          关闭
+        </el-button>
       </template>
     </el-dialog>
   </div>

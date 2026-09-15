@@ -204,7 +204,9 @@ watch(() => route.query.tab as string | undefined, (tab) => {
         class="page-header"
         :data-page-title="`${detail.appName} (集群编码: ${formatClusterNo(detail.clusterNo, detail.appId)})`"
       >
-        <el-button :icon="ArrowLeft" link @click="goBack">返回列表</el-button>
+        <el-button :icon="ArrowLeft" link @click="goBack">
+          返回列表
+        </el-button>
         <div class="page-header__meta">
           <span class="page-header__name">{{ detail.appName }}</span>
           <span
@@ -242,7 +244,9 @@ watch(() => route.query.tab as string | undefined, (tab) => {
     </template>
 
     <el-empty v-else-if="!loading" description="集群不存在或加载失败">
-      <el-button type="primary" @click="goBack">返回列表</el-button>
+      <el-button type="primary" @click="goBack">
+        返回列表
+      </el-button>
     </el-empty>
   </div>
 </template>

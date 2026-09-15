@@ -41,12 +41,6 @@ public class AsyncThreadPoolFactory {
             10, 0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<Runnable>(256), new NamedThreadFactory(APP_POOL, true));
 
-    public static final String BREVITY_SCHEDULER_POOL = "brevity-scheduler-pool";
-    public static final ThreadPoolExecutor BREVITY_SCHEDULER_ASYNC_THREAD_POOL = new ThreadPoolExecutor(10, 100,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>(1024),
-            new NamedThreadFactory(BREVITY_SCHEDULER_POOL, true),new CounterRejectedExecutionHandler());
-
     public static final String RESHARD_PROCESS_POOL = "redis-cluster-reshard";
     public static final ThreadPoolExecutor RESHARD_PROCESS_THREAD_POOL = new ThreadPoolExecutor(10, 100,
             0L, TimeUnit.MILLISECONDS,

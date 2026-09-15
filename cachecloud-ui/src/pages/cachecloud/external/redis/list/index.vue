@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import type { ExternalRedisNode } from "@/api/cachecloud"
-import { getExternalRedisListApi, repairExternalRedisApi } from "@/api/cachecloud"
 import { Refresh, Search } from "@element-plus/icons-vue"
-import { formatClusterType } from "@/common/utils/redis-type"
+import { getExternalRedisListApi, repairExternalRedisApi } from "@/api/cachecloud"
 import { formatUptime } from "@/common/utils/duration"
+import { formatClusterType } from "@/common/utils/redis-type"
 import "@/common/assets/styles/app-ops.scss"
 
 const router = useRouter()
@@ -158,12 +158,15 @@ onMounted(fetchList)
             <el-option label="全部状态" :value="-1" />
             <el-option label="运行中" :value="1" />
             <el-option label="异常" :value="0" />
-            <el-option label="已下线" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-          <el-button :icon="Refresh" @click="handleReset">清除</el-button>
+          <el-button type="primary" :icon="Search" @click="handleSearch">
+            查询
+          </el-button>
+          <el-button :icon="Refresh" @click="handleReset">
+            清除
+          </el-button>
         </el-form-item>
         <el-form-item>
           <el-switch v-model="showSentinel" active-text="显示哨兵节点" @change="handleSearch" />
@@ -180,7 +183,9 @@ onMounted(fetchList)
 
       <el-table v-loading="loading" :data="nodes" stripe border style="width: 100%">
         <el-table-column label="序号" width="60">
-          <template #default="{ $index }">{{ tableIndex($index) }}</template>
+          <template #default="{ $index }">
+            {{ tableIndex($index) }}
+          </template>
         </el-table-column>
         <el-table-column label="节点地址" min-width="180">
           <template #default="{ row }">
@@ -194,7 +199,9 @@ onMounted(fetchList)
             </el-link>
             <template v-else>
               {{ row.ip }}:{{ row.port }}
-              <el-tag size="small" type="warning" class="inline-tag">未入库</el-tag>
+              <el-tag size="small" type="warning" class="inline-tag">
+                未入库
+              </el-tag>
             </template>
             <div v-if="row.nodeTypeDesc === 'sentinel' && row.cmd" class="sentinel-master">
               master: {{ row.cmd }}
@@ -210,7 +217,9 @@ onMounted(fetchList)
         </el-table-column>
         <el-table-column label="内存详情" min-width="200">
           <template #default="{ row }">
-            <template v-if="row.nodeTypeDesc === 'sentinel'">-</template>
+            <template v-if="row.nodeTypeDesc === 'sentinel'">
+              -
+            </template>
             <template v-else-if="row.totalMemGb > 0">
               <el-progress
                 :percentage="Math.min(row.memUsePercent, 100)"
@@ -241,7 +250,9 @@ onMounted(fetchList)
         </el-table-column>
         <el-table-column label="碎片率" width="96" align="center">
           <template #default="{ row }">
-            <template v-if="row.nodeTypeDesc === 'sentinel' || !row.memFragmentationRatio">-</template>
+            <template v-if="row.nodeTypeDesc === 'sentinel' || !row.memFragmentationRatio">
+              -
+            </template>
             <el-tooltip v-else placement="top" :content="fragTip(row)" popper-class="frag-tip-popper">
               <span class="app-ops-frag" :class="fragClass(row)">
                 {{ Number(row.memFragmentationRatio).toFixed(2) }}
@@ -256,7 +267,9 @@ onMounted(fetchList)
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" size="small">{{ row.statusDesc }}</el-tag>
+            <el-tag :type="statusTagType(row.status)" size="small">
+              {{ row.statusDesc }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="140" fixed="right">
@@ -284,9 +297,13 @@ onMounted(fetchList)
         </el-table-column>
         <template #empty>
           <template v-if="hasSearch">
-            未找到匹配节点，<el-button link type="primary" @click="handleReset">查看全部</el-button>
+            未找到匹配节点，<el-button link type="primary" @click="handleReset">
+              查看全部
+            </el-button>
           </template>
-          <template v-else>暂无纳管节点</template>
+          <template v-else>
+            暂无纳管节点
+          </template>
         </template>
       </el-table>
 

@@ -88,9 +88,32 @@ else
   check_fail "找不到 mysql 客户端，install.sh 要用它导入 init.sql"
 fi
 
-step "Redis 连通性（$CC_REDIS_HOST:${CC_REDIS_PORT}）"
-if wait_port "$CC_REDIS_HOST" "$CC_REDIS_PORT" 3; then check_ok "端口可达"
-else check_fail "端口不可达，平台自用 Redis 未启动或地址不对"; fi
+if [ -n "${CC_REDIS_SENTINEL_MASTER:-}" ] || [ -n "${CC_REDIS_SENTINEL_NODES:-}" ]; then
+  step "Redis Sentinel 连通性（${CC_REDIS_SENTINEL_MASTER:-未配置主节点名}）"
+  if [ -z "${CC_REDIS_SENTINEL_MASTER:-}" ] || [ -z "${CC_REDIS_SENTINEL_NODES:-}" ]; then
+    check_fail "CC_REDIS_SENTINEL_MASTER 与 CC_REDIS_SENTINEL_NODES 必须同时配置"
+  else
+    sentinel_reachable=0
+    old_ifs="$IFS"; IFS=','
+    for endpoint in $CC_REDIS_SENTINEL_NODES; do
+      IFS="$old_ifs"
+      host="${endpoint%:*}"; port="${endpoint##*:}"
+      if [ -n "$host" ] && [ "$host" != "$endpoint" ] && wait_port "$host" "$port" 3; then
+        check_ok "Sentinel $host:$port 可达"
+        sentinel_reachable=$((sentinel_reachable + 1))
+      else
+        check_fail "Sentinel $endpoint 不可达或格式错误"
+      fi
+      IFS=','
+    done
+    IFS="$old_ifs"
+    [ "$sentinel_reachable" -ge 2 ] || check_fail "至少需要 2 个可达 Sentinel 才能形成故障转移多数派"
+  fi
+else
+  step "Redis 连通性（$CC_REDIS_HOST:${CC_REDIS_PORT}，直连模式）"
+  if wait_port "$CC_REDIS_HOST" "$CC_REDIS_PORT" 3; then check_ok "端口可达"
+  else check_fail "端口不可达，平台自用 Redis 未启动或地址不对"; fi
+fi
 if have redis-cli; then check_ok "redis-cli: $(redis-cli --version)"
 else check_warn "找不到 redis-cli —— 平台的部分运维功能（如手工执行命令）需要它"; fi
 

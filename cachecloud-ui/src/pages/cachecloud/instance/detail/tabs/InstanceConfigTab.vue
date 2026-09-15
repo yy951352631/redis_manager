@@ -187,8 +187,12 @@ watch(() => props.instanceId, fetchData, { immediate: true })
       </el-form>
       <el-alert v-if="changeMessage" :type="changeError ? 'error' : 'success'" :title="changeMessage" :closable="false" show-icon />
       <template #footer>
-        <el-button @click="modalVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submitChange">确认修改</el-button>
+        <el-button @click="modalVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="saving" @click="submitChange">
+          确认修改
+        </el-button>
       </template>
     </el-dialog>
   </div>

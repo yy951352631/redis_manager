@@ -10,7 +10,8 @@
     "build:staging": "vue-tsc && vite build --mode staging",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prepare": "husky",
     "test": "vitest"
   },

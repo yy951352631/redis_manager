@@ -1,8 +1,8 @@
 <script lang="ts" setup>
+import AiAssistantDrawer from "@@/components/AiAssistant/AiAssistantDrawer.vue"
 import { useDevice } from "@@/composables/useDevice"
 import { useLayoutMode } from "@@/composables/useLayoutMode"
 import { getCssVar, setCssVar } from "@@/utils/css"
-import AiAssistantDrawer from "@@/components/AiAssistant/AiAssistantDrawer.vue"
 import { useSettingsStore } from "@/pinia/stores/settings"
 import { useResize } from "./composables/useResize"
 import LeftMode from "./modes/LeftMode.vue"

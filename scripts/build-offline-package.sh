@@ -6,7 +6,7 @@
 #   bash scripts/build-offline-package.sh --with-deps     # 顺带把 Tomcat 下进包里（需联网）
 #   CC_VERSION=1.2.0 bash scripts/build-offline-package.sh
 #
-# 产物：dist/cachecloud-offline-<版本>.tar.gz 及其 .sha256
+# 产物：dist/cachecloud-offline-<版本>.tar.gz、校验文件、配置模板与安装入口脚本
 #
 # 构建机需要 JDK8 + Maven + Node 20.19+/22.12+ + pnpm 10+；
 # 目标机什么都不需要装（除了手册里的基础组件）。
@@ -98,20 +98,24 @@ say "打包"
 rm -f "$OUT" "$OUT.sha256"
 tar -C "$ROOT/dist" -czf "$OUT" "$NAME"
 (cd "$ROOT/dist" && shasum -a 256 "$(basename "$OUT")" > "$(basename "$OUT").sha256")
+cp -a scripts/install-offline-package.sh "$ROOT/dist/install-cachecloud-offline.sh"
+cp -a deploy/offline/conf/cachecloud.env.example "$ROOT/dist/cachecloud.env.example"
+chmod +x "$ROOT/dist/install-cachecloud-offline.sh"
 rm -rf "$STAGE"
 
 SIZE="$(du -h "$OUT" | cut -f1)"
 cat <<EOF
 
   介质包   $OUT
+  安装脚本 $ROOT/dist/install-cachecloud-offline.sh
+  配置模板 $ROOT/dist/cachecloud.env.example
   大小     $SIZE
   文件数   $info_count
   校验     $(cat "$OUT.sha256")
 
   拷到目标机后：
-    tar xzf $(basename "$OUT") && cd $NAME
-    cp conf/cachecloud.env.example conf/cachecloud.env && vi conf/cachecloud.env
-    bash scripts/preflight.sh
-    sudo bash install.sh
+    cp cachecloud.env.example cachecloud.env && vi cachecloud.env
+    bash install-cachecloud-offline.sh --verify-only $(basename "$OUT")
+    sudo bash install-cachecloud-offline.sh $(basename "$OUT") cachecloud.env
 
 EOF

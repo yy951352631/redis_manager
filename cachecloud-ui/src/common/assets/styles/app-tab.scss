@@ -137,7 +137,9 @@
   line-height: 1.5;
   color: var(--rp-text-muted, #64748b);
   background: transparent;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
   user-select: none;
   white-space: nowrap;
 }
@@ -271,9 +273,15 @@
   color: #fff;
 }
 
-.app-topology-frag.is-success { background: #5cb85c; }
-.app-topology-frag.is-warning { background: #f0ad4e; }
-.app-topology-frag.is-danger { background: #d9534f; }
+.app-topology-frag.is-success {
+  background: #5cb85c;
+}
+.app-topology-frag.is-warning {
+  background: #f0ad4e;
+}
+.app-topology-frag.is-danger {
+  background: #d9534f;
+}
 
 .app-topology-star {
   color: #f0ad4e;
@@ -281,29 +289,125 @@
 }
 
 /* 集群拓扑（机器×分片矩阵） */
-.app-machine-topology-page { width: 100%; }
-.app-topology-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 12px; }
-.app-topology-legend__item { display: inline-flex; align-items: center; gap: 8px; }
-.app-topology-legend__label { font-size: 13px; color: var(--rp-text-muted, #64748b); }
-.app-topology-table--matrix > thead > tr > th { text-align: center; padding: 8px 10px; background: var(--rp-surface-muted, #f8fafc); }
-.app-topology-table--matrix > tbody > tr > td { text-align: center; padding: 8px 8px; }
-.app-topology-table__machine-col { text-align: left !important; min-width: 150px; }
-.app-topology-table__empty { padding: 36px 12px !important; color: var(--rp-text-muted, #94a3b8); }
-.app-topology-machine__plain { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
-.app-topology-machine__icon { font-size: 16px; color: var(--rp-text-muted, #64748b); }
-.app-topology-cell { min-width: 68px; }
-.app-topology-node { display: inline-block; vertical-align: middle; margin: 3px 5px; text-decoration: none !important; color: inherit; cursor: pointer; }
-.app-topology-node__host { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 34px; border-radius: 8px; font-size: 24px; }
-.app-topology-node__badge { position: absolute; right: -4px; bottom: -2px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 15px; text-align: center; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14); }
-.app-topology-node--master .app-topology-node__host { background: #eff6ff; color: #2563eb; }
-.app-topology-node--master .app-topology-node__badge { background: #2563eb; color: #fff; }
-.app-topology-node--slave .app-topology-node__host { background: #f0fdf4; color: #16a34a; }
-.app-topology-node--slave .app-topology-node__badge { background: #16a34a; color: #fff; }
-.app-topology-node--sentinel .app-topology-node__host { background: #fff7ed; color: #ea580c; }
-.app-topology-node--sentinel .app-topology-node__badge { background: #ea580c; color: #fff; }
-.app-topology-node--unknown .app-topology-node__host { background: #f8fafc; color: #64748b; }
-.app-topology-node--unknown .app-topology-node__badge { background: #64748b; color: #fff; }
-.app-topology-offline { display: block; font-size: 10px; line-height: 1.3; color: #d9534f; margin-top: 1px; }
+.app-machine-topology-page {
+  width: 100%;
+}
+.app-topology-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-bottom: 12px;
+}
+.app-topology-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-topology-legend__label {
+  font-size: 13px;
+  color: var(--rp-text-muted, #64748b);
+}
+.app-topology-table--matrix > thead > tr > th {
+  text-align: center;
+  padding: 8px 10px;
+  background: var(--rp-surface-muted, #f8fafc);
+}
+.app-topology-table--matrix > tbody > tr > td {
+  text-align: center;
+  padding: 8px 8px;
+}
+.app-topology-table__machine-col {
+  text-align: left !important;
+  min-width: 150px;
+}
+.app-topology-table__empty {
+  padding: 36px 12px !important;
+  color: var(--rp-text-muted, #94a3b8);
+}
+.app-topology-machine__plain {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.app-topology-machine__icon {
+  font-size: 16px;
+  color: var(--rp-text-muted, #64748b);
+}
+.app-topology-cell {
+  min-width: 68px;
+}
+.app-topology-node {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 3px 5px;
+  text-decoration: none !important;
+  color: inherit;
+  cursor: pointer;
+}
+.app-topology-node__host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 24px;
+}
+.app-topology-node__badge {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+.app-topology-node--master .app-topology-node__host {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.app-topology-node--master .app-topology-node__badge {
+  background: #2563eb;
+  color: #fff;
+}
+.app-topology-node--slave .app-topology-node__host {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.app-topology-node--slave .app-topology-node__badge {
+  background: #16a34a;
+  color: #fff;
+}
+.app-topology-node--sentinel .app-topology-node__host {
+  background: #fff7ed;
+  color: #ea580c;
+}
+.app-topology-node--sentinel .app-topology-node__badge {
+  background: #ea580c;
+  color: #fff;
+}
+.app-topology-node--unknown .app-topology-node__host {
+  background: #f8fafc;
+  color: #64748b;
+}
+.app-topology-node--unknown .app-topology-node__badge {
+  background: #64748b;
+  color: #fff;
+}
+.app-topology-offline {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  color: #d9534f;
+  margin-top: 1px;
+}
 
 /* 日报统计 Tab — 对齐 manage-app-tab.css / appDaily.jsp */
 .app-daily-page {
@@ -439,15 +543,42 @@
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
-.app-daily-card--blue   { --daily-accent: #4d8dff; background: linear-gradient(135deg, #fff 70%, #eff6ff 100%); }
-.app-daily-card--indigo { --daily-accent: #6366f1; background: linear-gradient(135deg, #fff 70%, #eef2ff 100%); }
-.app-daily-card--teal   { --daily-accent: #14b8a6; background: linear-gradient(135deg, #fff 70%, #f0fdfa 100%); }
-.app-daily-card--green  { --daily-accent: #22c55e; background: linear-gradient(135deg, #fff 70%, #f0fdf4 100%); }
-.app-daily-card--lime   { --daily-accent: #84cc16; background: linear-gradient(135deg, #fff 70%, #f7fee7 100%); }
-.app-daily-card--red    { --daily-accent: #ef4444; background: linear-gradient(135deg, #fff 70%, #fef2f2 100%); }
-.app-daily-card--violet { --daily-accent: #8b5cf6; background: linear-gradient(135deg, #fff 70%, #f5f3ff 100%); }
-.app-daily-card--pink   { --daily-accent: #ec4899; background: linear-gradient(135deg, #fff 70%, #fdf2f8 100%); }
-.app-daily-card--sky    { --daily-accent: #0ea5e9; background: linear-gradient(135deg, #fff 70%, #f0f9ff 100%); }
+.app-daily-card--blue {
+  --daily-accent: #4d8dff;
+  background: linear-gradient(135deg, #fff 70%, #eff6ff 100%);
+}
+.app-daily-card--indigo {
+  --daily-accent: #6366f1;
+  background: linear-gradient(135deg, #fff 70%, #eef2ff 100%);
+}
+.app-daily-card--teal {
+  --daily-accent: #14b8a6;
+  background: linear-gradient(135deg, #fff 70%, #f0fdfa 100%);
+}
+.app-daily-card--green {
+  --daily-accent: #22c55e;
+  background: linear-gradient(135deg, #fff 70%, #f0fdf4 100%);
+}
+.app-daily-card--lime {
+  --daily-accent: #84cc16;
+  background: linear-gradient(135deg, #fff 70%, #f7fee7 100%);
+}
+.app-daily-card--red {
+  --daily-accent: #ef4444;
+  background: linear-gradient(135deg, #fff 70%, #fef2f2 100%);
+}
+.app-daily-card--violet {
+  --daily-accent: #8b5cf6;
+  background: linear-gradient(135deg, #fff 70%, #f5f3ff 100%);
+}
+.app-daily-card--pink {
+  --daily-accent: #ec4899;
+  background: linear-gradient(135deg, #fff 70%, #fdf2f8 100%);
+}
+.app-daily-card--sky {
+  --daily-accent: #0ea5e9;
+  background: linear-gradient(135deg, #fff 70%, #f0f9ff 100%);
+}
 
 .app-daily-page--no-data .app-daily-card {
   opacity: 0.92;
@@ -664,7 +795,12 @@
   top: 0;
   right: 0;
   height: 52px;
-  background: linear-gradient(90deg, var(--rp-primary-soft, #eaf2ff) 0%, rgba(234, 242, 255, 0.25) 55%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    var(--rp-primary-soft, #eaf2ff) 0%,
+    rgba(234, 242, 255, 0.25) 55%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 0;
 }
@@ -966,13 +1102,30 @@
   color: #475569;
 }
 
-.app-key-result-summary__tag--empty { background: #fef3c7; color: #92400e; }
-.app-key-result-summary__tag--ok { background: #d1fae5; color: #047857; }
-.app-key-result-summary__tag--risk { background: #ffedd5; color: #c2410c; }
-.app-key-result-summary__tag--missing { background: #fee2e2; color: #b91c1c; }
+.app-key-result-summary__tag--empty {
+  background: #fef3c7;
+  color: #92400e;
+}
+.app-key-result-summary__tag--ok {
+  background: #d1fae5;
+  color: #047857;
+}
+.app-key-result-summary__tag--risk {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.app-key-result-summary__tag--missing {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
-.app-key-analysis-key-count--zero { color: #94a3b8; }
-.app-key-analysis-key-count--ok { color: #059669; font-size: 18px; }
+.app-key-analysis-key-count--zero {
+  color: #94a3b8;
+}
+.app-key-analysis-key-count--ok {
+  color: #059669;
+  font-size: 18px;
+}
 
 .app-key-result-empty {
   padding: 12px 14px;
@@ -1168,9 +1321,15 @@
 }
 
 @media (max-width: 992px) {
-  .app-key-result-summary { grid-template-columns: 1fr; }
-  .app-key-result-highlight { grid-template-columns: 1fr; }
-  .app-key-result-charts { grid-template-columns: 1fr; }
+  .app-key-result-summary {
+    grid-template-columns: 1fr;
+  }
+  .app-key-result-highlight {
+    grid-template-columns: 1fr;
+  }
+  .app-key-result-charts {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 键值分析列表 — 对齐 manage-app-tab.css / appKey.jsp */
@@ -1387,7 +1546,9 @@
   border-radius: 4px;
   background: #111827;
   color: #d1fae5;
-  font: 12px/1.6 Consolas, monospace;
+  font:
+    12px/1.6 Consolas,
+    monospace;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -1881,8 +2042,12 @@
     white-space: nowrap;
   }
 
-  &.is-success { background: #5cb85c; }
-  &.is-danger { background: #d9534f; }
+  &.is-success {
+    background: #5cb85c;
+  }
+  &.is-danger {
+    background: #d9534f;
+  }
 }
 
 .app-instance-stat-page .page-header h4 {
@@ -1901,7 +2066,9 @@
 }
 
 /* 配置查询 */
-.app-instance-config-page { width: 100%; }
+.app-instance-config-page {
+  width: 100%;
+}
 .app-instance-config-toolbar {
   display: flex;
   justify-content: flex-end;
@@ -1950,7 +2117,9 @@
 }
 
 /* 命令曲线 */
-.app-instance-cmd-page { width: 100%; }
+.app-instance-cmd-page {
+  width: 100%;
+}
 .app-instance-cmd-page .filter-bar {
   display: flex;
   align-items: center;
@@ -2017,7 +2186,9 @@
 }
 
 /* 只读命令 */
-.app-command-page { width: 100%; }
+.app-command-page {
+  width: 100%;
+}
 .redis-console {
   background: #1e293b;
   border-radius: 8px;
@@ -2029,17 +2200,31 @@
   font-size: 13px;
   line-height: 1.6;
 }
-.redis-console__welcome { color: #cbd5e1; margin-bottom: 8px; }
-.redis-console__line { margin: 0; white-space: pre-wrap; word-break: break-all; }
-.redis-console__line--cmd { color: #93c5fd; }
-.redis-console__line--result { color: #e2e8f0; }
+.redis-console__welcome {
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+.redis-console__line {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.redis-console__line--cmd {
+  color: #93c5fd;
+}
+.redis-console__line--result {
+  color: #e2e8f0;
+}
 .redis-console__input {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 8px;
 }
-.redis-console__prompt { color: #86efac; white-space: nowrap; }
+.redis-console__prompt {
+  color: #86efac;
+  white-space: nowrap;
+}
 .redis-console__input input {
   flex: 1;
   background: transparent;
@@ -2197,7 +2382,9 @@
 }
 
 .app-instance-slow-page,
-.app-instance-fault-page { width: 100%; }
+.app-instance-fault-page {
+  width: 100%;
+}
 .app-instance-slow-table,
 .app-instance-fault-table {
   width: 100%;

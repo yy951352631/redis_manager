@@ -56,20 +56,6 @@ public class UserManageApiController extends AbstractAdminApiController {
         return ApiResponse.ok();
     }
 
-    @PostMapping("/{userId}/reset-password")
-    public ApiResponse<Void> resetPassword(HttpServletRequest request, @PathVariable long userId) {
-        ApiResponse<Void> denied = requireAdmin(request);
-        if (denied != null) {
-            return denied;
-        }
-        try {
-            userManageApiService.resetPassword(userId);
-            return ApiResponse.ok();
-        } catch (BizException ex) {
-            return ApiResponse.fail(400, ex.getMessage());
-        }
-    }
-
     @PutMapping("/{userId}/password")
     public ApiResponse<Void> updatePassword(
             HttpServletRequest request,

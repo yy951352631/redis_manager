@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import type { ECharts } from "echarts"
-import { initGrafanaChart } from "@/common/utils/chart-theme"
 import type { ChartPoint } from "@/api/cachecloud"
-import { getAppCommandChartsBatchApi, getAppCommandNamesApi } from "@/api/cachecloud"
-import { Search } from "@element-plus/icons-vue"
-import "@/common/assets/styles/app-tab.scss"
 import { useAutoQuery } from "@@/composables/useAutoQuery"
+import { Search } from "@element-plus/icons-vue"
+import { getAppCommandChartsBatchApi, getAppCommandNamesApi } from "@/api/cachecloud"
+import { initGrafanaChart } from "@/common/utils/chart-theme"
+import "@/common/assets/styles/app-tab.scss"
 
 const props = defineProps<{ appId: number }>()
 
@@ -205,9 +205,13 @@ onBeforeUnmount(() => {
         end-placeholder="结束时间"
         class="app-command-toolbar__range"
       />
-      <el-button type="primary" :icon="Search" @click="handleQuery">查询</el-button>
+      <el-button type="primary" :icon="Search" @click="handleQuery">
+        查询
+      </el-button>
     </div>
-    <p class="app-stat-range-hint">时间范围最长 7 天</p>
+    <p class="app-stat-range-hint">
+      时间范围最长 7 天
+    </p>
 
     <div class="app-command-filter app-command-filter--multi">
       <span class="app-command-filter__title">命令筛选</span>
@@ -245,7 +249,9 @@ onBeforeUnmount(() => {
 
     <div v-loading="chartLoading" class="app-command-chart-wrap">
       <div ref="chartRef" class="app-command-chart" />
-      <div v-if="showEmptyHint" class="app-command-empty-hint">暂无数据</div>
+      <div v-if="showEmptyHint" class="app-command-empty-hint">
+        暂无数据
+      </div>
     </div>
   </div>
 </template>

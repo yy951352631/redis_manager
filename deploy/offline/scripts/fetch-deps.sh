@@ -47,8 +47,8 @@ if [ "${1:-}" = "--all" ]; then
                  lower_case_table_names=1, max_allowed_packet=256M
                  sql_mode 去掉 ONLY_FULL_GROUP_BY
 
-  Redis 6.2.13（平台自用缓存，不是被纳管对象）
-    源码 : https://download.redis.io/releases/redis-6.2.13.tar.gz
+  Redis 6.2.24（平台自用缓存，不是被纳管对象）
+    源码 : https://download.redis.io/releases/redis-6.2.24.tar.gz
     要点 : 建议设 requirepass；appendonly yes
 
   nginx 1.20+（托管前端 dist 并反代后端）

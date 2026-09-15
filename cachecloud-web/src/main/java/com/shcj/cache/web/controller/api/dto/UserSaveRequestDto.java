@@ -19,4 +19,5 @@ public class UserSaveRequestDto implements Serializable {
     private Integer isAlert;
     private String company;
     private String purpose;
+    private String password;
 }

@@ -14,7 +14,6 @@ import com.shcj.cache.stats.app.AppStatsCenter;
 import com.shcj.cache.stats.app.ExternalRedisCenter;
 import com.shcj.cache.web.controller.api.dto.AppListPageDto;
 import com.shcj.cache.web.vo.AppDetailVO;
-import com.shcj.cache.web.vo.ExternalNodeVO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,6 +26,8 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,19 +70,10 @@ class AppManageRemovedInstanceStatusTest {
         InstanceInfo removed = instance("172.21.0.2", 6379,
                 InstanceStatusEnum.FORGET_STATUS.getStatus());
 
-        ExternalNodeVO removedNode = new ExternalNodeVO();
-        removedNode.setAppId(APP_ID);
-        removedNode.setIp(removed.getIp());
-        removedNode.setPort(removed.getPort());
-        removedNode.setStatus(InstanceStatusEnum.FORGET_STATUS.getStatus());
-        removedNode.setNodeTypeDesc("standalone");
-
         when(appService.getAppDescCount(any(), any())).thenReturn(1);
         when(appService.getAppDescList(any(), any())).thenReturn(Collections.singletonList(app));
         when(externalRedisDao.listAll()).thenReturn(Collections.singletonList(externalRedis));
         when(instanceDao.getInstListByAppId(APP_ID)).thenReturn(Arrays.asList(running, removed));
-        when(externalRedisCenter.listExternalNodes("")).thenReturn(Collections.singletonList(removedNode));
-        when(externalRedisCenter.detectRedisVersionName(externalRedis)).thenReturn("");
         when(appStatsCenter.getAppDetail(APP_ID)).thenReturn(new AppDetailVO());
 
         AppListPageDto result = service.listApps(null, "", "", -1, 1, 20);
@@ -90,6 +82,8 @@ class AppManageRemovedInstanceStatusTest {
         assertEquals(AppStatusEnum.STATUS_PUBLISHED.getStatus(), result.getItems().get(0).getRuntimeStatus());
         assertTrue(result.getItems().get(0).getRuntimeStatusDetail() == null
                 || result.getItems().get(0).getRuntimeStatusDetail().isEmpty());
+        verify(externalRedisCenter, never()).listExternalNodes("");
+        verify(externalRedisCenter, never()).detectRedisVersionName(externalRedis);
     }
 
     private InstanceInfo instance(String ip, int port, int status) {

@@ -412,7 +412,7 @@ CREATE TABLE `app_user`
     `type`          int(4) NOT NULL DEFAULT '2' COMMENT '0管理员，1预留，2普通用户，-1无效',
     `weChat`        varchar(32)  DEFAULT NULL COMMENT '微信号',
     `isAlert`       tinyint(4) NOT NULL DEFAULT '1' COMMENT '用户是否接收报警 0:不接收 1:接收',
-    `password`      varchar(64)  DEFAULT NULL COMMENT '密码',
+    `password`      varchar(255) DEFAULT NULL COMMENT 'BCrypt密码哈希',
     `register_time` datetime     DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `purpose`       varchar(255) DEFAULT NULL COMMENT '使用目的',
     `company`       varchar(255) DEFAULT NULL COMMENT '公司名称',
@@ -424,27 +424,10 @@ CREATE TABLE `app_user`
 --  Records of `app_user`
 -- ----------------------------
 BEGIN;
--- 默认管理员：admin / admin%TGB7ygv（password 为 MD5）
+-- 默认管理员：admin / admin%TGB7ygv（password 为 BCrypt，cost=12）
 INSERT INTO `app_user`
-VALUES ('1', 'admin', 'admin', 'admin@xxx.com', '13500000000', '0', null, '1', 'fae3997daa86ba75a7d81c1b7d8228fd', current_timestamp(), NULL, NULL);
+VALUES ('1', 'admin', 'admin', 'admin@xxx.com', '13500000000', '0', null, '1', '$2y$12$TG8IrOPabHn6z1EcAyJsuerXMzz/LcbNC7..pUOqc/afKXpAm08BK', current_timestamp(), NULL, NULL);
 COMMIT;
-
---
--- Table structure for table `brevity_schedule_resources`
---
-
-DROP TABLE IF EXISTS `brevity_schedule_resources`;
-CREATE TABLE `brevity_schedule_resources`
-(
-    `id`          bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-    `type`        tinyint(4) NOT NULL COMMENT '类型,见:BrevityScheduleType',
-    `version`     bigint(20) NOT NULL DEFAULT '0' COMMENT '时间版本',
-    `host`        varchar(16) NOT NULL COMMENT '资源ip',
-    `port`        int(11) NOT NULL DEFAULT '0' COMMENT '端口',
-    `create_time` datetime    NOT NULL COMMENT '创建时间',
-    PRIMARY KEY (`id`),
-    KEY           `idx_type_host_port` (`type`,`host`,`port`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='短频任务表';
 
 --
 -- Table structure for table `diagnostic_task_record`
@@ -1750,8 +1733,8 @@ CREATE TABLE IF NOT EXISTS `risk_assess_rule` (
 
 CREATE TABLE IF NOT EXISTS `risk_assess_report` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `app_id` bigint(20) NOT NULL,
-  `app_name` varchar(128) NOT NULL DEFAULT '',
+  `app_id` bigint(20) NOT NULL COMMENT '评估时应用ID快照，应用删除后仍保留历史报告',
+  `app_name` varchar(128) NOT NULL DEFAULT '' COMMENT '评估时应用名称快照',
   `window_hours` int(11) NOT NULL DEFAULT '168',
   `window_start` datetime DEFAULT NULL,
   `window_end` datetime DEFAULT NULL,
@@ -1771,7 +1754,7 @@ CREATE TABLE IF NOT EXISTS `risk_assess_report` (
 CREATE TABLE IF NOT EXISTS `risk_assess_dimension` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `report_id` bigint(20) NOT NULL,
-  `app_id` bigint(20) NOT NULL,
+  `app_id` bigint(20) NOT NULL COMMENT '评估时应用ID快照',
   `dimension` varchar(64) NOT NULL,
   `dimension_name` varchar(64) NOT NULL DEFAULT '',
   `level` varchar(24) NOT NULL DEFAULT 'NORMAL',
@@ -1852,3 +1835,13 @@ CREATE TABLE IF NOT EXISTS `benchmark_task`
     KEY `idx_app_start` (`app_id`, `start_time`),
     KEY `idx_start_time` (`start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='压测任务与结果';
+
+-- 关键父子关系：应用删除时清理关联登记，报告删除时清理维度明细。
+ALTER TABLE `app_to_user`
+  ADD CONSTRAINT `fk_app_to_user_app` FOREIGN KEY (`app_id`) REFERENCES `app_desc` (`app_id`) ON DELETE CASCADE;
+ALTER TABLE `external_redis`
+  ADD CONSTRAINT `fk_external_redis_app` FOREIGN KEY (`app_id`) REFERENCES `app_desc` (`app_id`) ON DELETE CASCADE;
+ALTER TABLE `risk_assess_dimension`
+  ADD CONSTRAINT `fk_risk_dimension_report` FOREIGN KEY (`report_id`) REFERENCES `risk_assess_report` (`id`) ON DELETE CASCADE;
+
+SET FOREIGN_KEY_CHECKS = 1;

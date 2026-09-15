@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { MigrateListItem, MigrateText, UserListItem } from "@/api/cachecloud"
+import { CircleCheck, Plus, Refresh, Search } from "@element-plus/icons-vue"
 import {
   compareMigrateKeyCountApi,
   deleteMigrateApi,
@@ -11,7 +12,6 @@ import {
   resyncMigrateApi,
   stopMigrateApi
 } from "@/api/cachecloud"
-import { CircleCheck, Plus, Refresh, Search } from "@element-plus/icons-vue"
 import { formatRedisVersion } from "@/common/utils/redis-version"
 import "@/common/assets/styles/migrate.scss"
 
@@ -220,7 +220,9 @@ onMounted(() => {
   <div class="migrate-list-page">
     <div class="page-header">
       <div class="page-actions">
-        <el-button type="success" :icon="Plus" @click="openCreate">添加新迁移</el-button>
+        <el-button type="success" :icon="Plus" @click="openCreate">
+          添加新迁移
+        </el-button>
       </div>
     </div>
 
@@ -252,15 +254,21 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-          <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">刷新</el-button>
+          <el-button type="primary" :icon="Search" @click="handleSearch">
+            查询
+          </el-button>
+          <el-button :icon="Refresh" :loading="loading" @click="handleRefresh">
+            刷新
+          </el-button>
         </el-form-item>
       </el-form>
 
       <el-table v-loading="loading" :data="items" stripe border style="width: 100%">
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column label="迁移机器" min-width="140" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.migrateMachine || row.migrateMachineIp || "-" }}</template>
+          <template #default="{ row }">
+            {{ row.migrateMachine || row.migrateMachineIp || "-" }}
+          </template>
         </el-table-column>
         <el-table-column prop="userName" label="操作人" min-width="90" />
         <el-table-column label="源数据" min-width="240">
@@ -349,7 +357,9 @@ onMounted(() => {
             </el-button>
           </template>
         </el-table-column>
-        <template #empty>无查询相关记录!</template>
+        <template #empty>
+          无查询相关记录!
+        </template>
       </el-table>
 
       <div class="pagination-wrap">
@@ -371,12 +381,24 @@ onMounted(() => {
     <el-dialog v-model="processVisible" title="迁移进度" width="720px">
       <template v-if="processData">
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="运行状态">{{ processData.running ? "运行中" : "已停止" }}</el-descriptions-item>
-          <el-descriptions-item label="当前阶段">{{ processData.stage || processData.message || "启动中" }}</el-descriptions-item>
-          <el-descriptions-item label="RDB 已接收">{{ formatBytes(processData.rdbReceivedBytes) }}</el-descriptions-item>
-          <el-descriptions-item label="AOF 已接收">{{ formatBytes(processData.aofReceivedBytes) }}</el-descriptions-item>
-          <el-descriptions-item label="读取命令">{{ formatCount(processData.entries?.read_count) }}</el-descriptions-item>
-          <el-descriptions-item label="写入命令">{{ formatCount(processData.entries?.write_count) }}</el-descriptions-item>
+          <el-descriptions-item label="运行状态">
+            {{ processData.running ? "运行中" : "已停止" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="当前阶段">
+            {{ processData.stage || processData.message || "启动中" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="RDB 已接收">
+            {{ formatBytes(processData.rdbReceivedBytes) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="AOF 已接收">
+            {{ formatBytes(processData.aofReceivedBytes) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="读取命令">
+            {{ formatCount(processData.entries?.read_count) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="写入命令">
+            {{ formatCount(processData.entries?.write_count) }}
+          </el-descriptions-item>
         </el-descriptions>
         <div class="migrate-progress-block">
           <span>RDB 写入进度</span>
@@ -386,8 +408,12 @@ onMounted(() => {
       </template>
       <pre v-else class="migrate-text-pre">{{ processText }}</pre>
       <template #footer>
-        <el-button :icon="Refresh" :loading="processRefreshing" @click="refreshProcess">刷新</el-button>
-        <el-button type="primary" @click="processVisible = false">关闭</el-button>
+        <el-button :icon="Refresh" :loading="processRefreshing" @click="refreshProcess">
+          刷新
+        </el-button>
+        <el-button type="primary" @click="processVisible = false">
+          关闭
+        </el-button>
       </template>
     </el-dialog>
 
@@ -407,16 +433,24 @@ onMounted(() => {
           >
             <template #sub-title>
               <el-descriptions :column="1" border>
-                <el-descriptions-item label="源集群 Key 数">{{ formatCount(keyCompareData.sourceKeyCount) }}</el-descriptions-item>
-                <el-descriptions-item label="目标集群 Key 数">{{ formatCount(keyCompareData.targetKeyCount) }}</el-descriptions-item>
-                <el-descriptions-item label="目标 - 源">{{ keyCompareData.difference > 0 ? '+' : '' }}{{ formatCount(keyCompareData.difference) }}</el-descriptions-item>
+                <el-descriptions-item label="源集群 Key 数">
+                  {{ formatCount(keyCompareData.sourceKeyCount) }}
+                </el-descriptions-item>
+                <el-descriptions-item label="目标集群 Key 数">
+                  {{ formatCount(keyCompareData.targetKeyCount) }}
+                </el-descriptions-item>
+                <el-descriptions-item label="目标 - 源">
+                  {{ keyCompareData.difference > 0 ? '+' : '' }}{{ formatCount(keyCompareData.difference) }}
+                </el-descriptions-item>
               </el-descriptions>
             </template>
           </el-result>
         </template>
       </div>
       <template #footer>
-        <el-button type="primary" :icon="CircleCheck" @click="keyCompareVisible = false">关闭</el-button>
+        <el-button type="primary" :icon="CircleCheck" @click="keyCompareVisible = false">
+          关闭
+        </el-button>
       </template>
     </el-dialog>
   </div>

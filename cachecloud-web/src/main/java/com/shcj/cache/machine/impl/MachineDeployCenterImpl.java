@@ -94,14 +94,9 @@ public class MachineDeployCenterImpl implements MachineDeployCenter {
         if (Strings.isNullOrEmpty(machineInfo.getSshUser())) {
             machineInfo.setSshUser(existing.getSshUser());
         }
-        String oldIp = existing.getIp();
         int rows = machineDao.updateMachineInfoById(machineInfo);
         if (rows <= 0) {
             throw new BizException("更新机器失败，未找到 id={} 的记录", machineInfo.getId());
-        }
-        if (!oldIp.equals(machineInfo.getIp())) {
-            machineDao.updateBrevityScheduleHost(oldIp, machineInfo.getIp());
-            logger.info("machine ip changed: {} -> {}, brevity schedule host updated", oldIp, machineInfo.getIp());
         }
     }
 

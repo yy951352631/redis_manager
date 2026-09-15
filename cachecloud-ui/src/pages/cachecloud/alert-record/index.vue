@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { AlertRecordItem } from "@/api/cachecloud"
+import { useAutoQuery } from "@@/composables/useAutoQuery"
 import { Refresh, Search } from "@element-plus/icons-vue"
 import { getAlertRecordsApi } from "@/api/cachecloud"
-import { useAutoQuery } from "@@/composables/useAutoQuery"
 
 const loading = ref(false)
 const items = ref<AlertRecordItem[]>([])
@@ -12,7 +12,10 @@ const apps = ref<{ appId: number, appName: string }[]>([])
 const detail = ref<AlertRecordItem | null>(null)
 const detailVisible = ref(false)
 
-function shiftRange(ms: number): [Date, Date] { const end = new Date(); return [new Date(end.getTime() - ms), end] }
+function shiftRange(ms: number): [Date, Date] {
+  const end = new Date()
+  return [new Date(end.getTime() - ms), end]
+}
 const rangeShortcuts = [
   { text: "最近 15 分钟", value: () => shiftRange(15 * 60 * 1000) },
   { text: "最近 30 分钟", value: () => shiftRange(30 * 60 * 1000) },
@@ -22,8 +25,14 @@ const rangeShortcuts = [
   { text: "最近 3 天", value: () => shiftRange(3 * 24 * 60 * 60 * 1000) },
   { text: "最近 7 天", value: () => shiftRange(7 * 24 * 60 * 60 * 1000) }
 ]
-function fmt(d: Date) { const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` }
-function defaultRange(): [string, string] { const [start, end] = shiftRange(60 * 60 * 1000); return [fmt(start), fmt(end)] }
+function fmt(d: Date) {
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+function defaultRange(): [string, string] {
+  const [start, end] = shiftRange(60 * 60 * 1000)
+  return [fmt(start), fmt(end)]
+}
 
 const query = reactive({
   importantLevel: undefined as number | undefined,
@@ -78,7 +87,9 @@ function handleReset() {
   query.ip = ""
   query.keyword = ""
   // 重置后统一查一次，恢复默认时间区间不再单独触发一次自动查询
-  silentRange(() => { timeRange.value = defaultRange() })
+  silentRange(() => {
+    timeRange.value = defaultRange()
+  })
   handleSearch()
 }
 
@@ -118,8 +129,12 @@ onMounted(fetchList)
           class="alert-record-page__range"
         />
         <el-input v-model="query.keyword" placeholder="标题 / 内容关键字" clearable style="width: 220px" />
-        <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-        <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        <el-button type="primary" :icon="Search" @click="handleSearch">
+          查询
+        </el-button>
+        <el-button :icon="Refresh" @click="handleReset">
+          重置
+        </el-button>
       </div>
     </el-card>
 
@@ -153,7 +168,9 @@ onMounted(fetchList)
         <el-table-column prop="content" label="报警内容" min-width="320" show-overflow-tooltip />
         <el-table-column label="详情" width="80" fixed="right">
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="openDetail(row)">查看</el-link>
+            <el-link type="primary" :underline="false" @click="openDetail(row)">
+              查看
+            </el-link>
           </template>
         </el-table-column>
         <template #empty>
@@ -172,15 +189,25 @@ onMounted(fetchList)
 
     <el-drawer v-model="detailVisible" title="报警详情" size="620px">
       <el-descriptions v-if="detail" :column="1" border size="small">
-        <el-descriptions-item label="报警时间">{{ detail.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="重要程度">{{ detail.importantLevelDesc }}</el-descriptions-item>
+        <el-descriptions-item label="报警时间">
+          {{ detail.createTime }}
+        </el-descriptions-item>
+        <el-descriptions-item label="重要程度">
+          {{ detail.importantLevelDesc }}
+        </el-descriptions-item>
         <el-descriptions-item label="集群">
           {{ detail.appName || (detail.appId ? `应用 ${detail.appId}` : "-") }}
         </el-descriptions-item>
-        <el-descriptions-item label="节点">{{ targetLabel(detail) }}</el-descriptions-item>
-        <el-descriptions-item label="标题">{{ detail.title }}</el-descriptions-item>
+        <el-descriptions-item label="节点">
+          {{ targetLabel(detail) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="标题">
+          {{ detail.title }}
+        </el-descriptions-item>
       </el-descriptions>
-      <h4 class="alert-record-page__detail-title">报警内容</h4>
+      <h4 class="alert-record-page__detail-title">
+        报警内容
+      </h4>
       <pre class="alert-record-page__content">{{ detail?.content || "-" }}</pre>
     </el-drawer>
   </div>

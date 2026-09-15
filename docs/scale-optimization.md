@@ -41,7 +41,7 @@
 |----|------|
 | **问题** | Quartz、探活、`INFO` 采集、告警扫描与 HTTP API 同进程，互相抢 CPU / 连接 / 线程 |
 | **改造** | 拆出独立 collector（或独立部署的采集进程）；`cachecloud-web` 只做管控与查询 |
-| **涉及** | `spring-quartz.xml`、`BrevitySchedulerImpl`、`HostInspectHandler`、各类 `*Job` |
+| **涉及** | `spring-quartz.xml`、`ExternalRedisStatsCollectJob`、`HostInspectHandler`、各类 `*Job` |
 | **收益** | API 不被采集拖垮；采集可单独扩容 |
 | **优先级** | P0 |
 
@@ -75,9 +75,9 @@
 
 | 项 | 内容 |
 |----|------|
-| **问题** | `BrevityScheduler` 对节点约每分钟 `INFO ALL`，写 `standard_statistics` + `instance_statistics` |
+| **问题** | `ExternalRedisStatsCollectJob` 对节点约每分钟 `INFO ALL`，写 `standard_statistics` + `instance_statistics` |
 | **改造** | 核心集群 1 分钟，普通 2～5 分钟；可配置；采集批次与并发可配 |
-| **涉及** | `BrevitySchedulerImpl`、`RedisCenterImpl.collectRedisInfo`、`brevity_schedule_resources` |
+| **涉及** | `ExternalRedisStatsCollectJob`、`RedisCenterImpl.collectRedisInfo` |
 | **收益** | 采集量可按业务重要性裁剪 |
 | **优先级** | P0 |
 
@@ -183,9 +183,9 @@
 
 | 项 | 内容 |
 |----|------|
-| **问题** | `BREVITY_SCHEDULER`（10～100）、`DEFAULT_ASYNC`（256）等写死或偏固定；拒绝策略仅计数 |
+| **问题** | `MACHINE_THREAD_POOL`（256～512）、`DEFAULT_ASYNC`（256）等写死或偏固定；拒绝策略仅计数 |
 | **改造** | 按节点规模配置核心/最大线程与队列；暴露队列深度、拒绝次数、任务耗时；积压告警 |
-| **涉及** | `AsyncThreadPoolFactory`、`BrevitySchedulerImpl`、Inspector 相关线程池 |
+| **涉及** | `AsyncThreadPoolFactory`、`ExternalRedisStatsCollectJob`、Inspector 相关线程池 |
 | **收益** | 规模上来时能先看见问题，再调参，而不是静默丢任务 |
 | **优先级** | P2 |
 
@@ -196,8 +196,8 @@
 | 项 | 内容 |
 |----|------|
 | **问题** | 可多实例部署，但若任务未真正分片，会重复打同一批节点或争抢 |
-| **改造** | 采集 / 探活 / 告警任务明确分片键 + 分布式锁（或基于 `brevity_schedule_resources` 的租约）；保证一节点同一时刻只被一个 worker 采集 |
-| **涉及** | `spring-quartz.xml`（JDBC cluster）、`BrevitySchedulerImpl`、各类 Job |
+| **改造** | 采集 / 探活 / 告警任务明确分片键 + 分布式锁；保证一节点同一时刻只被一个 worker 采集 |
+| **涉及** | `spring-quartz.xml`（JDBC cluster）、`ExternalRedisStatsCollectJob`、各类 Job |
 | **收益** | 水平扩展采集而不翻倍打 Redis |
 | **优先级** | P2 |
 
@@ -286,7 +286,7 @@
 
 | 模块 | 路径 / 类 |
 |------|-----------|
-| 采集调度 | `BrevitySchedulerImpl`、`AsyncThreadPoolFactory` |
+| 采集调度 | `ExternalRedisStatsCollectJob`、`AsyncThreadPoolFactory` |
 | 探活 | `HostInspectHandler`、`AbstractInspectHandler` |
 | 告警扫描 | `InstanceAlertConfigServiceImpl` |
 | 全站聚合 | `AppStatsCenterImpl#getOnlineAppDetails` |

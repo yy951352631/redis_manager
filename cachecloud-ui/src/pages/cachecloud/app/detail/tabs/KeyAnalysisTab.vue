@@ -5,7 +5,6 @@ import type {
   KeyAnalysisPage,
   KeyAnalysisProgress,
   KeyAnalysisResult,
-  ParamCountItem,
   TaskFlowDetail
 } from "@/api/cachecloud"
 import { Delete, Key, Refresh, Warning } from "@element-plus/icons-vue"
@@ -302,8 +301,12 @@ function progressFor(audit: KeyAnalysisAuditItem) {
 // 顶部再次点击「键值分析」时退回列表。keep-alive 会把非当前 tab 的实例也留着，
 // 用 onActivated/onDeactivated 标记可见性，避免重复点击别的 tab 时把这里一起重置了。
 const tabVisible = ref(true)
-onActivated(() => { tabVisible.value = true })
-onDeactivated(() => { tabVisible.value = false })
+onActivated(() => {
+  tabVisible.value = true
+})
+onDeactivated(() => {
+  tabVisible.value = false
+})
 const tabReclickSeq = inject(TAB_RECLICK, null)
 if (tabReclickSeq) {
   watch(tabReclickSeq, () => {
@@ -335,7 +338,9 @@ onBeforeUnmount(() => {
     <template v-else>
       <div class="app-key-analysis-header">
         <div class="app-key-analysis-nodes">
-          <div class="app-key-analysis-nodes__label">分析节点</div>
+          <div class="app-key-analysis-nodes__label">
+            分析节点
+          </div>
           <template v-if="page?.instances?.length">
             <el-checkbox-group v-model="selectedNodes" class="app-key-analysis-nodes__list">
               <el-checkbox
@@ -348,30 +353,48 @@ onBeforeUnmount(() => {
                 <template v-if="inst.currItems >= 0">
                   · <strong :class="inst.currItems === 0 ? 'app-key-analysis-key-count--zero' : 'app-key-analysis-key-count--ok'">{{ inst.currItems }}</strong> keys
                 </template>
-                <template v-else> · 暂无统计</template>
+                <template v-else>
+                  · 暂无统计
+                </template>
               </el-checkbox>
             </el-checkbox-group>
             <div class="app-key-analysis-nodes__actions">
-              <el-button size="small" class="app-key-analysis-nodes__btn" @click="selectAll(false)">全选</el-button>
-              <el-button size="small" class="app-key-analysis-nodes__btn" @click="selectAll(true)">仅从节点</el-button>
-              <el-button size="small" class="app-key-analysis-nodes__btn" @click="clearSelection">清空</el-button>
+              <el-button size="small" class="app-key-analysis-nodes__btn" @click="selectAll(false)">
+                全选
+              </el-button>
+              <el-button size="small" class="app-key-analysis-nodes__btn" @click="selectAll(true)">
+                仅从节点
+              </el-button>
+              <el-button size="small" class="app-key-analysis-nodes__btn" @click="clearSelection">
+                清空
+              </el-button>
             </div>
-            <div class="app-key-analysis-nodes__hint">不勾选时默认分析全部从节点；多个节点将并行扫描。</div>
+            <div class="app-key-analysis-nodes__hint">
+              不勾选时默认分析全部从节点；多个节点将并行扫描。
+            </div>
           </template>
-          <div v-else class="app-key-analysis-nodes__hint">未找到 Redis 实例，请先确认实例已纳入。</div>
+          <div v-else class="app-key-analysis-nodes__hint">
+            未找到 Redis 实例，请先确认实例已纳入。
+          </div>
         </div>
 
         <div class="app-key-analysis-config">
           <div class="app-key-analysis-header__text">
             <span class="app-key-analysis-header__badge"><el-icon><Key /></el-icon></span>
             <div>
-              <div class="app-key-analysis-header__title">集群键值分析</div>
-              <div class="app-key-analysis-header__desc">扫描 BigKey、键类型/TTL/内存分布、空闲键和 Key 前缀。</div>
+              <div class="app-key-analysis-header__title">
+                集群键值分析
+              </div>
+              <div class="app-key-analysis-header__desc">
+                扫描 BigKey、键类型/TTL/内存分布、空闲键和 Key 前缀。
+              </div>
             </div>
           </div>
 
           <div class="app-key-analysis-rules">
-            <div class="app-key-analysis-rules__title">BigKey 定义</div>
+            <div class="app-key-analysis-rules__title">
+              BigKey 定义
+            </div>
             <div class="app-key-analysis-rules__fields">
               <label>
                 <span>String 大小超过</span>
@@ -419,7 +442,9 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="app-key-analysis-section">
-        <div class="app-key-analysis-section__title">分析记录</div>
+        <div class="app-key-analysis-section__title">
+          分析记录
+        </div>
 
         <div v-if="!page?.audits?.length" class="app-key-analysis-empty-hint is-static">
           暂无分析记录。点击「发起分析」后，后台任务会扫描 Redis 并生成报告。
@@ -458,15 +483,23 @@ onBeforeUnmount(() => {
                 </template>
                 <template v-else>
                   <span class="app-key-analysis-status" :class="statusClass(row)">{{ statusLabel(row) }}</span>
-                  <div v-if="row.rejected && row.refuseReason" class="app-key-analysis-fail-reason">{{ row.refuseReason }}</div>
+                  <div v-if="row.rejected && row.refuseReason" class="app-key-analysis-fail-reason">
+                    {{ row.refuseReason }}
+                  </div>
                 </template>
               </template>
             </el-table-column>
             <el-table-column label="说明" min-width="220" class-name="app-key-analysis-table__info">
               <template #default="{ row }">
-                <div v-if="auditInfoText(row.info)">{{ auditInfoText(row.info) }}</div>
-                <div v-if="row.nodeInfo" class="app-key-analysis-table__nodes">节点：{{ row.nodeInfo }}</div>
-                <div v-if="row.riskInfo" class="app-key-analysis-table__risk">{{ row.riskInfo }}</div>
+                <div v-if="auditInfoText(row.info)">
+                  {{ auditInfoText(row.info) }}
+                </div>
+                <div v-if="row.nodeInfo" class="app-key-analysis-table__nodes">
+                  节点：{{ row.nodeInfo }}
+                </div>
+                <div v-if="row.riskInfo" class="app-key-analysis-table__risk">
+                  {{ row.riskInfo }}
+                </div>
                 <div v-if="row.passed && row.totalKeyCount != null && row.totalKeyCount >= 0" class="app-key-analysis-table__nodes">
                   扫描 key 总数：{{ row.totalKeyCount }}
                 </div>
@@ -523,7 +556,9 @@ onBeforeUnmount(() => {
             <div><span>当前步骤</span><strong>{{ flow.currentStep || "-" }}</strong></div>
           </div>
           <div class="app-key-flow-actions">
-            <el-button :icon="Refresh" size="small" @click="refreshTaskFlow()">刷新</el-button>
+            <el-button :icon="Refresh" size="small" @click="refreshTaskFlow()">
+              刷新
+            </el-button>
           </div>
           <el-table :data="flow.steps" stripe border size="small">
             <el-table-column prop="orderNo" label="#" width="60" />
@@ -534,9 +569,13 @@ onBeforeUnmount(() => {
           </el-table>
           <el-collapse v-model="activeLogSteps" class="app-key-flow-logs">
             <el-collapse-item v-for="step in flow.steps" :key="step.id" :name="step.stepName">
-              <template #title>{{ step.orderNo }}. {{ step.stepName }} · {{ step.statusDesc }}</template>
+              <template #title>
+                {{ step.orderNo }}. {{ step.stepName }} · {{ step.statusDesc }}
+              </template>
               <pre v-if="step.logs?.length">{{ step.logs.join("\n") }}</pre>
-              <div v-else class="app-key-analysis-muted">暂无日志</div>
+              <div v-else class="app-key-analysis-muted">
+                暂无日志
+              </div>
             </el-collapse-item>
           </el-collapse>
         </template>

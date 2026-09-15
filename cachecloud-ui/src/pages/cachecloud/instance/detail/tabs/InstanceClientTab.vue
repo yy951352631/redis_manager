@@ -97,7 +97,9 @@ watch(() => props.instanceId, fetchData, { immediate: true })
         </thead>
         <tbody>
           <tr v-if="!clients.length && !loading">
-            <td colspan="5" class="app-instance-slow-empty">暂无数据</td>
+            <td colspan="5" class="app-instance-slow-empty">
+              暂无数据
+            </td>
           </tr>
           <tr v-for="(row, index) in clients" :key="row.addr">
             <td>{{ index + 1 }}</td>
@@ -109,7 +111,9 @@ watch(() => props.instanceId, fetchData, { immediate: true })
             </td>
             <td>{{ row.count }}</td>
             <td>
-              <el-button type="success" size="small" @click="openConnections(row)">查看连接信息</el-button>
+              <el-button type="success" size="small" @click="openConnections(row)">
+                查看连接信息
+              </el-button>
             </td>
           </tr>
         </tbody>

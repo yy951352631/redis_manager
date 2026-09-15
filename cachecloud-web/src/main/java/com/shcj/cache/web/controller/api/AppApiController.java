@@ -2,7 +2,6 @@ package com.shcj.cache.web.controller.api;
 
 import com.shcj.cache.constant.AppUserTypeEnum;
 import com.shcj.cache.entity.AppUser;
-import com.shcj.cache.web.controller.BaseController;
 import com.shcj.cache.web.controller.api.dto.AppOfflineResultDto;
 import com.shcj.cache.exception.BizException;
 import com.shcj.cache.web.controller.api.dto.AppAddUsersRequestDto;
@@ -28,7 +27,6 @@ import com.shcj.cache.web.service.AppDetailTabApiService;
 import com.shcj.cache.web.service.AppManageApiService;
 import com.shcj.cache.web.service.KeyAnalysisApiService;
 import com.shcj.cache.web.vo.ApiResponse;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -50,7 +48,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/apps")
-public class AppApiController extends BaseController {
+public class AppApiController extends AbstractAdminApiController {
 
     @Autowired
     private AppManageApiService appManageApiService;
@@ -500,21 +498,4 @@ public class AppApiController extends BaseController {
         return null;
     }
 
-    private AppUser resolveApiUser(HttpServletRequest request) {
-        String userName = userLoginStatusService.getUserNameFromLoginStatus(request);
-        if (StringUtils.isBlank(userName)) {
-            String authHeader = request.getHeader("Authorization");
-            if (StringUtils.isNotBlank(authHeader) && authHeader.startsWith("Bearer ")) {
-                userName = authHeader.substring(7).trim();
-            }
-        }
-        if (StringUtils.isBlank(userName)) {
-            return null;
-        }
-        AppUser user = userService.getByName(userName);
-        if (user == null || AppUserTypeEnum.NO_USER.value().equals(user.getType())) {
-            return null;
-        }
-        return user;
-    }
 }

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { CommandCheckDetailRow, CommandCheckRecord, ConfigCheckDetailRow, ConfigCheckRecord, RestartRecord } from "@/api/cachecloud"
+import { Search } from "@element-plus/icons-vue"
 import {
   getCommandCheckDetailApi,
   getCommandCheckListApi,
@@ -11,7 +12,6 @@ import {
   runConfigCheckApi,
   stopRestartApi
 } from "@/api/cachecloud"
-import { Search } from "@element-plus/icons-vue"
 import { formatRedisVersion } from "@/common/utils/redis-version"
 
 const props = defineProps<{

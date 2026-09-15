@@ -117,7 +117,7 @@ public class AppKeyAnalysisTask extends BaseTask {
         }
         if (!assistRedisService.pingAssistRedis()) {
             throw new BizException("辅助 Redis 不可用: " + assistRedisService.getAssistRedisEndpoint()
-                    + "，请检查 cachecloud.redis.main（host/port/password）并重启应用使配置生效");
+                    + "，请检查 cachecloud.redis.main（直连或 Sentinel 配置）并重启应用使配置生效");
         }
         String probeKey = ConstUtils.getRedisServerTypeKey(appId, auditId);
         try {

@@ -11,10 +11,13 @@ import redis.clients.jedis.*;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.params.SetParams;
+import redis.clients.jedis.util.Pool;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.PostConstruct;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +35,18 @@ public class AssistRedisServiceImpl implements AssistRedisService {
     @Value("${cachecloud.redis.main.password:}")
     private String mainPassword;
 
-    private JedisPool jedisPoolMain;
+    @Value("${cachecloud.redis.main.sentinel-master:}")
+    private String sentinelMaster;
+
+    @Value("${cachecloud.redis.main.sentinel-nodes:}")
+    private String sentinelNodes;
+
+    @Value("${cachecloud.redis.main.sentinel-password:}")
+    private String sentinelPassword;
+
+    private Pool<Jedis> jedisPoolMain;
+
+    private JedisSentinelPool jedisSentinelPool;
 
     private ProtostuffSerializer protostuffSerializer = new ProtostuffSerializer();
 
@@ -42,12 +56,79 @@ public class AssistRedisServiceImpl implements AssistRedisService {
         config.setMaxTotal(100);
         config.setMaxIdle(50);
         config.setMinIdle(20);
-        jedisPoolMain = new JedisPool(config, mainHost, mainPort, Protocol.DEFAULT_TIMEOUT, mainPassword);
-        logger.info("assist redis initialized: {}:{}", mainHost, mainPort);
+        boolean sentinelMasterConfigured = hasText(sentinelMaster);
+        boolean sentinelNodesConfigured = hasText(sentinelNodes);
+        if (sentinelMasterConfigured != sentinelNodesConfigured) {
+            throw new IllegalArgumentException("Assist Redis sentinel master and nodes must be configured together");
+        }
+        if (sentinelMasterConfigured) {
+            Set<String> sentinels = parseSentinelNodes(sentinelNodes);
+            if (sentinelPassword == null || sentinelPassword.trim().isEmpty()) {
+                jedisSentinelPool = new JedisSentinelPool(sentinelMaster.trim(), sentinels, config,
+                        Protocol.DEFAULT_TIMEOUT, mainPassword);
+            } else {
+                jedisSentinelPool = new JedisSentinelPool(sentinelMaster.trim(), sentinels,
+                        mainPassword, sentinelPassword);
+            }
+            jedisPoolMain = jedisSentinelPool;
+            logger.info("assist redis initialized with sentinel: master={}, sentinels={}",
+                    sentinelMaster.trim(), sentinels);
+        } else {
+            jedisPoolMain = new JedisPool(config, mainHost, mainPort, Protocol.DEFAULT_TIMEOUT, mainPassword);
+            logger.info("assist redis initialized: {}:{}", mainHost, mainPort);
+        }
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (jedisPoolMain != null) {
+            jedisPoolMain.close();
+        }
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    static Set<String> parseSentinelNodes(String nodes) {
+        Set<String> result = new LinkedHashSet<>();
+        if (nodes == null) {
+            return result;
+        }
+        for (String node : nodes.split(",")) {
+            String endpoint = node.trim();
+            if (endpoint.isEmpty()) {
+                continue;
+            }
+            int separator = endpoint.lastIndexOf(':');
+            if (separator <= 0 || separator == endpoint.length() - 1) {
+                throw new IllegalArgumentException("Invalid assist Redis sentinel endpoint: " + endpoint);
+            }
+            String host = endpoint.substring(0, separator).trim();
+            int port;
+            try {
+                port = Integer.parseInt(endpoint.substring(separator + 1).trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid assist Redis sentinel endpoint: " + endpoint, e);
+            }
+            if (host.isEmpty() || port <= 0 || port > 65535) {
+                throw new IllegalArgumentException("Invalid assist Redis sentinel endpoint: " + endpoint);
+            }
+            result.add(host + ":" + port);
+        }
+        if (result.isEmpty()) {
+            throw new IllegalArgumentException("Assist Redis sentinel nodes must not be empty");
+        }
+        return result;
     }
 
     @Override
     public String getAssistRedisEndpoint() {
+        if (jedisSentinelPool != null) {
+            HostAndPort currentMaster = jedisSentinelPool.getCurrentHostMaster();
+            return "sentinel:" + sentinelMaster.trim() + "@"
+                    + (currentMaster == null ? "unknown" : currentMaster);
+        }
         return mainHost + ":" + mainPort;
     }
 
@@ -60,7 +141,7 @@ public class AssistRedisServiceImpl implements AssistRedisService {
         try {
             return jedisPoolMain.getResource();
         } catch (JedisConnectionException ce) {
-            logger.warn("Please Make sure the file:application-${profile}.yml connection pool is configured correctly !  cachecloud.redis.main.host:{} cachecloud.redis.main.port:{} cachecloud.redis.main.password:{}", mainHost, mainPort, mainPassword);
+            logger.warn("Assist Redis connection failed: endpoint={}", getAssistRedisEndpoint());
             throw ce;
         } catch (Exception e) {
             logger.warn(e.getMessage(), e);

@@ -2,14 +2,12 @@ package com.shcj.cache.web.controller.api;
 
 import com.shcj.cache.constant.AppUserTypeEnum;
 import com.shcj.cache.entity.AppUser;
-import com.shcj.cache.web.controller.BaseController;
 import com.shcj.cache.web.controller.api.dto.DashboardDetailsDto;
 import com.shcj.cache.web.controller.api.dto.DashboardOpsDto;
 import com.shcj.cache.web.controller.api.dto.DashboardDto;
 import com.shcj.cache.web.controller.api.dto.DashboardOverviewBundleDto;
 import com.shcj.cache.web.service.DashboardService;
 import com.shcj.cache.web.vo.ApiResponse;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +20,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 @RestController
 @RequestMapping("/api/v1/dashboard")
-public class DashboardApiController extends BaseController {
+public class DashboardApiController extends AbstractAdminApiController {
 
     @Autowired
     private DashboardService dashboardService;
@@ -83,21 +81,4 @@ public class DashboardApiController extends BaseController {
         return ApiResponse.ok(dashboardService.buildDashboard());
     }
 
-    private AppUser resolveApiUser(HttpServletRequest request) {
-        String userName = userLoginStatusService.getUserNameFromLoginStatus(request);
-        if (StringUtils.isBlank(userName)) {
-            String authHeader = request.getHeader("Authorization");
-            if (StringUtils.isNotBlank(authHeader) && authHeader.startsWith("Bearer ")) {
-                userName = authHeader.substring(7).trim();
-            }
-        }
-        if (StringUtils.isBlank(userName)) {
-            return null;
-        }
-        AppUser user = userService.getByName(userName);
-        if (user == null || AppUserTypeEnum.NO_USER.value().equals(user.getType())) {
-            return null;
-        }
-        return user;
-    }
 }

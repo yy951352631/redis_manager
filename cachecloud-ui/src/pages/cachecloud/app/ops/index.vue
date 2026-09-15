@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { AppDetail, AppOpsMachineItem, AppPasswordInfo } from "@/api/cachecloud"
+import { ArrowLeft, Hide, View } from "@element-plus/icons-vue"
 import {
   checkAppPasswordApi,
   getAppDetailApi,
@@ -7,11 +8,10 @@ import {
   getAppPasswordApi,
   updateAppPasswordApi
 } from "@/api/cachecloud"
+import { useHostCapability } from "@/common/composables/useHostCapability"
 import { formatClusterNo } from "@/common/utils/cluster-no"
-import { ArrowLeft, Hide, View } from "@element-plus/icons-vue"
 import FaultDiagnosticPanel from "@/pages/cachecloud/app/components/FaultDiagnosticPanel.vue"
 import OpsTopologyTab from "@/pages/cachecloud/app/detail/tabs/OpsTopologyTab.vue"
-import { useHostCapability } from "@/common/composables/useHostCapability"
 import "@/common/assets/styles/app-ops.scss"
 
 const route = useRoute()
@@ -142,8 +142,12 @@ watch(() => route.params.appId, async () => {
       :data-page-title="`集群运维 ${appDetail?.appName || appId} (集群编码: ${formatClusterNo(appDetail?.clusterNo, appId)})`"
     >
       <div class="page-header__actions">
-        <el-button :icon="ArrowLeft" link @click="goAppList">返回列表</el-button>
-        <el-button type="primary" size="small" @click="goAppDetail">节点列表</el-button>
+        <el-button :icon="ArrowLeft" link @click="goAppList">
+          返回列表
+        </el-button>
+        <el-button type="primary" size="small" @click="goAppDetail">
+          节点列表
+        </el-button>
       </div>
     </div>
 
@@ -166,7 +170,9 @@ watch(() => route.params.appId, async () => {
         <el-tab-pane label="集群密码修改" name="password" lazy>
           <div class="app-password-panel">
             <div class="app-password-panel__intro">
-              <h4 class="app-password-panel__title">Redis 密码</h4>
+              <h4 class="app-password-panel__title">
+                Redis 密码
+              </h4>
               <p class="app-password-panel__hint">
                 平台使用该密码连接 Redis 进行采集与运维。修改后建议点击「校验」确认各节点密码一致。
               </p>
@@ -194,8 +200,12 @@ watch(() => route.params.appId, async () => {
                 </button>
               </div>
               <div class="app-password-panel__actions">
-                <el-button type="primary" @click="handleUpdatePassword">更新</el-button>
-                <el-button @click="handleCheckPassword">校验</el-button>
+                <el-button type="primary" @click="handleUpdatePassword">
+                  更新
+                </el-button>
+                <el-button @click="handleCheckPassword">
+                  校验
+                </el-button>
               </div>
             </div>
           </div>

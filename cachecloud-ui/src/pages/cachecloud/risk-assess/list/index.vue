@@ -666,10 +666,16 @@ onMounted(fetchList)
           <table class="risk-batch__dims">
             <thead>
               <tr>
-                <th style="width:150px">维度</th>
-                <th style="width:70px">等级</th>
+                <th style="width:150px">
+                  维度
+                </th>
+                <th style="width:70px">
+                  等级
+                </th>
                 <th>结论</th>
-                <th style="width:230px">处置建议</th>
+                <th style="width:230px">
+                  处置建议
+                </th>
               </tr>
             </thead>
             <tbody>

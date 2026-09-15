@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { OperationAuditItem } from "@/api/cachecloud"
+import { useAutoQuery } from "@@/composables/useAutoQuery"
 import { Refresh, Search } from "@element-plus/icons-vue"
 import { getOperationAuditsApi } from "@/api/cachecloud"
-import { useAutoQuery } from "@@/composables/useAutoQuery"
 import { formatAuditHandler, hasAuditHandlerText } from "@/common/utils/audit-handler-meta"
 
 const loading = ref(false)
@@ -76,7 +76,9 @@ function handleReset() {
   query.keyword = ""
   query.success = undefined
   // 重置后统一查一次，清空时间区间不再单独触发一次自动查询
-  silentRange(() => { timeRange.value = null })
+  silentRange(() => {
+    timeRange.value = null
+  })
   handleSearch()
 }
 
@@ -129,8 +131,12 @@ onMounted(fetchList)
           style="width: 360px"
         />
         <el-input v-model="query.keyword" placeholder="路径 / 方法 / 参数关键字" clearable style="width: 220px" />
-        <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-        <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        <el-button type="primary" :icon="Search" @click="handleSearch">
+          查询
+        </el-button>
+        <el-button :icon="Refresh" @click="handleReset">
+          重置
+        </el-button>
       </div>
     </el-card>
 
@@ -145,7 +151,9 @@ onMounted(fetchList)
         <el-table-column prop="module" label="业务域" width="110" />
         <el-table-column label="方法" width="90">
           <template #default="{ row }">
-            <el-tag :type="METHOD_TAG[row.httpMethod] || 'info'" size="small">{{ row.httpMethod }}</el-tag>
+            <el-tag :type="METHOD_TAG[row.httpMethod] || 'info'" size="small">
+              {{ row.httpMethod }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="requestUri" label="请求路径" min-width="240" show-overflow-tooltip />
@@ -178,7 +186,9 @@ onMounted(fetchList)
         <el-table-column prop="clientIp" label="来源IP" width="130" />
         <el-table-column label="详情" width="80" fixed="right">
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="openDetail(row)">查看</el-link>
+            <el-link type="primary" :underline="false" @click="openDetail(row)">
+              查看
+            </el-link>
           </template>
         </el-table-column>
       </el-table>
@@ -194,20 +204,38 @@ onMounted(fetchList)
 
     <el-drawer v-model="detailVisible" title="操作详情" size="620px">
       <el-descriptions v-if="detail" :column="1" border size="small">
-        <el-descriptions-item label="操作时间">{{ detail.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ detail.userName || "-" }}</el-descriptions-item>
-        <el-descriptions-item label="业务域">{{ detail.module }}</el-descriptions-item>
-        <el-descriptions-item label="请求">{{ detail.httpMethod }} {{ detail.requestUri }}</el-descriptions-item>
+        <el-descriptions-item label="操作时间">
+          {{ detail.createTime }}
+        </el-descriptions-item>
+        <el-descriptions-item label="操作人">
+          {{ detail.userName || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="业务域">
+          {{ detail.module }}
+        </el-descriptions-item>
+        <el-descriptions-item label="请求">
+          {{ detail.httpMethod }} {{ detail.requestUri }}
+        </el-descriptions-item>
         <el-descriptions-item label="处理方法">
           {{ formatAuditHandler(detail.handler) }}
           <span v-if="hasAuditHandlerText(detail.handler)" class="audit-page__handler-raw">（{{ detail.handler }}）</span>
         </el-descriptions-item>
-        <el-descriptions-item label="来源IP">{{ detail.clientIp || "-" }}</el-descriptions-item>
-        <el-descriptions-item label="响应码">{{ detail.statusCode }}</el-descriptions-item>
-        <el-descriptions-item label="耗时">{{ detail.costMs }} ms</el-descriptions-item>
-        <el-descriptions-item v-if="detail.errorMsg" label="失败原因">{{ detail.errorMsg }}</el-descriptions-item>
+        <el-descriptions-item label="来源IP">
+          {{ detail.clientIp || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="响应码">
+          {{ detail.statusCode }}
+        </el-descriptions-item>
+        <el-descriptions-item label="耗时">
+          {{ detail.costMs }} ms
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail.errorMsg" label="失败原因">
+          {{ detail.errorMsg }}
+        </el-descriptions-item>
       </el-descriptions>
-      <h4 class="audit-page__detail-title">请求参数（敏感字段已脱敏）</h4>
+      <h4 class="audit-page__detail-title">
+        请求参数（敏感字段已脱敏）
+      </h4>
       <pre class="audit-page__params">{{ prettyParams(detail?.params) }}</pre>
     </el-drawer>
   </div>

@@ -52,6 +52,10 @@ WAR="$ROOT/cachecloud-web/target/cachecloud-web.war"
 UI_DIST="$ROOT/cachecloud-ui/dist"
 [ -f "$WAR" ] || { echo "缺少 ${WAR}，先构建或去掉 --skip-build" >&2; exit 1; }
 [ -f "$UI_DIST/index.html" ] || { echo "缺少 $UI_DIST/index.html" >&2; exit 1; }
+if ! cmp -s <(tr -d '\r' < cachecloud-web/sql/init.sql) <(tr -d '\r' < deploy/mysql/init.sql); then
+  echo "cachecloud-web/sql/init.sql 与 deploy/mysql/init.sql 内容不一致，请先同步" >&2
+  exit 1
+fi
 
 # ----------------------------------------------------------------- 组装
 say "组装介质包 $NAME"

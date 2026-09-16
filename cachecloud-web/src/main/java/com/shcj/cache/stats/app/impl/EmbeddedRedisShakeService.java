@@ -8,11 +8,13 @@ import com.shcj.cache.constant.AppDataMigrateStatusEnum;
 import com.shcj.cache.dao.AppDataMigrateStatusDao;
 import com.shcj.cache.entity.AppDataMigrateStatus;
 import com.shcj.cache.redis.RedisCenter;
+import com.shcj.cache.redis.util.RedisHostResolver;
 import com.shcj.cache.util.ConstUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Protocol;
@@ -59,6 +61,8 @@ public class EmbeddedRedisShakeService {
     private RedisCenter redisCenter;
     @Autowired
     private AppDataMigrateStatusDao migrateStatusDao;
+    @Value("${cachecloud.redis.managed-loopback-host:127.0.0.1}")
+    private String managedLoopbackHost;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, Process> processes = new ConcurrentHashMap<>();
@@ -233,10 +237,16 @@ public class EmbeddedRedisShakeService {
             Path log = taskDir.resolve("data").resolve("shake.log");
             Path console = taskDir.resolve("console.log");
             List<String> newConfig = new ArrayList<>();
+            String section = "";
             for (String oldLine : oldConfig) {
                 String line = oldLine;
                 String trimmed = line.trim();
-                if (trimmed.startsWith("dir =")) line = "dir = " + toml(taskDir.resolve("data").toString());
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) section = trimmed;
+                if ("[sync_reader]".equals(section) && trimmed.startsWith("address =")) {
+                    line = "address = " + toml(redisShakeAddress(firstAddress(original.getSourceServers())));
+                } else if ("[redis_writer]".equals(section) && trimmed.startsWith("address =")) {
+                    line = "address = " + toml(redisShakeAddress(firstAddress(original.getTargetServers())));
+                } else if (trimmed.startsWith("dir =")) line = "dir = " + toml(taskDir.resolve("data").toString());
                 else if (trimmed.startsWith("log_file =")) line = "log_file = \"shake.log\"";
                 else if (trimmed.startsWith("status_port =")) line = "status_port = " + statusPort;
                 newConfig.add(line);
@@ -366,9 +376,11 @@ public class EmbeddedRedisShakeService {
                                boolean sourceCluster, String target, String targetPassword,
                                boolean targetCluster, Map<String, Object> options) {
         StringBuilder c = new StringBuilder();
-        c.append("[sync_reader]\ncluster = ").append(sourceCluster).append("\naddress = ").append(toml(source));
+        c.append("[sync_reader]\ncluster = ").append(sourceCluster).append("\naddress = ")
+                .append(toml(redisShakeAddress(source)));
         c.append("\npassword = ").append(toml(sourcePassword)).append("\nsync_rdb = true\nsync_aof = true\n\n");
-        c.append("[redis_writer]\ncluster = ").append(targetCluster).append("\naddress = ").append(toml(target));
+        c.append("[redis_writer]\ncluster = ").append(targetCluster).append("\naddress = ")
+                .append(toml(redisShakeAddress(target)));
         c.append("\npassword = ").append(toml(targetPassword)).append("\n\n[filter]\n");
         appendArray(c, "allow_key_prefix", lines(options.get("allowKeyPrefix")));
         appendArray(c, "allow_key_suffix", lines(options.get("allowKeySuffix")));
@@ -701,6 +713,11 @@ public class EmbeddedRedisShakeService {
     private int freePort() throws IOException { try (ServerSocket socket = new ServerSocket(0)) { return socket.getLocalPort(); } }
     private String localHostName() { try { return java.net.InetAddress.getLocalHost().getHostAddress(); } catch (Exception e) { return "localhost"; } }
     private String firstAddress(String servers) { return StringUtils.isBlank(servers) ? "" : servers.trim().split("\\r?\\n")[0].trim(); }
+    private String redisShakeAddress(String address) {
+        if (StringUtils.isBlank(address)) return address;
+        String[] hp = splitAddress(address);
+        return RedisHostResolver.resolve(managedLoopbackHost, hp[0]) + ":" + hp[1];
+    }
     private String[] splitAddress(String address) {
         int colon = address.lastIndexOf(':');
         if (colon <= 0) throw new IllegalArgumentException("invalid address: " + address);

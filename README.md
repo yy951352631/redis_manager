@@ -158,7 +158,7 @@ docker compose ps
 ## 验证
 
 ```bash
-# 九个容器都应为 running；配置了健康检查的容器应为 healthy
+# 容器状态，九个都应是 running / healthy
 docker compose ps
 
 # 三个 Sentinel 应返回同一个当前主节点

@@ -15,7 +15,7 @@ mysql -uroot -p < init.sql
 
 库名默认 `redis_manager`，需与 `application*.yml` 一致；若用其它库名，改 `init.sql` 顶部两处后再导入。
 
-默认管理员：`admin` / `admin%TGB7ygv`（库中为 MD5：`fae3997daa86ba75a7d81c1b7d8228fd`）。
+默认管理员：`admin` / `admin%TGB7ygv`（库中为 BCrypt 哈希，首次登录后请立即修改）。
 
 ## 从 cache-cloud-master 升级（已有库）
 

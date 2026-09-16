@@ -99,7 +99,8 @@ PACKAGE_ROOT="$(find "$WORK_DIR" -mindepth 1 -maxdepth 1 -type d -name 'cacheclo
 [ -f "$PACKAGE_ROOT/MANIFEST.sha256" ] || { printf '介质包缺少 MANIFEST.sha256\n' >&2; exit 1; }
 sha256_check "$PACKAGE_ROOT/MANIFEST.sha256"
 
-for required in app/cachecloud-web.war app/dist/index.html install.sh scripts/preflight.sh; do
+for required in app/cachecloud-web.war app/dist/index.html sql/init.sql sql/upgrade.sql \
+  conf/cachecloud.env.example conf/setenv.sh install.sh scripts/preflight.sh; do
   [ -e "$PACKAGE_ROOT/$required" ] || { printf '介质包缺少 %s\n' "$required" >&2; exit 1; }
 done
 
